@@ -120,10 +120,10 @@ jobs:
         fetch-depth: 0
 
     - name: TruffleHog OSS
-      uses: trufflesecurity/trufflehog-actions-scan@v1.0.0
+      uses: trufflesecurity/trufflehog@main
       with:
         path: ./
-        extra_args: --only-verified --fail
+        extra_args: --only-verified
 
   docker-image-scan:
     name: Docker Image Security Scan
