@@ -6,15 +6,6 @@ on:
     tags:
       - 'v*.*.*'
   workflow_dispatch:
-    inputs:
-      environment:
-        description: 'Environment to deploy'
-        required: true
-        default: 'production'
-        type: choice
-        options:
-          - production
-          - staging
 
 env:
   REGISTRY: ghcr.io
@@ -65,8 +56,8 @@ jobs:
       packages: write
       security-events: write
     outputs:
-      backend-image: ${{ steps.backend-meta.outputs.tags }}
-      frontend-image: ${{ steps.frontend-meta.outputs.tags }}
+      backend-tag: ${{ steps.meta.outputs.backend-tag }}
+      frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
 
     steps:
     - name: Checkout code
@@ -82,53 +73,39 @@ jobs:
         username: ${{ github.actor }}
         password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Extract metadata for Backend Docker
-      id: backend-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+    - name: Extract metadata
+      id: meta
+      run: |
+        BACKEND_TAG="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}"
+        FRONTEND_TAG="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}"
+        echo "backend-tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
+        echo "frontend-tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
+        echo "Backend tag: $BACKEND_TAG"
+        echo "Frontend tag: $FRONTEND_TAG"
 
     - name: Build and push Backend Docker image
-      id: backend-build
       uses: docker/build-push-action@v5
       with:
         context: .
         file: ./Dockerfile
         push: true
-        tags: ${{ steps.backend-meta.outputs.tags }}
-        labels: ${{ steps.backend-meta.outputs.labels }}
+        tags: |
+          ${{ steps.meta.outputs.backend-tag }}
+          ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
         provenance: true
         sbom: true
 
-    - name: Extract metadata for Frontend Docker
-      id: frontend-meta
-      uses: docker/metadata-action@v5
-      with:
-        images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
-        tags: |
-          type=ref,event=branch
-          type=semver,pattern={{version}}
-          type=semver,pattern={{major}}.{{minor}}
-          type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
-
     - name: Build and push Frontend Docker image
-      id: frontend-build
       uses: docker/build-push-action@v5
       with:
         context: ./frontend
         file: ./frontend/Dockerfile
         push: true
-        tags: ${{ steps.frontend-meta.outputs.tags }}
-        labels: ${{ steps.frontend-meta.outputs.labels }}
+        tags: |
+          ${{ steps.meta.outputs.frontend-tag }}
+          ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
         cache-from: type=gha
         cache-to: type=gha,mode=max
         provenance: true
@@ -137,14 +114,14 @@ jobs:
     - name: Scan Backend image with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:master
+        image-ref: ${{ steps.meta.outputs.backend-tag }}
         format: 'sarif'
         output: 'trivy-backend-image.sarif'
 
     - name: Scan Frontend image with Trivy
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:master
+        image-ref: ${{ steps.meta.outputs.frontend-tag }}
         format: 'sarif'
         output: 'trivy-frontend-image.sarif'
 
@@ -165,7 +142,7 @@ jobs:
     - name: Block on critical image vulnerabilities
       uses: aquasecurity/trivy-action@master
       with:
-        image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:master
+        image-ref: ${{ steps.meta.outputs.backend-tag }}
         format: 'table'
         exit-code: '1'
         severity: 'CRITICAL'
@@ -182,172 +159,117 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Configure kubectl
-      uses: azure/setup-kubectl@v4
-      with:
-        version: 'latest'
-
-    - name: Set up kubeconfig
+    - name: Create deployment script
       run: |
-        mkdir -p $HOME/.kube
-        echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
-        chmod 600 $HOME/.kube/config
+        cat > deploy.sh << 'EOF'
+        #!/bin/bash
+        set -e
 
-    - name: Verify cluster connection
-      run: |
-        kubectl cluster-info
-        kubectl get nodes
+        echo "Starting deployment..."
 
-    - name: Store current deployment for rollback
-      id: store-rollback
-      run: |
-        # Get current image tags and revision for rollback
-        CURRENT_BACKEND=$(kubectl get deployment fastapi -n sgcc -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "none")
-        CURRENT_FRONTEND=$(kubectl get deployment frontend -n sgcc -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "none")
-        CURRENT_REVISION=$(kubectl rollout history deployment/fastapi -n sgcc | tail -n 1 | awk '{print $1}' || echo "0")
+        # Set variables
+        export GITHUB_REPOSITORY="${{ github.repository }}"
+        export IMAGE_TAG="${{ github.sha }}"
 
-        echo "backend_image=$CURRENT_BACKEND" >> $GITHUB_OUTPUT
-        echo "frontend_image=$CURRENT_FRONTEND" >> $GITHUB_OUTPUT
-        echo "revision=$CURRENT_REVISION" >> $GITHUB_OUTPUT
+        # Login to GitHub Container Registry
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-        echo "Current backend: $CURRENT_BACKEND"
-        echo "Current frontend: $CURRENT_FRONTEND"
-        echo "Current revision: $CURRENT_REVISION"
+        # Pull latest images
+        echo "Pulling latest images..."
+        docker pull ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+        docker pull ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
 
-    - name: Update image tags in manifests
-      run: |
-        # Extract the first tag from the metadata output (typically the branch or version tag)
-        BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:master"
-        FRONTEND_IMAGE="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:master"
+        # Tag as latest
+        docker tag ghcr.io/${{ github.repository }}/backend:${{ github.sha }} ghcr.io/${{ github.repository }}/backend:latest
+        docker tag ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} ghcr.io/${{ github.repository }}/frontend:latest
 
-        echo "Deploying backend image: $BACKEND_IMAGE"
-        echo "Deploying frontend image: $FRONTEND_IMAGE"
+        # Deploy with docker-compose
+        echo "Deploying application..."
+        docker-compose -f docker-compose.prod.yml down || true
+        docker-compose -f docker-compose.prod.yml up -d
 
-        # Update image references in deployment files
-        cd k8s
-        sed -i.bak "s|image: sgcc-fastapi:latest|image: $BACKEND_IMAGE|g" fastapi.yaml
-        sed -i.bak "s|imagePullPolicy: Never|imagePullPolicy: Always|g" fastapi.yaml
-        sed -i.bak "s|image: sgcc-frontend:latest|image: $FRONTEND_IMAGE|g" frontend.yaml
-        sed -i.bak "s|imagePullPolicy: Never|imagePullPolicy: Always|g" frontend.yaml
-
-    - name: Create image pull secret
-      run: |
-        kubectl create secret docker-registry ghcr-secret \
-          --docker-server=${{ env.REGISTRY }} \
-          --docker-username=${{ github.actor }} \
-          --docker-password=${{ secrets.GITHUB_TOKEN }} \
-          --namespace=sgcc \
-          --dry-run=client -o yaml | kubectl apply -f -
-
-    - name: Apply Kubernetes secrets
-      run: |
-        if [ -f "k8s/configmap-secret.yaml" ]; then
-          kubectl apply -f k8s/configmap-secret.yaml
-        fi
-        if [ -f "k8s/mariadb-secret.yaml" ]; then
-          kubectl apply -f k8s/mariadb-secret.yaml
-        fi
-
-    - name: Deploy to Kubernetes
-      run: |
-        cd k8s
-        chmod +x deploy.sh
-        ./deploy.sh
-
-    - name: Wait for deployment rollout
-      id: rollout
-      run: |
-        kubectl rollout status deployment/fastapi -n sgcc --timeout=5m
-        kubectl rollout status deployment/frontend -n sgcc --timeout=5m
-
-    - name: Verify deployment health
-      id: health-check
-      run: |
-        echo "=== Deployment Status ==="
-        kubectl get pods -n sgcc
-        kubectl get svc -n sgcc
-        kubectl get ingress -n sgcc
-
-        echo ""
-        echo "=== Recent Events ==="
-        kubectl get events -n sgcc --sort-by='.lastTimestamp' | tail -20
-
-        # Wait for pods to be ready
-        kubectl wait --for=condition=ready pod -l app=fastapi -n sgcc --timeout=3m
-        kubectl wait --for=condition=ready pod -l app=frontend -n sgcc --timeout=3m
-
-    - name: Run smoke tests
-      id: smoke-tests
-      run: |
-        # Wait for services to stabilize
+        # Wait for services to be healthy
+        echo "Waiting for services to be healthy..."
         sleep 30
 
-        # Test health endpoint
-        echo "Testing backend health endpoint..."
-        kubectl run curl-test --image=curlimages/curl:latest --rm -i --restart=Never -n sgcc -- \
-          curl -f http://fastapi-service:8000/health || exit 1
-
-        echo "Smoke tests passed!"
-
-    - name: Monitor deployment metrics
-      if: success()
-      run: |
-        echo "Monitoring deployment for 60 seconds..."
-        sleep 60
-
-        # Check for any pod restarts or failures
-        RESTART_COUNT=$(kubectl get pods -n sgcc -l app=fastapi -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1} END {print s}')
-        if [ "$RESTART_COUNT" -gt "0" ]; then
-          echo "Warning: Detected $RESTART_COUNT pod restarts"
+        # Check if services are running
+        if ! docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+          echo "Error: Some services failed to start"
+          docker-compose -f docker-compose.prod.yml logs
           exit 1
         fi
 
-        echo "Deployment is stable"
+        echo "Deployment completed successfully!"
+        docker-compose -f docker-compose.prod.yml ps
+        EOF
 
-    - name: Record successful deployment
-      if: success()
-      run: |
-        kubectl annotate deployment/fastapi -n sgcc \
-          kubernetes.io/change-cause="Deployed ${{ github.sha }} by ${{ github.actor }}" \
-          deployment.kubernetes.io/revision="${{ steps.store-rollback.outputs.revision }}" \
-          --overwrite
-        kubectl annotate deployment/frontend -n sgcc \
-          kubernetes.io/change-cause="Deployed ${{ github.sha }} by ${{ github.actor }}" \
-          deployment.kubernetes.io/revision="${{ steps.store-rollback.outputs.revision }}" \
-          --overwrite
+        chmod +x deploy.sh
+
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script_stop: true
+        script: |
+          # Navigate to deployment directory
+          cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
+
+          # Pull latest code
+          git fetch origin
+          git checkout master
+          git pull origin master
+
+          # Set environment variables
+          export GITHUB_REPOSITORY="${{ github.repository }}"
+          export IMAGE_TAG="${{ github.sha }}"
+
+          # Login to GitHub Container Registry
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          # Pull and deploy
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+
+          # Check health
+          sleep 30
+          docker-compose -f docker-compose.prod.yml ps
+
+    - name: Run smoke tests
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          # Test backend health endpoint
+          curl -f http://localhost:8000/health || exit 1
+
+          # Test frontend
+          curl -f http://localhost:3000 || exit 1
+
+          echo "Smoke tests passed!"
 
     - name: Rollback on failure
-      if: failure() && steps.store-rollback.outputs.backend_image != 'none'
-      run: |
-        echo "❌ Deployment failed, initiating automatic rollback..."
+      if: failure()
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          echo "Deployment failed, rolling back to previous version..."
+          cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
 
-        BACKEND_IMAGE="${{ steps.store-rollback.outputs.backend_image }}"
-        FRONTEND_IMAGE="${{ steps.store-rollback.outputs.frontend_image }}"
+          # Use latest tag (previous deployment)
+          export IMAGE_TAG=latest
+          docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
-        echo "Rolling back to previous deployment:"
-        echo "  Backend: $BACKEND_IMAGE"
-        echo "  Frontend: $FRONTEND_IMAGE"
-
-        if [ "$BACKEND_IMAGE" != "none" ]; then
-          kubectl set image deployment/fastapi fastapi=$BACKEND_IMAGE -n sgcc
-        fi
-
-        if [ "$FRONTEND_IMAGE" != "none" ]; then
-          kubectl set image deployment/frontend frontend=$FRONTEND_IMAGE -n sgcc
-        fi
-
-        # Wait for rollback to complete
-        kubectl rollout status deployment/fastapi -n sgcc --timeout=5m || true
-        kubectl rollout status deployment/frontend -n sgcc --timeout=5m || true
-
-        # Verify rollback health
-        kubectl wait --for=condition=ready pod -l app=fastapi -n sgcc --timeout=3m || true
-        kubectl wait --for=condition=ready pod -l app=frontend -n sgcc --timeout=3m || true
-
-        echo "✅ Rollback completed successfully"
-
-        # Send failure notification
-        echo "::error::Production deployment failed and was rolled back to previous version"
+          echo "Rollback completed"
 
   notify:
     needs: deploy-production
