@@ -18,6 +18,9 @@ jobs:
   trivy-fs-scan:
     name: Trivy Filesystem Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
     - name: Checkout code
@@ -58,6 +61,9 @@ jobs:
   trivy-config-scan:
     name: Trivy Config Scan
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
 
     steps:
     - name: Checkout code
@@ -129,6 +135,9 @@ jobs:
     name: Docker Image Security Scan
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    permissions:
+      contents: read
+      security-events: write
     strategy:
       matrix:
         image: [backend, frontend]
