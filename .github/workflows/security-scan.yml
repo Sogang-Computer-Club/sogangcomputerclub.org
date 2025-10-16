@@ -120,12 +120,10 @@ jobs:
         fetch-depth: 0
 
     - name: TruffleHog OSS
-      uses: trufflesecurity/trufflehog@v3.82.13
+      uses: trufflesecurity/trufflehog-actions-scan@v1.0.0
       with:
         path: ./
-        base: ${{ github.event.repository.default_branch }}
-        head: HEAD
-        extra_args: --only-verified
+        extra_args: --only-verified --fail
 
   docker-image-scan:
     name: Docker Image Security Scan
@@ -201,7 +199,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [ 'python', 'javascript' ]
+        language: [ 'python', 'javascript-typescript' ]
 
     steps:
     - name: Checkout code
@@ -212,9 +210,16 @@ jobs:
       with:
         languages: ${{ matrix.language }}
         queries: security-extended,security-and-quality
+        config: |
+          paths-ignore:
+            - '**/node_modules'
+            - '**/dist'
+            - '**/build'
+            - '**/.svelte-kit'
 
     - name: Autobuild
       uses: github/codeql-action/autobuild@v3
+      if: matrix.language == 'python'
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v3
@@ -240,11 +245,15 @@ jobs:
         echo "- CodeQL Analysis: ${{ needs.codeql-analysis.result }}" >> $GITHUB_STEP_SUMMARY
         echo "" >> $GITHUB_STEP_SUMMARY
 
-        if [ "${{ needs.trivy-fs-scan.result }}" == "failure" ] || \
-           [ "${{ needs.trivy-config-scan.result }}" == "failure" ] || \
-           [ "${{ needs.secret-scan.result }}" == "failure" ] || \
-           [ "${{ needs.docker-image-scan.result }}" == "failure" ] || \
-           [ "${{ needs.codeql-analysis.result }}" == "failure" ]; then
+        # Check for failures, treating 'skipped' as success
+        FAILED=0
+        if [ "${{ needs.trivy-fs-scan.result }}" == "failure" ]; then FAILED=1; fi
+        if [ "${{ needs.trivy-config-scan.result }}" == "failure" ]; then FAILED=1; fi
+        if [ "${{ needs.secret-scan.result }}" == "failure" ]; then FAILED=1; fi
+        if [ "${{ needs.docker-image-scan.result }}" == "failure" ]; then FAILED=1; fi
+        if [ "${{ needs.codeql-analysis.result }}" == "failure" ]; then FAILED=1; fi
+
+        if [ $FAILED -eq 1 ]; then
           echo "⚠️ **Security issues detected!** Please review the scan results." >> $GITHUB_STEP_SUMMARY
           exit 1
         else
