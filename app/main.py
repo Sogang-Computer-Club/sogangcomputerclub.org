@@ -1,7 +1,7 @@
 import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from typing import List, AsyncGenerator, Optional, Dict, Any
 from datetime import datetime, date
@@ -12,6 +12,8 @@ import os
 import redis.asyncio as aioredis
 from aiokafka import AIOKafkaProducer
 import json
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import time
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -19,6 +21,26 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# --- Prometheus Metrics ---
+REQUEST_COUNT = Counter(
+    'fastapi_requests_total',
+    'Total number of requests',
+    ['method', 'endpoint', 'status_code']
+)
+REQUEST_DURATION = Histogram(
+    'fastapi_request_duration_seconds',
+    'Request duration in seconds',
+    ['method', 'endpoint']
+)
+MEMO_COUNT = Gauge(
+    'memo_total',
+    'Total number of memos in the database'
+)
+ACTIVE_CONNECTIONS = Gauge(
+    'fastapi_active_connections',
+    'Number of active database connections'
+)
 
 # --- Environment Configuration ---
 DATABASE_URL = os.getenv(
@@ -136,6 +158,23 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# --- Prometheus Middleware ---
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    duration = time.time() - start_time
+    endpoint = request.url.path
+    method = request.method
+    status_code = response.status_code
+
+    REQUEST_COUNT.labels(method=method, endpoint=endpoint, status_code=status_code).inc()
+    REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
+
+    return response
+
 # --- Pydantic Models ---
 class MemoBase(BaseModel):
     title: str = Field(..., min_length=1, max_length=100, description="메모 제목")
@@ -221,6 +260,12 @@ async def health_check(request: Request) -> Dict[str, Any]:
         health_status["status"] = "degraded"
 
     return health_status
+
+# --- Prometheus Metrics Endpoint ---
+@app.get("/metrics", tags=["System"])
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 # --- Memo API Endpoints ---
 @app.post("/memos/", response_model=MemoInDB, status_code=status.HTTP_201_CREATED, tags=["Memos"])
