@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: sgcc-local
+  labels:
+    environment: local
+    managed-by: kubernetes

@@ -1,46 +1,64 @@
 services:
   fastapi:
-    build: .
+    image: ghcr.io/${GITHUB_REPOSITORY}/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
     ports:
       - "8000:8000"
     environment:
-      - DATABASE_URL=${DATABASE_URL:-mysql+aiomysql://memo_user:phoenix@mariadb:3306/memo_app}
+      - DATABASE_URL=${DATABASE_URL}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9093}
     depends_on:
       - mariadb
       - redis
       - kafka
-    volumes:
-      - ./app:/code/app
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   mariadb:
     image: mariadb:10.11
+    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-phoenix}
-      - MYSQL_DATABASE=${MYSQL_DATABASE:-memo_app}
-      - MYSQL_USER=${MYSQL_USER:-memo_user}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD:-phoenix}
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD}
+      - MYSQL_DATABASE=${MYSQL_DATABASE}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     ports:
       - "3307:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   redis:
     image: redis:7-alpine
+    restart: unless-stopped
     ports:
       - "6381:6379"
     volumes:
       - redis_data:/data
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    restart: unless-stopped
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
@@ -49,6 +67,7 @@ services:
 
   kafka:
     image: confluentinc/cp-kafka:7.4.0
+    restart: unless-stopped
     depends_on:
       - zookeeper
     ports:
@@ -66,20 +85,27 @@ services:
       - app-network
 
   frontend:
-    build: ./frontend
+    image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
     ports:
       - "3000:3000"
     environment:
-      - NODE_ENV=${NODE_ENV:-production}
-      - HOST=${HOST:-0.0.0.0}
-      - PORT=${PORT:-3000}
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
     depends_on:
       - fastapi
     networks:
       - app-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   nginx:
     image: nginx:alpine
+    restart: unless-stopped
     ports:
       - "80:80"
       - "443:443"
@@ -98,6 +124,7 @@ services:
 
   certbot:
     image: certbot/certbot
+    restart: unless-stopped
     volumes:
       - certbot_certs:/etc/letsencrypt
       - ./frontend/build:/var/www/html
@@ -109,11 +136,10 @@ services:
       - app-network
     depends_on:
       - nginx
-    links:
-      - nginx
 
   prometheus:
     image: prom/prometheus:latest
+    restart: unless-stopped
     ports:
       - "9090:9090"
     volumes:
@@ -129,15 +155,22 @@ services:
       - app-network
     depends_on:
       - fastapi
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
   grafana:
     image: grafana/grafana:latest
+    restart: unless-stopped
     ports:
       - "3001:3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
       - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
     volumes:
       - grafana_data:/var/lib/grafana
       - ./grafana/provisioning:/etc/grafana/provisioning
@@ -145,6 +178,11 @@ services:
       - app-network
     depends_on:
       - prometheus
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 volumes:
   mariadb_data:
@@ -156,5 +194,3 @@ volumes:
 networks:
   app-network:
     driver: bridge
-    driver_opts:
-      com.docker.network.bridge.name: docker1

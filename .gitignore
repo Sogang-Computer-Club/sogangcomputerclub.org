@@ -118,7 +118,15 @@ vite.config.ts.timestamp-*
 *.backup
 *.orig
 
-# Claude AI
+# Docs
+/docs
+
+# Cleanup
+test.db
+.venv
+venv
+.pytest_cache
+__pycache__
+
+# IDE
 .claude/
-.claude.json
-.claude.json.backup

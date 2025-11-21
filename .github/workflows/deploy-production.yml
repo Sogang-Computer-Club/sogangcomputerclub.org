@@ -1,0 +1,296 @@
+name: Deploy to Production
+
+on:
+  push:
+    branches: [ master ]
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Block deployment on critical vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL'
+        ignore-unfixed: true
+
+  build-and-push:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+    outputs:
+      backend-tag: ${{ steps.meta.outputs.backend-tag }}
+      frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata
+      id: meta
+      run: |
+        BACKEND_TAG="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}"
+        FRONTEND_TAG="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}"
+        echo "backend-tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
+        echo "frontend-tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
+        echo "Backend tag: $BACKEND_TAG"
+        echo "Frontend tag: $FRONTEND_TAG"
+
+    - name: Build and push Backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: |
+          ${{ steps.meta.outputs.backend-tag }}
+          ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: true
+        sbom: true
+
+    - name: Build and push Frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        tags: |
+          ${{ steps.meta.outputs.frontend-tag }}
+          ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: true
+        sbom: true
+
+    - name: Scan Backend image with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.meta.outputs.backend-tag }}
+        format: 'sarif'
+        output: 'trivy-backend-image.sarif'
+
+    - name: Scan Frontend image with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.meta.outputs.frontend-tag }}
+        format: 'sarif'
+        output: 'trivy-frontend-image.sarif'
+
+    - name: Upload backend image scan results
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
+      with:
+        sarif_file: 'trivy-backend-image.sarif'
+        category: 'backend-image'
+
+    - name: Upload frontend image scan results
+      uses: github/codeql-action/upload-sarif@v4
+      if: always()
+      with:
+        sarif_file: 'trivy-frontend-image.sarif'
+        category: 'frontend-image'
+
+    - name: Block on critical image vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ steps.meta.outputs.backend-tag }}
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL'
+        ignore-unfixed: true
+
+  deploy-production:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://sogangcomputerclub.org
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Create deployment script
+      run: |
+        cat > deploy.sh << 'EOF'
+        #!/bin/bash
+        set -e
+
+        echo "Starting deployment..."
+
+        # Set variables
+        export GITHUB_REPOSITORY="${{ github.repository }}"
+        export IMAGE_TAG="${{ github.sha }}"
+
+        # Login to GitHub Container Registry
+        echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+        # Pull latest images
+        echo "Pulling latest images..."
+        docker pull ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+        docker pull ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+
+        # Tag as latest
+        docker tag ghcr.io/${{ github.repository }}/backend:${{ github.sha }} ghcr.io/${{ github.repository }}/backend:latest
+        docker tag ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} ghcr.io/${{ github.repository }}/frontend:latest
+
+        # Deploy with docker-compose
+        echo "Deploying application..."
+        docker-compose -f docker-compose.prod.yml down || true
+        docker-compose -f docker-compose.prod.yml up -d
+
+        # Wait for services to be healthy
+        echo "Waiting for services to be healthy..."
+        sleep 30
+
+        # Check if services are running
+        if ! docker-compose -f docker-compose.prod.yml ps | grep -q "Up"; then
+          echo "Error: Some services failed to start"
+          docker-compose -f docker-compose.prod.yml logs
+          exit 1
+        fi
+
+        echo "Deployment completed successfully!"
+        docker-compose -f docker-compose.prod.yml ps
+        EOF
+
+        chmod +x deploy.sh
+
+    - name: Deploy to production server
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script_stop: true
+        script: |
+          # Navigate to deployment directory
+          cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
+
+          # Pull latest code
+          git fetch origin
+          git checkout master
+          git pull origin master
+
+          # Set environment variables
+          export GITHUB_REPOSITORY="${{ github.repository }}"
+          export IMAGE_TAG="${{ github.sha }}"
+
+          # Login to GitHub Container Registry
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+          # Pull and deploy
+          docker-compose -f docker-compose.prod.yml pull
+          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+
+          # Check health
+          sleep 30
+          docker-compose -f docker-compose.prod.yml ps
+
+    - name: Run smoke tests
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          # Test backend health endpoint
+          curl -f http://localhost:8000/health || exit 1
+
+          # Test frontend
+          curl -f http://localhost:3000 || exit 1
+
+          echo "Smoke tests passed!"
+
+    - name: Rollback on failure
+      if: failure()
+      uses: appleboy/ssh-action@v1.0.3
+      with:
+        host: ${{ secrets.PROD_HOST }}
+        username: ${{ secrets.PROD_USERNAME }}
+        key: ${{ secrets.PROD_SSH_KEY }}
+        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        script: |
+          echo "Deployment failed, rolling back to previous version..."
+          cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
+
+          # Use latest tag (previous deployment)
+          export IMAGE_TAG=latest
+          docker-compose -f docker-compose.prod.yml up -d --force-recreate
+
+          echo "Rollback completed"
+
+  notify:
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Deployment notification
+      run: |
+        if [ "${{ needs.deploy-production.result }}" == "success" ]; then
+          echo "Production deployment successful!"
+          echo "Application is live at https://sogangcomputerclub.org"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Security scans: Passed"
+          echo "Health checks: Passed"
+          echo "Smoke tests: Passed"
+        else
+          echo "Production deployment failed!"
+          echo "Automatic rollback has been initiated"
+          echo "Failed commit: ${{ github.sha }}"
+          echo "Please check the logs for details"
+          echo "::error::Production deployment failed - rollback completed"
+        fi

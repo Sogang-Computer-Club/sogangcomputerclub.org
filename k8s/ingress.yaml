@@ -2,7 +2,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: sgcc-memo-api-ingress
-  namespace: sgcc-memo
+  namespace: sgcc
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
     nginx.ingress.kubernetes.io/rewrite-target: /$2
@@ -25,7 +25,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: sgcc-memo-backend-ingress
-  namespace: sgcc-memo
+  namespace: sgcc
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:
@@ -60,7 +60,7 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: sgcc-memo-frontend-ingress
-  namespace: sgcc-memo
+  namespace: sgcc
   annotations:
     nginx.ingress.kubernetes.io/ssl-redirect: "false"
 spec:

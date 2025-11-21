@@ -1,0 +1,309 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ develop, staging ]
+  pull_request:
+    types: [ labeled ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  BACKEND_IMAGE_NAME: ${{ github.repository }}/backend
+  FRONTEND_IMAGE_NAME: ${{ github.repository }}/frontend
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run Trivy vulnerability scanner
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'sarif'
+        output: 'trivy-results.sarif'
+        severity: 'CRITICAL,HIGH'
+
+    - name: Upload Trivy results to GitHub Security
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-results.sarif'
+
+    - name: Check for critical vulnerabilities
+      uses: aquasecurity/trivy-action@master
+      with:
+        scan-type: 'fs'
+        scan-ref: '.'
+        format: 'table'
+        exit-code: '1'
+        severity: 'CRITICAL'
+        ignore-unfixed: true
+
+  build-and-push:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    outputs:
+      backend-image: ${{ steps.backend-meta.outputs.tags }}
+      frontend-image: ${{ steps.frontend-meta.outputs.tags }}
+      backend-digest: ${{ steps.backend-build.outputs.digest }}
+      frontend-digest: ${{ steps.frontend-build.outputs.digest }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Extract metadata for Backend Docker
+      id: backend-meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix=staging-
+          type=raw,value=staging
+
+    - name: Build and push Backend Docker image
+      id: backend-build
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ steps.backend-meta.outputs.tags }}
+        labels: ${{ steps.backend-meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: true
+        sbom: true
+
+    - name: Extract metadata for Frontend Docker
+      id: frontend-meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=sha,prefix=staging-
+          type=raw,value=staging
+
+    - name: Build and push Frontend Docker image
+      id: frontend-build
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        file: ./frontend/Dockerfile
+        push: true
+        tags: ${{ steps.frontend-meta.outputs.tags }}
+        labels: ${{ steps.frontend-meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        provenance: true
+        sbom: true
+
+    - name: Scan Backend image with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:staging
+        format: 'sarif'
+        output: 'trivy-backend-image.sarif'
+
+    - name: Scan Frontend image with Trivy
+      uses: aquasecurity/trivy-action@master
+      with:
+        image-ref: ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:staging
+        format: 'sarif'
+        output: 'trivy-frontend-image.sarif'
+
+    - name: Upload backend image scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-backend-image.sarif'
+        category: 'backend-image'
+
+    - name: Upload frontend image scan results
+      uses: github/codeql-action/upload-sarif@v3
+      if: always()
+      with:
+        sarif_file: 'trivy-frontend-image.sarif'
+        category: 'frontend-image'
+
+  deploy-staging:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: staging
+      url: https://staging.sogangcomputerclub.org
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'latest'
+
+    - name: Set up kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+        chmod 600 $HOME/.kube/config
+
+    - name: Verify cluster connection
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Create staging namespace if not exists
+      run: |
+        kubectl apply -f k8s/namespace-staging.yaml
+
+    - name: Create image pull secret
+      run: |
+        kubectl create secret docker-registry ghcr-secret \
+          --docker-server=${{ env.REGISTRY }} \
+          --docker-username=${{ github.actor }} \
+          --docker-password=${{ secrets.GITHUB_TOKEN }} \
+          --namespace=sgcc-staging \
+          --dry-run=client -o yaml | kubectl apply -f -
+
+    - name: Store current deployment for rollback
+      id: store-rollback
+      run: |
+        # Get current image tags for rollback
+        CURRENT_BACKEND=$(kubectl get deployment fastapi -n sgcc-staging -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "none")
+        CURRENT_FRONTEND=$(kubectl get deployment frontend -n sgcc-staging -o jsonpath='{.spec.template.spec.containers[0].image}' 2>/dev/null || echo "none")
+
+        echo "backend_image=$CURRENT_BACKEND" >> $GITHUB_OUTPUT
+        echo "frontend_image=$CURRENT_FRONTEND" >> $GITHUB_OUTPUT
+
+        echo "Current backend: $CURRENT_BACKEND"
+        echo "Current frontend: $CURRENT_FRONTEND"
+
+    - name: Update image tags in staging manifests
+      run: |
+        BACKEND_IMAGE="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:staging"
+        FRONTEND_IMAGE="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:staging"
+
+        echo "Deploying backend image: $BACKEND_IMAGE"
+        echo "Deploying frontend image: $FRONTEND_IMAGE"
+
+        # Update staging manifests
+        sed -i.bak "s|image: ghcr.io/OWNER/REPO/backend:staging|image: $BACKEND_IMAGE|g" k8s/fastapi-staging.yaml
+        sed -i.bak "s|image: ghcr.io/OWNER/REPO/frontend:staging|image: $FRONTEND_IMAGE|g" k8s/frontend-staging.yaml
+
+    - name: Deploy to Kubernetes
+      id: deploy
+      run: |
+        kubectl apply -f k8s/fastapi-staging.yaml
+        kubectl apply -f k8s/frontend-staging.yaml
+
+    - name: Wait for deployment rollout
+      id: rollout
+      run: |
+        kubectl rollout status deployment/fastapi -n sgcc-staging --timeout=5m
+        kubectl rollout status deployment/frontend -n sgcc-staging --timeout=5m
+
+    - name: Verify deployment health
+      id: health-check
+      run: |
+        echo "=== Deployment Status ==="
+        kubectl get pods -n sgcc-staging
+        kubectl get svc -n sgcc-staging
+
+        # Wait for pods to be ready
+        kubectl wait --for=condition=ready pod -l app=fastapi -n sgcc-staging --timeout=2m
+        kubectl wait --for=condition=ready pod -l app=frontend -n sgcc-staging --timeout=2m
+
+        # Run health checks
+        echo "Testing backend health endpoint..."
+        kubectl run curl-test --image=curlimages/curl:latest --rm -i --restart=Never -n sgcc-staging -- \
+          curl -f http://fastapi-service:8000/health || exit 1
+
+        echo "Deployment health check passed!"
+
+    - name: Run smoke tests
+      run: |
+        echo "Running smoke tests on staging environment..."
+
+        # Test backend API
+        kubectl run api-test --image=curlimages/curl:latest --rm -i --restart=Never -n sgcc-staging -- \
+          curl -f http://fastapi-service:8000/health || exit 1
+
+        echo "Smoke tests passed!"
+
+    - name: Rollback on failure
+      if: failure() && steps.store-rollback.outputs.backend_image != 'none'
+      run: |
+        echo "Deployment failed, initiating automatic rollback..."
+
+        BACKEND_IMAGE="${{ steps.store-rollback.outputs.backend_image }}"
+        FRONTEND_IMAGE="${{ steps.store-rollback.outputs.frontend_image }}"
+
+        if [ "$BACKEND_IMAGE" != "none" ]; then
+          echo "Rolling back backend to: $BACKEND_IMAGE"
+          kubectl set image deployment/fastapi fastapi=$BACKEND_IMAGE -n sgcc-staging
+        fi
+
+        if [ "$FRONTEND_IMAGE" != "none" ]; then
+          echo "Rolling back frontend to: $FRONTEND_IMAGE"
+          kubectl set image deployment/frontend frontend=$FRONTEND_IMAGE -n sgcc-staging
+        fi
+
+        # Wait for rollback to complete
+        kubectl rollout status deployment/fastapi -n sgcc-staging --timeout=3m || true
+        kubectl rollout status deployment/frontend -n sgcc-staging --timeout=3m || true
+
+        echo "Rollback completed"
+
+    - name: Record deployment
+      if: success()
+      run: |
+        kubectl annotate deployment/fastapi -n sgcc-staging \
+          kubernetes.io/change-cause="Deployed ${{ github.sha }} by ${{ github.actor }}" \
+          --overwrite
+        kubectl annotate deployment/frontend -n sgcc-staging \
+          kubernetes.io/change-cause="Deployed ${{ github.sha }} by ${{ github.actor }}" \
+          --overwrite
+
+  notify:
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Deployment notification
+      run: |
+        if [ "${{ needs.deploy-staging.result }}" == "success" ]; then
+          echo "✅ Staging deployment successful!"
+          echo "🚀 Application is live at https://staging.sogangcomputerclub.org"
+          echo "📦 Commit: ${{ github.sha }}"
+          echo "👤 Deployed by: ${{ github.actor }}"
+        else
+          echo "❌ Staging deployment failed!"
+          echo "🔄 Automatic rollback has been initiated"
+          echo "📦 Failed commit: ${{ github.sha }}"
+        fi

@@ -1,0 +1,238 @@
+name: Manual Rollback
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to rollback'
+        required: true
+        type: choice
+        options:
+          - production
+          - staging
+      rollback_type:
+        description: 'Rollback type'
+        required: true
+        type: choice
+        options:
+          - previous_revision
+          - specific_image
+      backend_image:
+        description: 'Backend image (for specific_image rollback)'
+        required: false
+        type: string
+      frontend_image:
+        description: 'Frontend image (for specific_image rollback)'
+        required: false
+        type: string
+      revision_number:
+        description: 'Revision number (for previous_revision rollback, leave empty for last revision)'
+        required: false
+        type: string
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  validate-inputs:
+    runs-on: ubuntu-latest
+    outputs:
+      namespace: ${{ steps.set-namespace.outputs.namespace }}
+
+    steps:
+    - name: Set namespace
+      id: set-namespace
+      run: |
+        if [ "${{ inputs.environment }}" == "production" ]; then
+          echo "namespace=sgcc" >> $GITHUB_OUTPUT
+        else
+          echo "namespace=sgcc-staging" >> $GITHUB_OUTPUT
+        fi
+
+    - name: Validate specific image rollback inputs
+      if: inputs.rollback_type == 'specific_image'
+      run: |
+        if [ -z "${{ inputs.backend_image }}" ] && [ -z "${{ inputs.frontend_image }}" ]; then
+          echo "Error: At least one image must be specified for specific_image rollback"
+          exit 1
+        fi
+
+  rollback:
+    needs: validate-inputs
+    runs-on: ubuntu-latest
+    environment:
+      name: ${{ inputs.environment }}
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Configure kubectl
+      uses: azure/setup-kubectl@v4
+      with:
+        version: 'latest'
+
+    - name: Set up kubeconfig
+      run: |
+        mkdir -p $HOME/.kube
+        if [ "${{ inputs.environment }}" == "production" ]; then
+          echo "${{ secrets.KUBECONFIG }}" | base64 -d > $HOME/.kube/config
+        else
+          echo "${{ secrets.KUBECONFIG_STAGING }}" | base64 -d > $HOME/.kube/config
+        fi
+        chmod 600 $HOME/.kube/config
+
+    - name: Verify cluster connection
+      run: |
+        kubectl cluster-info
+        kubectl get nodes
+
+    - name: Show current deployment status
+      run: |
+        echo "=== Current Deployment Status ==="
+        echo ""
+        echo "Backend deployment:"
+        kubectl get deployment fastapi -n ${{ needs.validate-inputs.outputs.namespace }} -o wide
+        echo ""
+        echo "Frontend deployment:"
+        kubectl get deployment frontend -n ${{ needs.validate-inputs.outputs.namespace }} -o wide
+        echo ""
+        echo "=== Current Images ==="
+        echo "Backend: $(kubectl get deployment fastapi -n ${{ needs.validate-inputs.outputs.namespace }} -o jsonpath='{.spec.template.spec.containers[0].image}')"
+        echo "Frontend: $(kubectl get deployment frontend -n ${{ needs.validate-inputs.outputs.namespace }} -o jsonpath='{.spec.template.spec.containers[0].image}')"
+
+    - name: Show rollout history
+      run: |
+        echo ""
+        echo "=== Backend Rollout History ==="
+        kubectl rollout history deployment/fastapi -n ${{ needs.validate-inputs.outputs.namespace }}
+        echo ""
+        echo "=== Frontend Rollout History ==="
+        kubectl rollout history deployment/frontend -n ${{ needs.validate-inputs.outputs.namespace }}
+
+    - name: Rollback to previous revision
+      if: inputs.rollback_type == 'previous_revision'
+      run: |
+        echo "Initiating rollback to previous revision..."
+
+        if [ -n "${{ inputs.revision_number }}" ]; then
+          echo "Rolling back to revision ${{ inputs.revision_number }}"
+          kubectl rollout undo deployment/fastapi -n ${{ needs.validate-inputs.outputs.namespace }} --to-revision=${{ inputs.revision_number }}
+          kubectl rollout undo deployment/frontend -n ${{ needs.validate-inputs.outputs.namespace }} --to-revision=${{ inputs.revision_number }}
+        else
+          echo "Rolling back to previous revision"
+          kubectl rollout undo deployment/fastapi -n ${{ needs.validate-inputs.outputs.namespace }}
+          kubectl rollout undo deployment/frontend -n ${{ needs.validate-inputs.outputs.namespace }}
+        fi
+
+    - name: Rollback to specific images
+      if: inputs.rollback_type == 'specific_image'
+      run: |
+        echo "Initiating rollback to specific images..."
+
+        if [ -n "${{ inputs.backend_image }}" ]; then
+          echo "Rolling back backend to: ${{ inputs.backend_image }}"
+          kubectl set image deployment/fastapi \
+            fastapi=${{ inputs.backend_image }} \
+            -n ${{ needs.validate-inputs.outputs.namespace }}
+        fi
+
+        if [ -n "${{ inputs.frontend_image }}" ]; then
+          echo "Rolling back frontend to: ${{ inputs.frontend_image }}"
+          kubectl set image deployment/frontend \
+            frontend=${{ inputs.frontend_image }} \
+            -n ${{ needs.validate-inputs.outputs.namespace }}
+        fi
+
+    - name: Wait for rollback to complete
+      run: |
+        echo "Waiting for rollback to complete..."
+        kubectl rollout status deployment/fastapi -n ${{ needs.validate-inputs.outputs.namespace }} --timeout=5m
+        kubectl rollout status deployment/frontend -n ${{ needs.validate-inputs.outputs.namespace }} --timeout=5m
+
+    - name: Verify rollback health
+      run: |
+        echo "Verifying rollback health..."
+
+        # Wait for pods to be ready
+        kubectl wait --for=condition=ready pod -l app=fastapi -n ${{ needs.validate-inputs.outputs.namespace }} --timeout=3m
+        kubectl wait --for=condition=ready pod -l app=frontend -n ${{ needs.validate-inputs.outputs.namespace }} --timeout=3m
+
+        echo ""
+        echo "=== Pod Status After Rollback ==="
+        kubectl get pods -n ${{ needs.validate-inputs.outputs.namespace }}
+
+    - name: Run health checks
+      run: |
+        echo "Running health checks..."
+
+        # Test backend health
+        kubectl run health-check --image=curlimages/curl:latest --rm -i --restart=Never \
+          -n ${{ needs.validate-inputs.outputs.namespace }} -- \
+          curl -f http://fastapi-service:8000/health || exit 1
+
+        echo "Health checks passed!"
+
+    - name: Monitor for stability
+      run: |
+        echo "Monitoring deployment for 60 seconds..."
+        sleep 60
+
+        # Check for pod restarts
+        RESTART_COUNT=$(kubectl get pods -n ${{ needs.validate-inputs.outputs.namespace }} -l app=fastapi -o jsonpath='{.items[*].status.containerStatuses[*].restartCount}' | awk '{s+=$1} END {print s}')
+
+        if [ "$RESTART_COUNT" -gt "0" ]; then
+          echo "Warning: Detected $RESTART_COUNT pod restarts after rollback"
+          exit 1
+        fi
+
+        echo "Deployment is stable"
+
+    - name: Show final deployment status
+      if: always()
+      run: |
+        echo ""
+        echo "=== Final Deployment Status ==="
+        echo ""
+        echo "Backend Image: $(kubectl get deployment fastapi -n ${{ needs.validate-inputs.outputs.namespace }} -o jsonpath='{.spec.template.spec.containers[0].image}')"
+        echo "Frontend Image: $(kubectl get deployment frontend -n ${{ needs.validate-inputs.outputs.namespace }} -o jsonpath='{.spec.template.spec.containers[0].image}')"
+        echo ""
+        kubectl get pods -n ${{ needs.validate-inputs.outputs.namespace }}
+        echo ""
+        kubectl get events -n ${{ needs.validate-inputs.outputs.namespace }} --sort-by='.lastTimestamp' | tail -20
+
+    - name: Record rollback
+      if: success()
+      run: |
+        kubectl annotate deployment/fastapi -n ${{ needs.validate-inputs.outputs.namespace }} \
+          kubernetes.io/change-cause="Manual rollback by ${{ github.actor }} - Type: ${{ inputs.rollback_type }}" \
+          --overwrite
+        kubectl annotate deployment/frontend -n ${{ needs.validate-inputs.outputs.namespace }} \
+          kubernetes.io/change-cause="Manual rollback by ${{ github.actor }} - Type: ${{ inputs.rollback_type }}" \
+          --overwrite
+
+  notify:
+    needs: [validate-inputs, rollback]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: Rollback notification
+      run: |
+        if [ "${{ needs.rollback.result }}" == "success" ]; then
+          echo "✅ Rollback completed successfully!"
+          echo "🔄 Environment: ${{ inputs.environment }}"
+          echo "📝 Type: ${{ inputs.rollback_type }}"
+          echo "👤 Performed by: ${{ github.actor }}"
+
+          if [ "${{ inputs.environment }}" == "production" ]; then
+            echo "🚀 Application: https://sogangcomputerclub.org"
+          else
+            echo "🚀 Application: https://staging.sogangcomputerclub.org"
+          fi
+        else
+          echo "❌ Rollback failed!"
+          echo "🔄 Environment: ${{ inputs.environment }}"
+          echo "⚠️  Please check the logs and perform manual intervention if necessary"
+          exit 1
+        fi

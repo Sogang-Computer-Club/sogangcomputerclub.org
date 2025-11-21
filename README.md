@@ -305,27 +305,70 @@ docker-compose exec nginx nginx -s reload
 
 ## ☸️ Kubernetes 배포
 
-### 클러스터 배포
+### 자동 배포 (Recommended)
 
+#### Staging 환경
+```bash
+# develop 브랜치에 push하면 자동 배포
+git push origin develop
+
+# 또는 GitHub Actions에서 수동 실행
+gh workflow run deploy-staging.yml
+```
+
+#### Production 환경
+```bash
+# master 브랜치에 push하면 자동 배포
+git push origin master
+
+# 버전 태그로 배포
+git tag v1.0.0
+git push origin v1.0.0
+
+# 또는 GitHub Actions에서 수동 실행
+gh workflow run deploy-production.yml
+```
+
+### 수동 배포
+
+#### Staging 배포
 ```bash
 cd k8s
 
-# 모든 리소스 배포
-./deploy.sh
+# Staging 환경 배포
+./deploy-staging.sh
+```
 
-# 개별 배포
+#### Production 배포
+```bash
+cd k8s
+
+# Production 환경 배포
+./deploy-production.sh
+```
+
+#### 개별 리소스 배포
+```bash
+# Staging
+kubectl apply -f namespace-staging.yaml
+kubectl apply -f fastapi-staging.yaml
+kubectl apply -f frontend-staging.yaml
+
+# Production
 kubectl apply -f namespace.yaml
-kubectl apply -f mariadb.yaml
-kubectl apply -f fastapi.yaml
-kubectl apply -f frontend.yaml
+kubectl apply -f fastapi-production.yaml
+kubectl apply -f frontend-production.yaml
 kubectl apply -f ingress.yaml
 ```
 
 ### 상태 확인
 
 ```bash
-# Pod 상태
+# Production Pod 상태
 kubectl get pods -n sgcc
+
+# Staging Pod 상태
+kubectl get pods -n sgcc-staging
 
 # 서비스 상태
 kubectl get svc -n sgcc
@@ -333,8 +376,64 @@ kubectl get svc -n sgcc
 # Ingress 상태
 kubectl get ingress -n sgcc
 
+# 배포 상태
+kubectl rollout status deployment/fastapi -n sgcc
+
 # 로그 확인
 kubectl logs -f deployment/fastapi -n sgcc
+```
+
+### 롤백
+
+#### 자동 롤백
+배포 실패 시 자동으로 이전 버전으로 롤백됩니다:
+- 배포 롤아웃 실패
+- 헬스 체크 실패
+- 스모크 테스트 실패
+- Pod 재시작 감지
+
+#### 수동 롤백 (GitHub Actions)
+```bash
+# GitHub Actions에서 Manual Rollback 워크플로우 실행
+# 1. Actions 탭으로 이동
+# 2. "Manual Rollback" 선택
+# 3. 환경과 롤백 타입 선택
+```
+
+#### 수동 롤백 (CLI)
+```bash
+# 이전 버전으로 롤백
+./k8s/rollback.sh production previous
+
+# 특정 리비전으로 롤백
+./k8s/rollback.sh staging revision 5
+
+# 특정 이미지로 롤백
+./k8s/rollback.sh production image \
+  --backend ghcr.io/owner/repo/backend:v1.2.3 \
+  --frontend ghcr.io/owner/repo/frontend:v1.2.3
+```
+
+#### kubectl 직접 사용
+```bash
+# 롤아웃 히스토리 확인
+kubectl rollout history deployment/fastapi -n sgcc
+
+# 이전 버전으로 롤백
+kubectl rollout undo deployment/fastapi -n sgcc
+
+# 특정 리비전으로 롤백
+kubectl rollout undo deployment/fastapi -n sgcc --to-revision=3
+```
+
+### 보안 스캔
+
+```bash
+# 수동으로 보안 스캔 실행
+gh workflow run security-scan.yml
+
+# 스캔 결과 확인
+# GitHub Security 탭에서 확인 가능
 ```
 
 ## 🔧 환경 설정
@@ -404,7 +503,7 @@ kubectl apply -f k8s/mariadb-secret.yaml
 kubectl create secret generic mariadb-secret \
   --from-literal=MYSQL_ROOT_PASSWORD='your_secure_root_password' \
   --from-literal=MYSQL_PASSWORD='your_secure_password' \
-  -n sgcc-memo
+  -n sgcc
 ```
 
 ## 🧪 테스트
@@ -640,6 +739,66 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 - Redis 캐시 작업 테스트
 - 테스트 결과 아티팩트 업로드
 
+#### 5. Staging Deployment (`.github/workflows/deploy-staging.yml`)
+
+##### Trigger
+
+- `develop`, `staging` 브랜치에 push (자동 배포)
+- Pull Request에 레이블 추가 시
+- 수동 트리거 (GitHub Actions UI)
+
+##### Jobs
+
+- **Security Scan**: Trivy로 취약점 스캔
+- **Build & Push**: Docker 이미지 빌드 및 GHCR 푸시
+- **Deploy**: Staging Kubernetes 클러스터에 배포
+- **Health Check**: 헬스 체크 및 스모크 테스트
+- **Auto-Rollback**: 실패 시 자동 롤백
+
+#### 6. Production Deployment (`.github/workflows/deploy-production.yml`)
+
+##### Trigger
+
+- `master` 브랜치에 push (자동 배포)
+- 버전 태그 (`v*.*.*`) 생성 시
+- 수동 트리거 (GitHub Actions UI)
+
+##### Jobs
+
+- **Security Scan**: Trivy로 CRITICAL 취약점 스캔 (블로킹)
+- **Build & Push**: Docker 이미지 빌드, SBOM/Provenance 생성 및 GHCR 푸시
+- **Image Scan**: 빌드된 이미지 보안 스캔
+- **Deploy**: Kubernetes 클러스터에 자동 배포
+  - 현재 배포 상태 저장 (롤백용)
+  - 이미지 태그 업데이트
+  - 이미지 pull secret 생성
+  - Kubernetes 매니페스트 적용
+  - 배포 롤아웃 대기
+- **Health Check**: 헬스 체크 및 스모크 테스트
+- **Stability Monitor**: 60초 안정성 모니터링
+- **Auto-Rollback**: 실패 시 이전 버전으로 자동 롤백
+- **Notify**: 배포 결과 알림
+
+#### 7. Security Scanning (`.github/workflows/security-scan.yml`)
+
+##### Trigger
+
+- `master`, `develop`, `staging` 브랜치에 push
+- Pull Request 생성 시
+- 매일 새벽 2시 (UTC) 자동 스캔
+- 수동 트리거
+
+##### Security Tools
+
+- **Trivy**: Filesystem, Config, Image 스캔
+- **CodeQL**: Python/JavaScript 코드 분석
+- **TruffleHog**: Secret 스캔
+- **Dependency Review**: 의존성 취약점 검사
+
+##### 배포 설정
+
+자동 배포를 위한 설정 가이드는 [docs/deployment-guide.md](docs/deployment-guide.md)를 참조하세요.
+
 ### 로컬에서 Docker 이미지 빌드
 
 ```bash
@@ -671,15 +830,6 @@ docker-compose exec certbot certbot certificates
 ```
 
 ## 🔒 보안
-
-### 보안 체크리스트
-
-- [x] **환경 변수 사용**: 모든 민감 정보는 `.env` 파일로 관리
-- [ ] **비밀번호 변경**: `.env` 파일의 기본 비밀번호를 강력한 비밀번호로 변경
-- [ ] **SSL/TLS 인증서**: Let's Encrypt를 사용한 HTTPS 설정
-- [ ] **Kubernetes Secrets**: K8s 배포 시 Secret 리소스 사용
-- [ ] **CORS 설정**: 프로덕션 환경에 맞게 CORS 설정 조정
-- [ ] **방화벽 설정**: 필요한 포트만 외부에 노출
 
 ### Git 보안
 

@@ -2,7 +2,7 @@ apiVersion: v1
 kind: ConfigMap
 metadata:
   name: app-config
-  namespace: sgcc-memo
+  namespace: sgcc
 data:
   # NOTE: Database password is injected via Secret in the deployment
   # Use format: mysql+aiomysql://memo_user:$(DATABASE_PASSWORD)@mariadb-service:3306/memo_app
