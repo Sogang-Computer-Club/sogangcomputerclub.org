@@ -2,14 +2,14 @@ import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
 from fastapi.responses import JSONResponse, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, AsyncGenerator, Optional, Dict, Any
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 import os
-import redis.asyncio as aioredis
+import redis.asyncio as redis
 from aiokafka import AIOKafkaProducer
 import json
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
@@ -101,7 +101,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize Redis
     try:
-        redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
         await redis_client.ping()
         app.state.redis = redis_client
         logger.info("Lifespan: Redis 연결 성공")
@@ -134,7 +134,7 @@ async def lifespan(app: FastAPI):
         logger.info("Lifespan: Kafka Producer 종료 완료")
 
     if app.state.redis:
-        await app.state.redis.close()
+        await app.state.redis.aclose()
         logger.info("Lifespan: Redis 연결 종료 완료")
 
     await app.state.db_engine.dispose()
@@ -204,8 +204,7 @@ class MemoInDB(MemoBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Dependency Injection ---
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -225,7 +224,7 @@ async def health_check(request: Request) -> Dict[str, Any]:
     """System health check endpoint"""
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).isoformat(),
         "services": {}
     }
 

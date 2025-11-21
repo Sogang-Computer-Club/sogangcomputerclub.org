@@ -59,7 +59,7 @@ class TestAPIEndToEnd:
         assert data["content"] == memo_data["content"]
         assert "id" in data
 
-        return data["id"]
+
 
     def test_get_memos_e2e(self, wait_for_api):
         """Test retrieving all memos"""
