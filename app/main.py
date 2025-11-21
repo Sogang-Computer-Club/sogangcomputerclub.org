@@ -1,17 +1,19 @@
 import sqlalchemy
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from fastapi import FastAPI, HTTPException, Depends, status, Request, Query
-from fastapi.responses import JSONResponse
-from pydantic import BaseModel, Field
+from fastapi.responses import JSONResponse, Response
+from pydantic import BaseModel, Field, ConfigDict
 from typing import List, AsyncGenerator, Optional, Dict, Any
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 import os
-import redis.asyncio as aioredis
+import redis.asyncio as redis
 from aiokafka import AIOKafkaProducer
 import json
+from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import time
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -19,6 +21,26 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
+
+# --- Prometheus Metrics ---
+REQUEST_COUNT = Counter(
+    'fastapi_requests_total',
+    'Total number of requests',
+    ['method', 'endpoint', 'status_code']
+)
+REQUEST_DURATION = Histogram(
+    'fastapi_request_duration_seconds',
+    'Request duration in seconds',
+    ['method', 'endpoint']
+)
+MEMO_COUNT = Gauge(
+    'memo_total',
+    'Total number of memos in the database'
+)
+ACTIVE_CONNECTIONS = Gauge(
+    'fastapi_active_connections',
+    'Number of active database connections'
+)
 
 # --- Environment Configuration ---
 DATABASE_URL = os.getenv(
@@ -79,7 +101,7 @@ async def lifespan(app: FastAPI):
 
     # Initialize Redis
     try:
-        redis_client = aioredis.from_url(REDIS_URL, decode_responses=True)
+        redis_client = redis.from_url(REDIS_URL, decode_responses=True)
         await redis_client.ping()
         app.state.redis = redis_client
         logger.info("Lifespan: Redis 연결 성공")
@@ -112,7 +134,7 @@ async def lifespan(app: FastAPI):
         logger.info("Lifespan: Kafka Producer 종료 완료")
 
     if app.state.redis:
-        await app.state.redis.close()
+        await app.state.redis.aclose()
         logger.info("Lifespan: Redis 연결 종료 완료")
 
     await app.state.db_engine.dispose()
@@ -135,6 +157,23 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# --- Prometheus Middleware ---
+@app.middleware("http")
+async def prometheus_middleware(request: Request, call_next):
+    start_time = time.time()
+
+    response = await call_next(request)
+
+    duration = time.time() - start_time
+    endpoint = request.url.path
+    method = request.method
+    status_code = response.status_code
+
+    REQUEST_COUNT.labels(method=method, endpoint=endpoint, status_code=status_code).inc()
+    REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
+
+    return response
 
 # --- Pydantic Models ---
 class MemoBase(BaseModel):
@@ -165,8 +204,7 @@ class MemoInDB(MemoBase):
     created_at: datetime
     updated_at: datetime
 
-    class Config:
-        from_attributes = True
+    model_config = ConfigDict(from_attributes=True)
 
 # --- Dependency Injection ---
 async def get_db(request: Request) -> AsyncGenerator[AsyncSession, None]:
@@ -186,7 +224,7 @@ async def health_check(request: Request) -> Dict[str, Any]:
     """System health check endpoint"""
     health_status = {
         "status": "healthy",
-        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "timestamp": datetime.now(UTC).isoformat(),
         "services": {}
     }
 
@@ -221,6 +259,12 @@ async def health_check(request: Request) -> Dict[str, Any]:
         health_status["status"] = "degraded"
 
     return health_status
+
+# --- Prometheus Metrics Endpoint ---
+@app.get("/metrics", tags=["System"])
+async def metrics():
+    """Prometheus metrics endpoint"""
+    return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
 
 # --- Memo API Endpoints ---
 @app.post("/memos/", response_model=MemoInDB, status_code=status.HTTP_201_CREATED, tags=["Memos"])

@@ -1,5 +1,5 @@
 import pytest
-import redis.asyncio as aioredis
+import redis.asyncio as redis
 import asyncio
 
 
@@ -7,12 +7,12 @@ import asyncio
 async def test_redis_connection():
     """Test connection to Redis"""
     try:
-        redis_client = aioredis.from_url("redis://localhost:6380", decode_responses=True)
+        redis_client = redis.from_url("redis://localhost:6380", decode_responses=True)
         pong = await redis_client.ping()
 
         assert pong is True
 
-        await redis_client.close()
+        await redis_client.aclose()
 
     except Exception as e:
         pytest.fail(f"Failed to connect to Redis: {e}")
@@ -22,7 +22,7 @@ async def test_redis_connection():
 async def test_redis_set_and_get():
     """Test setting and getting values from Redis"""
     try:
-        redis_client = aioredis.from_url("redis://localhost:6380", decode_responses=True)
+        redis_client = redis.from_url("redis://localhost:6380", decode_responses=True)
 
         # Set a test value
         await redis_client.set("test_key", "test_value")
@@ -35,7 +35,7 @@ async def test_redis_set_and_get():
         # Clean up - delete the test key
         await redis_client.delete("test_key")
 
-        await redis_client.close()
+        await redis_client.aclose()
 
     except Exception as e:
         pytest.fail(f"Failed to set and get Redis value: {e}")
@@ -45,7 +45,7 @@ async def test_redis_set_and_get():
 async def test_redis_expiration():
     """Test Redis key expiration"""
     try:
-        redis_client = aioredis.from_url("redis://localhost:6380", decode_responses=True)
+        redis_client = redis.from_url("redis://localhost:6380", decode_responses=True)
 
         # Set a key with 2 second expiration
         await redis_client.setex("expiring_key", 2, "expiring_value")
@@ -61,7 +61,7 @@ async def test_redis_expiration():
         value = await redis_client.get("expiring_key")
         assert value is None
 
-        await redis_client.close()
+        await redis_client.aclose()
 
     except Exception as e:
         pytest.fail(f"Failed to test Redis expiration: {e}")
@@ -71,7 +71,7 @@ async def test_redis_expiration():
 async def test_redis_delete():
     """Test deleting keys from Redis"""
     try:
-        redis_client = aioredis.from_url("redis://localhost:6380", decode_responses=True)
+        redis_client = redis.from_url("redis://localhost:6380", decode_responses=True)
 
         # Set multiple keys
         await redis_client.set("delete_test_1", "value1")
@@ -89,7 +89,7 @@ async def test_redis_delete():
         assert value1 is None
         assert value2 is None
 
-        await redis_client.close()
+        await redis_client.aclose()
 
     except Exception as e:
         pytest.fail(f"Failed to test Redis delete: {e}")
@@ -99,7 +99,7 @@ async def test_redis_delete():
 async def test_redis_exists():
     """Test checking if keys exist in Redis"""
     try:
-        redis_client = aioredis.from_url("redis://localhost:6380", decode_responses=True)
+        redis_client = redis.from_url("redis://localhost:6380", decode_responses=True)
 
         # Set a key
         await redis_client.set("exists_test", "value")
@@ -115,7 +115,7 @@ async def test_redis_exists():
         # Clean up
         await redis_client.delete("exists_test")
 
-        await redis_client.close()
+        await redis_client.aclose()
 
     except Exception as e:
         pytest.fail(f"Failed to test Redis exists: {e}")
@@ -127,7 +127,7 @@ async def test_redis_json_data():
     try:
         import json
 
-        redis_client = aioredis.from_url("redis://localhost:6380", decode_responses=True)
+        redis_client = redis.from_url("redis://localhost:6380", decode_responses=True)
 
         # Store JSON data
         test_data = {
@@ -150,7 +150,7 @@ async def test_redis_json_data():
         # Clean up
         await redis_client.delete("json_test")
 
-        await redis_client.close()
+        await redis_client.aclose()
 
     except Exception as e:
         pytest.fail(f"Failed to test Redis JSON data: {e}")

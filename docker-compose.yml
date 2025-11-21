@@ -24,7 +24,7 @@ services:
       - MYSQL_USER=${MYSQL_USER:-memo_user}
       - MYSQL_PASSWORD=${MYSQL_PASSWORD:-phoenix}
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       - mariadb_data:/var/lib/mysql
     networks:
@@ -33,7 +33,7 @@ services:
   redis:
     image: redis:7-alpine
     ports:
-      - "6380:6379"
+      - "6381:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -112,10 +112,46 @@ services:
     links:
       - nginx
 
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    networks:
+      - app-network
+    depends_on:
+      - fastapi
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3001:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - app-network
+    depends_on:
+      - prometheus
+
 volumes:
   mariadb_data:
   redis_data:
   certbot_certs:
+  prometheus_data:
+  grafana_data:
 
 networks:
   app-network:
