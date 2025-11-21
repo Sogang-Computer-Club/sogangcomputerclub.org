@@ -45,11 +45,7 @@ services:
     image: redis:7-alpine
     restart: unless-stopped
     ports:
-<<<<<<< HEAD
-      - "6380:6379"
-=======
       - "6381:6379"
->>>>>>> feature/CI-CD
     volumes:
       - redis_data:/data
     networks:
