@@ -137,8 +137,6 @@ services:
     depends_on:
       - nginx
 
-<<<<<<< HEAD
-=======
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
@@ -186,16 +184,12 @@ services:
       timeout: 10s
       retries: 3
 
->>>>>>> feature/CI-CD
 volumes:
   mariadb_data:
   redis_data:
   certbot_certs:
-<<<<<<< HEAD
-=======
   prometheus_data:
   grafana_data:
->>>>>>> feature/CI-CD
 
 networks:
   app-network:

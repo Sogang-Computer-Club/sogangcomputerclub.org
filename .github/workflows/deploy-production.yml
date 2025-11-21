@@ -280,17 +280,17 @@ jobs:
     - name: Deployment notification
       run: |
         if [ "${{ needs.deploy-production.result }}" == "success" ]; then
-          echo "✅ Production deployment successful!"
-          echo "🚀 Application is live at https://sogangcomputerclub.org"
-          echo "📦 Commit: ${{ github.sha }}"
-          echo "👤 Deployed by: ${{ github.actor }}"
-          echo "🔒 Security scans: Passed"
-          echo "✓ Health checks: Passed"
-          echo "✓ Smoke tests: Passed"
+          echo "Production deployment successful!"
+          echo "Application is live at https://sogangcomputerclub.org"
+          echo "Commit: ${{ github.sha }}"
+          echo "Deployed by: ${{ github.actor }}"
+          echo "Security scans: Passed"
+          echo "Health checks: Passed"
+          echo "Smoke tests: Passed"
         else
-          echo "❌ Production deployment failed!"
-          echo "🔄 Automatic rollback has been initiated"
-          echo "📦 Failed commit: ${{ github.sha }}"
-          echo "⚠️  Please check the logs for details"
+          echo "Production deployment failed!"
+          echo "Automatic rollback has been initiated"
+          echo "Failed commit: ${{ github.sha }}"
+          echo "Please check the logs for details"
           echo "::error::Production deployment failed - rollback completed"
         fi
