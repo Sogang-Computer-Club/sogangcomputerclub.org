@@ -178,7 +178,7 @@ jobs:
         host: ${{ secrets.PROD_HOST }}
         username: ${{ secrets.PROD_USERNAME }}
         key: ${{ secrets.PROD_SSH_KEY }}
-        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        port: ${{ secrets.PROD_SSH_PORT || 65522 }}
         script_stop: true
         script: |
           # Navigate to deployment directory
@@ -211,7 +211,7 @@ jobs:
         host: ${{ secrets.PROD_HOST }}
         username: ${{ secrets.PROD_USERNAME }}
         key: ${{ secrets.PROD_SSH_KEY }}
-        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        port: ${{ secrets.PROD_SSH_PORT || 65522 }}
         script: |
           # Test backend health endpoint
           curl -f http://localhost:8000/health || exit 1
@@ -228,7 +228,7 @@ jobs:
         host: ${{ secrets.PROD_HOST }}
         username: ${{ secrets.PROD_USERNAME }}
         key: ${{ secrets.PROD_SSH_KEY }}
-        port: ${{ secrets.PROD_SSH_PORT || 22 }}
+        port: ${{ secrets.PROD_SSH_PORT || 65522 }}
         script: |
           echo "Deployment failed, rolling back to previous version..."
           cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
