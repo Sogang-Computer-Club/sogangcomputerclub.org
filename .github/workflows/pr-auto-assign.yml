@@ -32,18 +32,18 @@ jobs:
           script: |
             const message = `Thank you for your contribution!
 
-This PR is from a fork. A maintainer will review it shortly.
+            This PR is from a fork. A maintainer will review it shortly.
 
-**Next steps:**
-- Ensure all CI checks pass
-- Respond to any review feedback
-- Keep the PR up to date with the base branch
+            **Next steps:**
+            - Ensure all CI checks pass
+            - Respond to any review feedback
+            - Keep the PR up to date with the base branch
 
-**Review process:**
-- Maintainers typically review PRs within 2-3 business days
-- You'll receive feedback or approval via GitHub notifications
+            **Review process:**
+            - Maintainers typically review PRs within 2-3 business days
+            - You'll receive feedback or approval via GitHub notifications
 
-If you have questions, feel free to ask in the comments!`;
+            If you have questions, feel free to ask in the comments!`;
 
             await github.rest.issues.createComment({
               issue_number: context.issue.number,
@@ -51,7 +51,7 @@ If you have questions, feel free to ask in the comments!`;
               repo: context.repo.repo,
               body: message
             });
-            
+
             // Add "external contribution" label
             await github.rest.issues.addLabels({
               issue_number: context.issue.number,
