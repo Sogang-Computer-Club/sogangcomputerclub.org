@@ -13,6 +13,7 @@ import redis.asyncio as redis
 from aiokafka import AIOKafkaProducer
 import json
 from prometheus_client import Counter, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+import asyncio
 import time
 
 # --- Logging Configuration ---
@@ -67,6 +68,18 @@ memos = sqlalchemy.Table(
     sqlalchemy.Column("created_at", sqlalchemy.DateTime, server_default=sqlalchemy.func.now()),
     sqlalchemy.Column("updated_at", sqlalchemy.DateTime, server_default=sqlalchemy.func.now(), onupdate=sqlalchemy.func.now()),
 )
+
+# --- Background Tasks ---
+async def monitor_database_connections(app: FastAPI):
+    while True:
+        try:
+            if hasattr(app.state, 'db_engine'):
+                # Access the sync engine's pool to get connection stats
+                pool = app.state.db_engine.sync_engine.pool
+                ACTIVE_CONNECTIONS.set(pool.checkedout())
+        except Exception as e:
+            logger.error(f"Error monitoring DB connections: {e}")
+        await asyncio.sleep(5)
 
 # --- Application Lifespan Management ---
 @asynccontextmanager
@@ -124,6 +137,20 @@ async def lifespan(app: FastAPI):
 
     logger.info("Lifespan: 모든 서비스가 성공적으로 시작되었습니다.")
 
+    # Initialize MEMO_COUNT
+    try:
+        async with engine.connect() as conn:
+            result = await conn.execute(sqlalchemy.text("SELECT COUNT(*) FROM memos"))
+            count = result.scalar()
+            MEMO_COUNT.set(count)
+            logger.info(f"Lifespan: MEMO_COUNT initialized to {count}")
+    except Exception as e:
+        logger.warning(f"Lifespan: Failed to initialize MEMO_COUNT - {e}")
+
+    # Start Background Tasks
+    monitoring_task = asyncio.create_task(monitor_database_connections(app))
+
+
     yield
 
     # Shutdown
@@ -137,6 +164,12 @@ async def lifespan(app: FastAPI):
         await app.state.redis.aclose()
         logger.info("Lifespan: Redis 연결 종료 완료")
 
+    monitoring_task.cancel()
+    try:
+        await monitoring_task
+    except asyncio.CancelledError:
+        pass
+    
     await app.state.db_engine.dispose()
     logger.info("Lifespan: 데이터베이스 연결 종료 완료")
     logger.info("Lifespan: 모든 서비스가 정상적으로 종료되었습니다.")
@@ -304,6 +337,9 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
         await db.rollback()
         logger.error(f"메모 생성 중 오류 발생: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="메모 생성에 실패했습니다.")
+    finally:
+        if 'created_id' in locals():
+             MEMO_COUNT.inc()
 
 @app.get("/memos/", response_model=List[MemoInDB], tags=["Memos"])
 async def read_memos(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
@@ -400,6 +436,9 @@ async def delete_memo(memo_id: int, request: Request, db: AsyncSession = Depends
         await db.rollback()
         logger.error(f"메모(ID:{memo_id}) 삭제 중 오류 발생: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="메모 삭제 중 오류가 발생했습니다.")
+    finally:
+        if 'delete_query' in locals(): # Simple check if we reached the deletion point
+             MEMO_COUNT.dec()
 
 @app.get("/memos/search/", response_model=List[MemoInDB], tags=["Memos"])
 async def search_memos(q: str = Query(..., min_length=1, description="검색어"), db: AsyncSession = Depends(get_db)):
