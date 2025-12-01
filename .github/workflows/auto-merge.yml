@@ -1,0 +1,99 @@
+name: Auto Merge Approved PRs
+
+on:
+  pull_request_review:
+    types: [submitted]
+  check_suite:
+    types: [completed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  auto-merge:
+    runs-on: ubuntu-latest
+    # Only run for PRs from the same repository (not forks)
+    if: |
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      !github.event.pull_request.draft
+    steps:
+      - name: Check if PR is approved and all checks pass
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+
+            if (!pr) {
+              console.log('No PR found in context');
+              return;
+            }
+
+            // Get PR reviews
+            const { data: reviews } = await github.rest.pulls.listReviews({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+
+            // Check if PR has at least one approval
+            const approvals = reviews.filter(review => review.state === 'APPROVED');
+            const hasApproval = approvals.length > 0;
+
+            console.log(`PR #${pr.number} has ${approvals.length} approval(s)`);
+
+            if (!hasApproval) {
+              console.log('PR is not yet approved');
+              return;
+            }
+
+            // Get PR status checks
+            const { data: checks } = await github.rest.checks.listForRef({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              ref: pr.head.sha
+            });
+
+            const allChecksPassed = checks.check_runs.every(
+              check => check.status === 'completed' && check.conclusion === 'success'
+            );
+
+            console.log(`All checks passed: ${allChecksPassed}`);
+
+            // Check for auto-merge label
+            const hasAutoMergeLabel = pr.labels.some(label => label.name === 'auto-merge');
+
+            if (hasApproval && allChecksPassed && hasAutoMergeLabel) {
+              console.log(`Auto-merging PR #${pr.number}`);
+              
+              try {
+                await github.rest.pulls.merge({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  pull_number: pr.number,
+                  merge_method: 'squash',
+                  commit_title: `${pr.title} (#${pr.number})`,
+                  commit_message: `Automatically merged after approval and passing all checks.`
+                });
+                
+                console.log('PR merged successfully');
+                
+                // Add comment
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: pr.number,
+                  body: 'This PR has been automatically merged after receiving approval and passing all checks.'
+                });
+              } catch (error) {
+                console.error('Failed to merge PR:', error);
+                core.setFailed(`Failed to auto-merge: ${error.message}`);
+              }
+            } else {
+              const missing = [];
+              if (!hasApproval) missing.push('approval');
+              if (!allChecksPassed) missing.push('passing checks');
+              if (!hasAutoMergeLabel) missing.push('auto-merge label');
+              
+              console.log(`Cannot auto-merge. Missing: ${missing.join(', ')}`);
+            }

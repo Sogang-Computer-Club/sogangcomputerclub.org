@@ -1,0 +1,61 @@
+name: Auto Assign Reviewers
+
+on:
+  pull_request:
+    types: [opened, ready_for_review]
+
+permissions:
+  pull-requests: write
+  issues: write
+  contents: read
+
+jobs:
+  auto-assign:
+    runs-on: ubuntu-latest
+    # Skip if PR is from a fork (external contributors)
+    if: github.event.pull_request.head.repo.full_name == github.repository
+    steps:
+      - name: Auto assign based on CODEOWNERS
+        uses: hkusu/review-assign-action@v1
+        with:
+          assignees: ${{ github.actor }}
+          reviewers: revenantonthemission
+
+  notify-external-pr:
+    runs-on: ubuntu-latest
+    # Only run for PRs from forks
+    if: github.event.pull_request.head.repo.full_name != github.repository
+    steps:
+      - name: Comment on external PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const message = `Thank you for your contribution!
+
+This PR is from a fork. A maintainer will review it shortly.
+
+**Next steps:**
+- Ensure all CI checks pass
+- Respond to any review feedback
+- Keep the PR up to date with the base branch
+
+**Review process:**
+- Maintainers typically review PRs within 2-3 business days
+- You'll receive feedback or approval via GitHub notifications
+
+If you have questions, feel free to ask in the comments!`;
+
+            await github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: message
+            });
+            
+            // Add "external contribution" label
+            await github.rest.issues.addLabels({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: ['external contribution', 'needs review']
+            });

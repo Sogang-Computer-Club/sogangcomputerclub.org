@@ -2,20 +2,20 @@ name: Backend CI
 
 on:
   push:
-    branches: [ main, master, develop, 'feature/backend-*' ]
+    branches: [main, master, "feature/backend-*", "feature/CI-CD"]
     paths:
-      - 'app/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
-      - '.github/workflows/backend-ci.yml'
+      - "app/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
+      - ".github/workflows/backend-ci.yml"
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master]
     paths:
-      - 'app/**'
-      - 'tests/**'
-      - 'pyproject.toml'
-      - 'uv.lock'
+      - "app/**"
+      - "tests/**"
+      - "pyproject.toml"
+      - "uv.lock"
 
 jobs:
   test:
@@ -23,66 +23,66 @@ jobs:
 
     strategy:
       matrix:
-        python-version: ['3.13']
+        python-version: ["3.13"]
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v5
-      with:
-        python-version: ${{ matrix.python-version }}
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
-      run: |
-        uv sync
+      - name: Install dependencies
+        run: |
+          uv sync
 
-    - name: Run unit tests
-      run: |
-        uv run pytest tests/ -v --ignore=tests/integration --ignore=tests/load
+      - name: Run unit tests
+        run: |
+          uv run pytest tests/ -v --ignore=tests/integration --ignore=tests/load
 
-    - name: Generate coverage report
-      run: |
-        uv run pytest tests/ --cov=app --cov-report=xml --cov-report=html --ignore=tests/integration --ignore=tests/load
-      continue-on-error: true
+      - name: Generate coverage report
+        run: |
+          uv run pytest tests/ --cov=app --cov-report=xml --cov-report=html --ignore=tests/integration --ignore=tests/load
+        continue-on-error: true
 
-    - name: Upload coverage reports
-      uses: codecov/codecov-action@v5
-      if: success()
-      with:
-        file: ./coverage.xml
-        flags: unittests
-        name: codecov-umbrella
-      continue-on-error: true
+      - name: Upload coverage reports
+        uses: codecov/codecov-action@v5
+        if: success()
+        with:
+          file: ./coverage.xml
+          flags: unittests
+          name: codecov-umbrella
+        continue-on-error: true
 
   lint:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
-    - name: Install dependencies
-      run: |
-        uv sync
+      - name: Install dependencies
+        run: |
+          uv sync
 
-    - name: Check code formatting with ruff (if available)
-      run: |
-        uv run ruff check app/ tests/ || echo "Ruff not installed, skipping"
-      continue-on-error: true
+      - name: Check code formatting with ruff (if available)
+        run: |
+          uv run ruff check app/ tests/ || echo "Ruff not installed, skipping"
+        continue-on-error: true

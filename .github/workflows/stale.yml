@@ -1,0 +1,67 @@
+name: Stale PR and Issue Management
+
+on:
+    schedule:
+        - cron: "0 0 * * *" # Daily at midnight UTC
+    workflow_dispatch:
+
+permissions:
+    issues: write
+    pull-requests: write
+
+jobs:
+    stale:
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/stale@v9
+              with:
+                  repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+                  # PR settings
+                  days-before-pr-stale: 30
+                  days-before-pr-close: 7
+                  stale-pr-message: |
+                      This pull request has been automatically marked as stale because it has not had recent activity.
+
+                      **What happens next:**
+                      - This PR will be closed in 7 days if no further activity occurs
+                      - You can remove the stale label or comment to keep it open
+                      - Maintainers may still merge this PR if it's valuable
+
+                      **To keep this PR active:**
+                      - Respond to review comments
+                      - Push new commits
+                      - Comment with updates or questions
+
+                      Thank you for your contribution!
+                  close-pr-message: |
+                      This pull request has been automatically closed due to inactivity.
+
+                      Feel free to reopen it if you'd like to continue working on it. We appreciate your contribution!
+                  stale-pr-label: "stale"
+                  # Issue settings
+                  days-before-issue-stale: 60
+                  days-before-issue-close: 14
+                  stale-issue-message: |
+                      This issue has been automatically marked as stale because it has not had recent activity.
+
+                      It will be closed in 14 days if no further activity occurs.
+
+                      If this issue is still relevant, please comment to keep it open.
+                  close-issue-message: |
+                      This issue has been automatically closed due to inactivity.
+
+                      If you believe this is still an issue, feel free to reopen it with additional context.
+                  stale-issue-label: "stale"
+                  # Exempt labels
+                  exempt-pr-labels: "pinned,security,high-priority,work-in-progress"
+                  exempt-issue-labels: "pinned,security,high-priority,bug"
+
+                  # Operations per run (to avoid rate limiting)
+                  operations-per-run: 100
+
+                  # Don't remove stale label on updates
+                  remove-stale-when-updated: true
+
+                  # Ascending order (oldest first)
+                  ascending: true

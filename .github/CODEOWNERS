@@ -1,0 +1,36 @@
+# CODEOWNERS - Automatically request reviews from code owners
+# 
+# Each line is a file pattern followed by one or more owners.
+# Order is important; the last matching pattern takes precedence.
+# 
+# Learn more: https://docs.github.com/en/repositories/managing-your-repositorys-settings-and-features/customizing-your-repository/about-code-owners
+
+# Default owners for everything in the repo
+* @revenantonthemission
+
+# Backend code
+/app/ @revenantonthemission
+/tests/ @revenantonthemission
+pyproject.toml @revenantonthemission
+uv.lock @revenantonthemission
+
+# Frontend code
+/frontend/ @revenantonthemission
+
+# Infrastructure and DevOps
+/k8s/ @revenantonthemission
+/scripts/ @revenantonthemission
+docker-compose*.yml @revenantonthemission
+Dockerfile @revenantonthemission
+/frontend/Dockerfile @revenantonthemission
+
+# CI/CD workflows
+/.github/workflows/ @revenantonthemission
+
+# Documentation
+*.md @revenantonthemission
+/docs/ @revenantonthemission
+
+# Configuration files
+.gitignore @revenantonthemission
+.env.example @revenantonthemission
