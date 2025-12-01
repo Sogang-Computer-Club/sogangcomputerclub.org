@@ -1,38 +1,58 @@
 ---
-name: Bug report
+name: Bug Report
 about: Create a report to help us improve
-title: ''
-labels: ''
+title: '[BUG] '
+labels: bug
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+## Description
 
-**To Reproduce**
-Steps to reproduce the behavior:
+<!-- A clear and concise description of what the bug is -->
+
+## Steps to Reproduce
+
 1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
+2. Click on '...'
+3. Scroll down to '...'
 4. See error
 
-**Expected behavior**
-A clear and concise description of what you expected to happen.
+## Expected Behavior
 
-**Screenshots**
-If applicable, add screenshots to help explain your problem.
+<!-- A clear and concise description of what you expected to happen -->
 
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
+## Actual Behavior
 
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+<!-- A clear and concise description of what actually happened -->
 
-**Additional context**
-Add any other context about the problem here.
+## Screenshots
+
+<!-- If applicable, add screenshots to help explain your problem -->
+
+## Environment
+
+**Desktop/Server:**
+- OS: [e.g., Ubuntu 22.04, macOS 14.0]
+- Browser: [e.g., Chrome 120, Firefox 121]
+- Version: [e.g., commit hash or release version]
+
+**Mobile (if applicable):**
+- Device: [e.g., iPhone 12, Samsung Galaxy S21]
+- OS: [e.g., iOS 17.0, Android 13]
+- Browser: [e.g., Safari, Chrome]
+
+## Logs
+
+<!-- If applicable, paste relevant logs here -->
+
+```
+[paste logs here]
+```
+
+## Additional Context
+
+<!-- Add any other context about the problem here -->
+
+## Possible Solution
+
+<!-- Optional: If you have ideas on how to fix this issue -->

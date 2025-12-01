@@ -1,0 +1,81 @@
+{
+    "categories": [
+        {
+            "title": "## Features",
+            "labels": [
+                "type: feature",
+                "enhancement"
+            ]
+        },
+        {
+            "title": "## Bug Fixes",
+            "labels": [
+                "type: bug",
+                "fix"
+            ]
+        },
+        {
+            "title": "## Documentation",
+            "labels": [
+                "type: documentation",
+                "docs"
+            ]
+        },
+        {
+            "title": "## Maintenance",
+            "labels": [
+                "type: chore",
+                "dependencies"
+            ]
+        },
+        {
+            "title": "## Performance",
+            "labels": [
+                "type: performance",
+                "perf"
+            ]
+        },
+        {
+            "title": "## Security",
+            "labels": [
+                "security"
+            ]
+        },
+        {
+            "title": "## Other Changes",
+            "labels": []
+        }
+    ],
+    "ignore_labels": [
+        "ignore-for-release",
+        "duplicate",
+        "invalid",
+        "wontfix"
+    ],
+    "sort": "ASC",
+    "template": "#{{NUMBER}} - #{{TITLE}} (@#{{AUTHOR}})",
+    "pr_template": "- #{{TITLE}} (#{{NUMBER}}) by @#{{AUTHOR}}",
+    "empty_template": "- No changes in this category",
+    "label_extractor": [
+        {
+            "pattern": "^(feat|feature):",
+            "target": "type: feature"
+        },
+        {
+            "pattern": "^fix:",
+            "target": "type: bug"
+        },
+        {
+            "pattern": "^docs:",
+            "target": "type: documentation"
+        },
+        {
+            "pattern": "^chore:",
+            "target": "type: chore"
+        },
+        {
+            "pattern": "^perf:",
+            "target": "type: performance"
+        }
+    ]
+}
