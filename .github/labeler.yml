@@ -1,40 +1,40 @@
 # Labeler configuration
 # Label PRs based on changed files
 
-"backend":
+backend:
   - "app/**/*"
   - "tests/**/*"
   - "pyproject.toml"
   - "uv.lock"
 
-"frontend":
+frontend:
   - "frontend/**/*"
 
-"infrastructure":
+infrastructure:
   - "k8s/**/*"
   - "docker-compose*.yml"
   - "**/Dockerfile"
   - "nginx*.conf"
 
-"ci/cd":
+ci/cd:
   - ".github/workflows/**/*"
   - ".github/actions/**/*"
 
-"documentation":
+documentation:
   - "**/*.md"
   - "docs/**/*"
 
-"dependencies":
+dependencies:
   - "package*.json"
   - "pyproject.toml"
   - "uv.lock"
   - "**/requirements*.txt"
 
-"security":
+security:
   - ".github/workflows/security-scan.yml"
   - "SECURITY.md"
 
-"configuration":
+configuration:
   - "*.toml"
   - "*.yaml"
   - "*.yml"
