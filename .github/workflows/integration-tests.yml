@@ -2,32 +2,31 @@ name: Integration Tests
 
 on:
   push:
-    branches: [ main, master, develop, 'feature/backend-*' ]
+    branches: [main, master, develop, "feature/backend-*"]
   pull_request:
-    branches: [ main, master, develop ]
+    branches: [main, master, develop]
   schedule:
     # Run integration tests daily at 2 AM UTC
-    - cron: '0 2 * * *'
+    - cron: "0 2 * * *"
 
 jobs:
   integration-test:
     runs-on: ubuntu-latest
 
     services:
-      mariadb:
-        image: mariadb:10.11
+      postgres:
+        image: postgres:15-alpine
         env:
-          MYSQL_ROOT_PASSWORD: rootpassword
-          MYSQL_DATABASE: memo_app
-          MYSQL_USER: memo_user
-          MYSQL_PASSWORD: phoenix
+          POSTGRES_USER: memo_user
+          POSTGRES_PASSWORD: phoenix
+          POSTGRES_DB: memo_app
         ports:
-          - 3306:3306
+          - 5432:5432
         options: >-
-          --health-cmd="mysqladmin ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
 
       redis:
         image: redis:7-alpine
@@ -40,63 +39,63 @@ jobs:
           --health-retries=5
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Install uv
-      uses: astral-sh/setup-uv@v5
-      with:
-        enable-cache: true
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
 
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.13'
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
 
-    - name: Install dependencies
-      run: |
-        uv sync
+      - name: Install dependencies
+        run: |
+          uv sync
 
-    - name: Wait for services to be ready
-      run: |
-        echo "Waiting for MariaDB..."
-        for i in {1..30}; do
-          if mysqladmin ping -h 127.0.0.1 -P 3306 -umemo_user -pphoenix --silent; then
-            echo "MariaDB is ready"
-            break
-          fi
-          echo "Waiting for MariaDB... ($i/30)"
-          sleep 1
-        done
+      - name: Wait for services to be ready
+        run: |
+          echo "Waiting for PostgreSQL..."
+          for i in {1..30}; do
+            if docker exec ${{ job.services.postgres.id }} pg_isready; then
+              echo "PostgreSQL is ready"
+              break
+            fi
+            echo "Waiting for PostgreSQL... ($i/30)"
+            sleep 1
+          done
 
-        echo "Waiting for Redis..."
-        for i in {1..30}; do
-          if redis-cli -h 127.0.0.1 -p 6380 ping > /dev/null 2>&1; then
-            echo "Redis is ready"
-            break
-          fi
-          echo "Waiting for Redis... ($i/30)"
-          sleep 1
-        done
+          echo "Waiting for Redis..."
+          for i in {1..30}; do
+            if redis-cli -h 127.0.0.1 -p 6380 ping > /dev/null 2>&1; then
+              echo "Redis is ready"
+              break
+            fi
+            echo "Waiting for Redis... ($i/30)"
+            sleep 1
+          done
 
-    - name: Initialize database schema
-      run: |
-        uv run python scripts/init_test_db.py
+      - name: Initialize database schema
+        run: |
+          uv run python scripts/init_test_db.py
 
-    - name: Run database integration tests
-      run: |
-        uv run pytest tests/integration/test_database.py -v
+      - name: Run database integration tests
+        run: |
+          uv run pytest tests/integration/test_database.py -v
 
-    - name: Run Redis integration tests
-      run: |
-        uv run pytest tests/integration/test_redis.py -v
+      - name: Run Redis integration tests
+        run: |
+          uv run pytest tests/integration/test_redis.py -v
 
-    - name: Upload test results
-      uses: actions/upload-artifact@v4
-      if: always()
-      with:
-        name: integration-test-results
-        path: |
-          pytest-report.xml
-          coverage.xml
-        retention-days: 7
+      - name: Upload test results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: integration-test-results
+          path: |
+            pytest-report.xml
+            coverage.xml
+          retention-days: 7
