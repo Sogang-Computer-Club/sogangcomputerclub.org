@@ -170,6 +170,21 @@ jobs:
         run: |
           echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       # --- FIX END ---
+      - name: Check for required secrets
+        run: |
+          missing_secrets=""
+          if [ -z "${{ secrets.POSTGRES_USER }}" ]; then missing_secrets+="POSTGRES_USER "; fi
+          if [ -z "${{ secrets.POSTGRES_PASSWORD }}" ]; then missing_secrets+="POSTGRES_PASSWORD "; fi
+          if [ -z "${{ secrets.POSTGRES_DB }}" ]; then missing_secrets+="POSTGRES_DB "; fi
+          if [ -z "${{ secrets.PROD_HOST }}" ]; then missing_secrets+="PROD_HOST "; fi
+          if [ -z "${{ secrets.PROD_USERNAME }}" ]; then missing_secrets+="PROD_USERNAME "; fi
+          if [ -z "${{ secrets.PROD_SSH_KEY }}" ]; then missing_secrets+="PROD_SSH_KEY "; fi
+
+          if [ -n "$missing_secrets" ]; then
+            echo "::error::The following secrets are missing: $missing_secrets"
+            exit 1
+          fi
+
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         with:
