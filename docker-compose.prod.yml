@@ -1,6 +1,5 @@
 services:
   sgcc-postgres:
-    container_name: sgcc-postgres
     image: postgres:15-alpine
     restart: unless-stopped
     environment:
@@ -18,7 +17,6 @@ services:
       retries: 5
 
   sgcc-backend:
-    container_name: sgcc-backend
     build: .
     image: ghcr.io/${GITHUB_REPOSITORY}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -43,7 +41,6 @@ services:
       start_period: 40s
 
   sgcc-zookeeper:
-    container_name: sgcc-zookeeper
     image: confluentinc/cp-zookeeper:latest
     restart: unless-stopped
     environment:
@@ -53,7 +50,6 @@ services:
       - backend_sgcc-network
 
   sgcc-kafka:
-    container_name: sgcc-kafka
     image: confluentinc/cp-kafka:7.4.0
     restart: unless-stopped
     depends_on:
@@ -73,7 +69,6 @@ services:
       - backend_sgcc-network
 
   sgcc-frontend:
-    container_name: sgcc-frontend
     build: ./frontend
     image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
@@ -102,7 +97,6 @@ services:
       retries: 3
 
   sgcc-nginx:
-    container_name: sgcc-nginx
     image: nginx:latest
     restart: unless-stopped
     ports:
@@ -118,7 +112,6 @@ services:
       - sgcc-frontend
 
   sgcc-redis:
-    container_name: sgcc-redis
     image: redis:7-alpine
     restart: unless-stopped
     ports:
@@ -134,7 +127,6 @@ services:
       retries: 5
 
   sgcc-postgres-exporter:
-    container_name: sgcc-postgres-exporter
     image: prometheuscommunity/postgres-exporter
     restart: unless-stopped
     ports:
@@ -147,7 +139,6 @@ services:
       - sgcc-postgres
 
   sgcc-nginx-exporter:
-    container_name: sgcc-nginx-exporter
     image: nginx/nginx-prometheus-exporter:latest
     restart: unless-stopped
     ports:
@@ -160,7 +151,6 @@ services:
       - sgcc-nginx
 
   sgcc-prometheus:
-    container_name: sgcc-prometheus
     image: prom/prometheus:latest
     restart: unless-stopped
     ports:
@@ -193,7 +183,6 @@ services:
       retries: 3
 
   sgcc-grafana:
-    container_name: sgcc-grafana
     image: grafana/grafana:latest
     restart: unless-stopped
     ports:
