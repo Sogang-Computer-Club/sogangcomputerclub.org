@@ -219,6 +219,15 @@ jobs:
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+            # Stop and remove containers from the current project (if any exist from previous runs)
+            docker-compose -f docker-compose.prod.yml down --remove-orphans || true
+
+            # Cleanup legacy containers (to free up ports from old deployments)
+            legacy_containers="sgcc-redis sgcc-backend sgcc-frontend sgcc-nginx sgcc-postgres sgcc-kafka sgcc-zookeeper sgcc-prometheus sgcc-grafana sgcc-postgres-exporter sgcc-nginx-exporter"
+            for container in $legacy_containers; do
+              docker rm -f $container || true
+            done
+
             # Pull and deploy
             docker-compose -f docker-compose.prod.yml pull
             docker-compose -f docker-compose.prod.yml up -d --remove-orphans
