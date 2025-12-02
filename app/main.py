@@ -46,7 +46,7 @@ ACTIVE_CONNECTIONS = Gauge(
 # --- Environment Configuration ---
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "mysql+aiomysql://memo_user:changeme@mariadb:3306/memo_app"
+    "postgresql+asyncpg://admin:82292@sgcc-db:5432/sgcc-backend-db"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
@@ -312,12 +312,14 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
             category=memo.category,
             is_archived=memo.is_archived,
             is_favorite=memo.is_favorite,
-            author=memo.author
-        )
+            author=memo.author,
+            created_at=datetime.now(UTC).replace(tzinfo=None),
+            updated_at=datetime.now(UTC).replace(tzinfo=None)
+        ).returning(memos.c.id)
         result = await db.execute(query)
         await db.commit()
 
-        created_id = result.lastrowid
+        created_id = result.scalar()
         created_memo_query = memos.select().where(memos.c.id == created_id)
         created_memo = await db.execute(created_memo_query)
         memo_data = created_memo.mappings().one()
