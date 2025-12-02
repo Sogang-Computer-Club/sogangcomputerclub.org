@@ -1,45 +1,45 @@
 ---
-name: Feature Request
-about: Suggest an idea for this project
+name: 기능 요청
+about: 이 프로젝트에 대한 아이디어를 제안해주세요.
 title: '[FEATURE] '
 labels: enhancement
 assignees: ''
 ---
 
-## Is your feature request related to a problem?
+## 요청하고자 하는 기능이 어떤 문제를 해결하나요?
 
-<!-- A clear and concise description of what the problem is. Ex. I'm always frustrated when [...] -->
+<!-- 문제가 무엇인지 명확하고 간결하게 설명해주세요. 예: [...] 할 때 항상 답답합니다. -->
 
-## Describe the solution you'd like
+## 원하시는 해결책을 설명해주세요.
 
-<!-- A clear and concise description of what you want to happen -->
+<!-- 원하시는 동작에 대해 명확하고 간결하게 설명해주세요. -->
 
-## Describe alternatives you've considered
+## 고려해본 대안을 설명해주세요.
 
-<!-- A clear and concise description of any alternative solutions or features you've considered -->
+<!-- 고려해본 대안 솔루션이나 기능에 대해 명확하고 간결하게 설명해주세요. -->
 
-## Use Cases
+## 사용 사례.
 
-<!-- Describe who would benefit from this feature and how they would use it -->
+<!-- 이 기능이 누구에게 도움이 되고 어떻게 사용할지 설명해주세요. -->
 
-## Benefits
+## 이점
 
-<!-- Explain the benefits this feature would bring to the project -->
+<!-- 이 기능이 프로젝트에 가져올 이점을 설명해주세요. -->
 
 - 
 - 
 - 
 
-## Implementation Ideas
+## 구현 아이디어
 
-<!-- Optional: If you have ideas on how to implement this feature -->
+<!-- 이 기능을 구현하는 방법에 대한 아이디어가 있다면 여기에 추가해주세요. -->
 
-## Additional Context
+## 비고
 
-<!-- Add any other context or screenshots about the feature request here -->
+<!-- 기능 요청에 대한 추가적인 내용이나 스크린샷을 여기에 추가해주세요. -->
 
-## Are you willing to contribute?
+## 기여하실 의향이 있으신가요?
 
-- [ ] Yes, I'd like to work on this feature
-- [ ] No, just suggesting
-- [ ] Maybe, if guided
+- [ ] 네, 이 기능을 작업하고 싶습니다
+- [ ] 아니요, 제안만 합니다.
+- [ ] 가이드가 있다면 참여할지도?

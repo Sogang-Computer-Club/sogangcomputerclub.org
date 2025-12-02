@@ -1,73 +1,73 @@
-## Description
+## 설명
 
-<!-- Provide a brief description of the changes in this PR -->
+<!-- 이 PR의 변경 사항에 대해 간략하게 설명해주세요 -->
 
-## Type of Change
+## 변경 유형
 
-<!-- Mark the relevant option with an "x" -->
+<!-- 해당되는 옵션에 "x"를 표시해주세요. 체크 표시로 나타납니다. -->
 
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Refactoring (no functional changes)
-- [ ] Performance improvement
-- [ ] Test addition/improvement
-- [ ] Chore (dependencies, configs, etc.)
+- [ ] 버그 수정 (문제를 수정하는 비호환성 없는 변경)
+- [ ] 새로운 기능 (기능을 추가하는 비호환성 없는 변경)
+- [ ] 주요 변경 사항 (기존 기능이 예상대로 작동하지 않게 하는 수정 또는 기능)
+- [ ] 문서 업데이트
+- [ ] 리팩토링 (기능적 변경 없음)
+- [ ] 성능 개선
+- [ ] 테스트 추가/개선
+- [ ] 기타 (의존성, 설정 등)
 
-## Related Issues
+## 관련 이슈
 
-<!-- Link to related issues, e.g., "Fixes #123" or "Closes #456" -->
+<!-- 이 PR과 관련된 이슈를 링크해주세요. 예: "Fixes #123" 또는 "Closes #456" -->
 
 - Fixes #
 - Related to #
 
-## Changes Made
+## 변경 사항
 
-<!-- List the main changes made in this PR -->
+<!-- 이 PR에서 이루어진 주요 변경 사항을 나열해주세요 -->
 
 - 
 - 
 - 
 
-## Testing
+## 테스트
 
-<!-- Describe the tests you ran and how to reproduce them -->
+<!-- 이 PR를 위해 수행한 테스트와 재현 방법을 설명해주세요. 테스트를 수행하지 않았다면 이 부분은 비워두시면 됩니다. -->
 
-- [ ] Backend tests pass (`uv run pytest tests/`)
-- [ ] Frontend tests pass (`cd frontend && npm run test`)
-- [ ] Integration tests pass
-- [ ] Manual testing completed
+- [ ] 백엔드 테스트 통과 (`uv run pytest tests/`)
+- [ ] 프론트엔드 테스트 통과 (`cd frontend && npm run test`)
+- [ ] 통합 테스트 통과
+- [ ] 수동 테스트 완료
 
-### Test Evidence
+### 테스트 증빙자료
 
-<!-- Provide screenshots, logs, or describe manual testing performed -->
+<!-- 테스트 과정이 드러나는 스크린샷 혹은 로그를 제공하거나 수행한 수동 테스트를 설명해주세요 -->
 
-## Checklist
+## 체크리스트
 
-<!-- Mark completed items with an "x" -->
+<!-- 완료된 항목에 "x"를 표시해주세요. 체크 표시로 나타납니다. -->
 
-- [ ] My code follows the project's style guidelines
-- [ ] I have performed a self-review of my code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings or errors
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
-- [ ] Any dependent changes have been merged and published
+- [ ] 프로젝트의 스타일 가이드를 준수했습니다.
+- [ ] 스스로 코드를 검토했습니다.
+- [ ] 이해하기 어려운 부분에 주석을 달았습니다.
+- [ ] 문서에 해당 변경 사항을 반영했습니다.
+- [ ] 이 PR의 변경 사항으로 인해 새로운 경고나 오류가 발생하지 않습니다.
+- [ ] 이 PR에서 이루어진 수정이 효과적이거나 기능이 작동함을 증명하는 테스트를 추가했습니다.
+- [ ] 로컬 환경에서 단위 테스트를 통과했습니다.
+- [ ] 이 PR의 의존성(Dependency) 변경 사항이 병합되고 게시되었습니다.
 
-## Screenshots (if applicable)
+## 스크린샷 (해당되는 경우)
 
-<!-- Add screenshots to help explain your changes -->
+<!-- 변경 사항을 설명하는 데 도움이 되는 스크린샷을 추가해주세요. -->
 
-## Additional Notes
+## 추가 참고 사항
 
-<!-- Add any other context about the PR here -->
+<!-- PR에 대한 추가 내용을 여기에 추가해주세요. -->
 
-## For Reviewers
+## 리뷰어를 위한 참고 사항
 
-<!-- Optional: Specific areas you'd like reviewers to focus on -->
+<!-- 선택 사항입니다. 리뷰어가 집중해서 봐주었으면 하는 특정 요소나 부분을 적어주세요. -->
 
 ---
 
-**By submitting this pull request, I confirm that my contribution is made under the terms of the project's license.**
+**이 Pull Request를 제출함으로써, 자신의 기여가 프로젝트의 라이선스 조건에 따라 이루어졌음을 확인합니다.**

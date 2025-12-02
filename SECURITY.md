@@ -1,21 +1,18 @@
-# Security Policy
+# 보안 정책
 
-## Supported Versions
+## 지원되는 버전
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
+이 섹션에서는 보안 업데이트가 지원되는 프로젝트 버전을 알려줍니다.
 
-| Version | Supported          |
+| 버전 | 지원 여부 |
 | ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| 5.1.x | 지원됨 |
+| 5.0.x | 미지원 |
+| 4.0.x | 지원됨 |
+| < 4.0 | 미지원 |
 
-## Reporting a Vulnerability
+## 취약점 신고
 
-Use this section to tell people how to report a vulnerability.
+이 섹션에서는 취약점을 신고하는 방법을 알려줍니다.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+신고할 곳, 신고된 취약점에 대한 업데이트를 얼마나 자주 받을 수 있는지, 취약점이 수락되거나 거부될 경우 예상되는 사항 등을 알려주세요.
