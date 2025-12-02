@@ -242,6 +242,19 @@ jobs:
 
             echo "Smoke tests passed!"
 
+      - name: Debug on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 65522 }}
+          script: |
+            echo "=== BACKEND LOGS ==="
+            docker logs sgcc-backend --tail 100
+            echo "===================="
+
       - name: Rollback on failure
         if: failure()
         uses: appleboy/ssh-action@v1.0.3
@@ -257,6 +270,8 @@ jobs:
             # Use latest tag (previous deployment)
             export GITHUB_REPOSITORY="${{ env.REPO_LC }}"
             export IMAGE_TAG=latest
+            # Force remove containers to avoid conflicts
+            docker-compose -f docker-compose.prod.yml rm -f -s
             docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
             echo "Rollback completed"
