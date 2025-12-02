@@ -170,6 +170,21 @@ jobs:
         run: |
           echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
       # --- FIX END ---
+      - name: Check for required secrets
+        run: |
+          missing_secrets=""
+          if [ -z "${{ secrets.POSTGRES_USER }}" ]; then missing_secrets+="POSTGRES_USER "; fi
+          if [ -z "${{ secrets.POSTGRES_PASSWORD }}" ]; then missing_secrets+="POSTGRES_PASSWORD "; fi
+          if [ -z "${{ secrets.POSTGRES_DB }}" ]; then missing_secrets+="POSTGRES_DB "; fi
+          if [ -z "${{ secrets.PROD_HOST }}" ]; then missing_secrets+="PROD_HOST "; fi
+          if [ -z "${{ secrets.PROD_USERNAME }}" ]; then missing_secrets+="PROD_USERNAME "; fi
+          if [ -z "${{ secrets.PROD_SSH_KEY }}" ]; then missing_secrets+="PROD_SSH_KEY "; fi
+
+          if [ -n "$missing_secrets" ]; then
+            echo "::error::The following secrets are missing: $missing_secrets"
+            exit 1
+          fi
+
       - name: Deploy to production server
         uses: appleboy/ssh-action@v1.0.3
         with:
@@ -199,6 +214,7 @@ jobs:
             export DATABASE_URL="${{ secrets.DATABASE_URL }}"
             export GRAFANA_ADMIN_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
 
+
             # Login to GitHub Container Registry
             echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
@@ -226,6 +242,19 @@ jobs:
 
             echo "Smoke tests passed!"
 
+      - name: Debug on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 65522 }}
+          script: |
+            echo "=== BACKEND LOGS ==="
+            docker logs sgcc-backend --tail 100
+            echo "===================="
+
       - name: Rollback on failure
         if: failure()
         uses: appleboy/ssh-action@v1.0.3
@@ -241,6 +270,10 @@ jobs:
             # Use latest tag (previous deployment)
             export GITHUB_REPOSITORY="${{ env.REPO_LC }}"
             export IMAGE_TAG=latest
+            # Force remove containers to avoid conflicts
+            docker-compose -f docker-compose.prod.yml rm -f -s
+            # Explicitly remove sgcc-redis in case it's not tracked by the previous compose file
+            docker rm -f sgcc-redis || true
             docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
             echo "Rollback completed"
