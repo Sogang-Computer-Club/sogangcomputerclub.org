@@ -346,14 +346,12 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
             except Exception as e:
                 logger.warning(f"Failed to publish to Kafka: {e}")
 
+        MEMO_COUNT.inc()
         return memo_data
     except Exception as e:
         await db.rollback()
         logger.error(f"메모 생성 중 오류 발생: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="메모 생성에 실패했습니다.")
-    finally:
-        if 'created_id' in locals():
-             MEMO_COUNT.inc()
 
 
 @app.get("/memos/", response_model=List[MemoInDB], tags=["Memos"])
