@@ -110,9 +110,14 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: 데이터베이스 리소스가 app.state에 저장되었습니다.")
 
     # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(metadata.create_all)
-    logger.info("Lifespan: 데이터베이스 테이블이 성공적으로 준비되었습니다.")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(metadata.create_all)
+        logger.info("Lifespan: 데이터베이스 테이블이 성공적으로 준비되었습니다.")
+    except Exception as e:
+        logger.error(f"Lifespan: 데이터베이스 테이블 생성 실패 - {e}")
+        # We don't raise here to allow the app to start and report health status
+
 
     # Initialize Redis
     try:
