@@ -117,18 +117,6 @@ services:
       - sgcc-backend
       - sgcc-frontend
 
-  sgcc-redis-exporter:
-    container_name: sgcc-redis-exporter
-    image: oliver006/redis_exporter
-    restart: unless-stopped
-    ports:
-      - "9121:9121"
-    environment:
-      - REDIS_ADDR=sgcc-redis:6379
-      - REDIS_PASSWORD=82292
-    networks:
-      - backend_sgcc-network
-
   sgcc-postgres-exporter:
     container_name: sgcc-postgres-exporter
     image: prometheuscommunity/postgres-exporter
@@ -219,7 +207,6 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-
 volumes:
   postgres_data:
   prometheus_data:

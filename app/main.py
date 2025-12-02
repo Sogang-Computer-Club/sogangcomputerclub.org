@@ -22,7 +22,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 # --- Prometheus Metrics ---
 REQUEST_COUNT = Counter(
     'fastapi_requests_total',
@@ -42,6 +41,7 @@ ACTIVE_CONNECTIONS = Gauge(
     'fastapi_active_connections',
     'Number of active database connections'
 )
+
 
 # --- Environment Configuration ---
 DATABASE_URL = os.getenv(
@@ -80,6 +80,8 @@ async def monitor_database_connections(app: FastAPI):
         except Exception as e:
             logger.error(f"Error monitoring DB connections: {e}")
         await asyncio.sleep(5)
+
+
 
 # --- Application Lifespan Management ---
 @asynccontextmanager
@@ -151,6 +153,10 @@ async def lifespan(app: FastAPI):
     monitoring_task = asyncio.create_task(monitor_database_connections(app))
 
 
+
+
+
+
     yield
 
     # Shutdown
@@ -169,6 +175,8 @@ async def lifespan(app: FastAPI):
         await monitoring_task
     except asyncio.CancelledError:
         pass
+
+
     
     await app.state.db_engine.dispose()
     logger.info("Lifespan: 데이터베이스 연결 종료 완료")
@@ -207,6 +215,8 @@ async def prometheus_middleware(request: Request, call_next):
     REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
 
     return response
+
+
 
 # --- Pydantic Models ---
 class MemoBase(BaseModel):
@@ -293,12 +303,12 @@ async def health_check(request: Request) -> Dict[str, Any]:
 
     return health_status
 
+
 # --- Prometheus Metrics Endpoint ---
 @app.get("/metrics", tags=["System"])
 async def metrics():
     """Prometheus metrics endpoint"""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
 # --- Memo API Endpoints ---
 @app.post("/memos/", response_model=MemoInDB, status_code=status.HTTP_201_CREATED, tags=["Memos"])
 async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Depends(get_db)):
@@ -339,6 +349,7 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
     finally:
         if 'created_id' in locals():
              MEMO_COUNT.inc()
+
 
 @app.get("/memos/", response_model=List[MemoInDB], tags=["Memos"])
 async def read_memos(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
@@ -438,6 +449,7 @@ async def delete_memo(memo_id: int, request: Request, db: AsyncSession = Depends
     finally:
         if 'delete_query' in locals(): # Simple check if we reached the deletion point
              MEMO_COUNT.dec()
+
 
 @app.get("/memos/search/", response_model=List[MemoInDB], tags=["Memos"])
 async def search_memos(q: str = Query(..., min_length=1, description="검색어"), db: AsyncSession = Depends(get_db)):

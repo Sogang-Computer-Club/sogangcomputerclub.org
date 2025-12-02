@@ -177,7 +177,6 @@ services:
       - app-network
     depends_on:
       - prometheus
-
 volumes:
   postgres_data:
   redis_data:
