@@ -1,162 +1,152 @@
 import pytest
 import asyncio
-import aiomysql
+import asyncpg
 import os
 
 
 @pytest.mark.asyncio
-async def test_mariadb_connection():
-    """Test connection to MariaDB database"""
+async def test_postgres_connection():
+    """Test connection to PostgreSQL database"""
     try:
-        connection = await aiomysql.connect(
-            host="localhost",
-            port=3306,
-            user="memo_user",
-            password="phoenix",
-            db="memo_app"
+        connection = await asyncpg.connect(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5433")),
+            user=os.getenv("POSTGRES_USER", "memo_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
+            database=os.getenv("POSTGRES_DB", "memo_app")
         )
 
         assert connection is not None
 
-        async with connection.cursor() as cursor:
-            await cursor.execute("SELECT 1")
-            result = await cursor.fetchone()
-            assert result == (1,)
+        result = await connection.fetchval("SELECT 1")
+        assert result == 1
 
-        connection.close()
+        await connection.close()
 
     except Exception as e:
-        pytest.fail(f"Failed to connect to MariaDB: {e}")
+        pytest.fail(f"Failed to connect to PostgreSQL: {e}")
 
 
 @pytest.mark.asyncio
-async def test_mariadb_database_exists():
+async def test_postgres_database_exists():
     """Test that the memo_app database exists"""
     try:
-        connection = await aiomysql.connect(
-            host="localhost",
-            port=3306,
-            user="memo_user",
-            password="phoenix",
-            db="memo_app"
+        connection = await asyncpg.connect(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5433")),
+            user=os.getenv("POSTGRES_USER", "memo_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
+            database="postgres"
         )
 
-        async with connection.cursor() as cursor:
-            await cursor.execute("SHOW DATABASES LIKE 'memo_app'")
-            result = await cursor.fetchone()
-            assert result is not None
-            assert result[0] == "memo_app"
+        result = await connection.fetchval(f"SELECT datname FROM pg_database WHERE datname = '{os.getenv('POSTGRES_DB', 'memo_app')}'")
+        assert result == os.getenv("POSTGRES_DB", "memo_app")
 
-        connection.close()
+        await connection.close()
 
     except Exception as e:
         pytest.fail(f"Failed to verify database exists: {e}")
 
 
 @pytest.mark.asyncio
-async def test_mariadb_memos_table_exists():
+async def test_postgres_memos_table_exists():
     """Test that the memos table exists"""
     try:
-        connection = await aiomysql.connect(
-            host="localhost",
-            port=3306,
-            user="memo_user",
-            password="phoenix",
-            db="memo_app"
+        connection = await asyncpg.connect(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5433")),
+            user=os.getenv("POSTGRES_USER", "memo_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
+            database=os.getenv("POSTGRES_DB", "memo_app")
         )
 
-        async with connection.cursor() as cursor:
-            await cursor.execute("SHOW TABLES LIKE 'memos'")
-            result = await cursor.fetchone()
-            assert result is not None
-            assert result[0] == "memos"
+        result = await connection.fetchval(
+            "SELECT to_regclass('public.memos')"
+        )
+        assert result == 'memos'
 
-        connection.close()
+        await connection.close()
 
     except Exception as e:
         pytest.fail(f"Failed to verify memos table exists: {e}")
 
 
 @pytest.mark.asyncio
-async def test_mariadb_memos_table_structure():
+async def test_postgres_memos_table_structure():
     """Test the structure of the memos table"""
     try:
-        connection = await aiomysql.connect(
-            host="localhost",
-            port=3306,
-            user="memo_user",
-            password="phoenix",
-            db="memo_app"
+        connection = await asyncpg.connect(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5433")),
+            user=os.getenv("POSTGRES_USER", "memo_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
+            database=os.getenv("POSTGRES_DB", "memo_app")
         )
 
-        async with connection.cursor() as cursor:
-            await cursor.execute("DESCRIBE memos")
-            columns = await cursor.fetchall()
+        rows = await connection.fetch(
+            "SELECT column_name FROM information_schema.columns WHERE table_name = 'memos'"
+        )
 
-            column_names = [col[0] for col in columns]
+        column_names = [row['column_name'] for row in rows]
 
-            expected_columns = [
-                'id', 'title', 'content', 'tags', 'priority',
-                'category', 'is_archived', 'is_favorite', 'author',
-                'created_at', 'updated_at'
-            ]
+        expected_columns = [
+            'id', 'title', 'content', 'tags', 'priority',
+            'category', 'is_archived', 'is_favorite', 'author',
+            'created_at', 'updated_at'
+        ]
 
-            for expected_col in expected_columns:
-                assert expected_col in column_names, f"Column {expected_col} not found in memos table"
+        for expected_col in expected_columns:
+            assert expected_col in column_names, f"Column {expected_col} not found in memos table"
 
-        connection.close()
+        await connection.close()
 
     except Exception as e:
         pytest.fail(f"Failed to verify memos table structure: {e}")
 
 
 @pytest.mark.asyncio
-async def test_mariadb_insert_and_retrieve():
+async def test_postgres_insert_and_retrieve():
     """Test inserting and retrieving data from memos table"""
     try:
-        connection = await aiomysql.connect(
-            host="localhost",
-            port=3306,
-            user="memo_user",
-            password="phoenix",
-            db="memo_app"
+        connection = await asyncpg.connect(
+            host=os.getenv("POSTGRES_HOST", "localhost"),
+            port=int(os.getenv("POSTGRES_PORT", "5433")),
+            user=os.getenv("POSTGRES_USER", "memo_user"),
+            password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
+            database=os.getenv("POSTGRES_DB", "memo_app")
         )
 
-        async with connection.cursor() as cursor:
-            # Insert test data
-            await cursor.execute(
-                """
-                INSERT INTO memos (title, content, priority)
-                VALUES (%s, %s, %s)
-                """,
-                ("Integration Test Memo", "This is a test memo for integration testing", 2)
-            )
-            await connection.commit()
+        # Insert test data
+        await connection.execute(
+            """
+            INSERT INTO memos (title, content, priority)
+            VALUES ($1, $2, $3)
+            """,
+            "Integration Test Memo", "This is a test memo for integration testing", 2
+        )
 
-            # Retrieve the inserted data
-            await cursor.execute(
-                """
-                SELECT title, content, priority
-                FROM memos
-                WHERE title = %s
-                """,
-                ("Integration Test Memo",)
-            )
-            result = await cursor.fetchone()
+        # Retrieve the inserted data
+        row = await connection.fetchrow(
+            """
+            SELECT title, content, priority
+            FROM memos
+            WHERE title = $1
+            """,
+            "Integration Test Memo"
+        )
 
-            assert result is not None
-            assert result[0] == "Integration Test Memo"
-            assert result[1] == "This is a test memo for integration testing"
-            assert result[2] == 2
+        assert row is not None
+        assert row['title'] == "Integration Test Memo"
+        assert row['content'] == "This is a test memo for integration testing"
+        assert row['priority'] == 2
 
-            # Clean up - delete the test data
-            await cursor.execute(
-                "DELETE FROM memos WHERE title = %s",
-                ("Integration Test Memo",)
-            )
-            await connection.commit()
+        # Clean up - delete the test data
+        await connection.execute(
+            "DELETE FROM memos WHERE title = $1",
+            "Integration Test Memo"
+        )
 
-        connection.close()
+        await connection.close()
 
     except Exception as e:
         pytest.fail(f"Failed to insert and retrieve data: {e}")

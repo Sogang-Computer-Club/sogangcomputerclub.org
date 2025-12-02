@@ -75,11 +75,10 @@ GITHUB_REPOSITORY=YOUR_USERNAME/sogangcomputerclub.org
 IMAGE_TAG=latest
 
 # Database Configuration
-MYSQL_ROOT_PASSWORD=CHANGE_ME_ROOT_PASSWORD
-MYSQL_DATABASE=memo_app
-MYSQL_USER=memo_user
-MYSQL_PASSWORD=CHANGE_ME_USER_PASSWORD
-DATABASE_URL=mysql+aiomysql://memo_user:CHANGE_ME_USER_PASSWORD@mariadb:3306/memo_app
+POSTGRES_USER=memo_user
+POSTGRES_PASSWORD=CHANGE_ME_USER_PASSWORD
+POSTGRES_DB=memo_app
+DATABASE_URL=postgresql+asyncpg://memo_user:CHANGE_ME_USER_PASSWORD@postgres:5432/memo_app
 
 # Redis Configuration
 REDIS_URL=redis://redis:6379

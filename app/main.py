@@ -313,11 +313,10 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
             is_archived=memo.is_archived,
             is_favorite=memo.is_favorite,
             author=memo.author
-        )
+        ).returning(memos.c.id)
         result = await db.execute(query)
+        created_id = result.scalar_one()
         await db.commit()
-
-        created_id = result.lastrowid
         created_memo_query = memos.select().where(memos.c.id == created_id)
         created_memo = await db.execute(created_memo_query)
         memo_data = created_memo.mappings().one()

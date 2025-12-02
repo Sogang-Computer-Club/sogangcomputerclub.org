@@ -11,10 +11,10 @@ fi
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
 TIMESTAMP=$(date +%Y%m%d_%H%M%S)
 BACKUP_FILE="${BACKUP_DIR}/memo_app_backup_${TIMESTAMP}.sql"
-CONTAINER_NAME="${CONTAINER_NAME_PREFIX:-sogangcomputercluborg}-mariadb-1"
-DB_USER="${MYSQL_USER:-memo_user}"
-DB_PASS="${MYSQL_PASSWORD:-changeme}"
-DB_NAME="${MYSQL_DATABASE:-memo_app}"
+CONTAINER_NAME="${CONTAINER_NAME_PREFIX:-sogangcomputercluborg}-postgres-1"
+DB_USER="${POSTGRES_USER:-memo_user}"
+DB_PASS="${POSTGRES_PASSWORD:-phoenix}"
+DB_NAME="${POSTGRES_DB:-memo_app}"
 
 # Keep only the last 30 backups
 KEEP_BACKUPS=30
@@ -25,7 +25,7 @@ echo "Creating backup: ${BACKUP_FILE}"
 mkdir -p "${BACKUP_DIR}"
 
 # Create backup
-docker exec ${CONTAINER_NAME} mysqldump -u${DB_USER} -p${DB_PASS} ${DB_NAME} > "${BACKUP_FILE}"
+docker exec -e PGPASSWORD=${DB_PASS} ${CONTAINER_NAME} pg_dump -U ${DB_USER} ${DB_NAME} > "${BACKUP_FILE}"
 
 if [ $? -eq 0 ]; then
     echo "Backup created successfully: ${BACKUP_FILE}"

@@ -28,8 +28,8 @@
                ┌────────────────┼────────────────┐
                │                │                │
           ┌────▼─────┐     ┌────▼────┐      ┌────▼─────┐
-          │ MariaDB  │     │  Redis  │      │  Kafka   │
-          │  :3306   │     │  :6380  │      │  :9092   │
+          │PostgreSQL│     │  Redis  │      │  Kafka   │
+          │  :5432   │     │  :6380  │      │  :9092   │
           └──────────┘     └─────────┘      └────┬─────┘
                                                  │
                                             ┌────▼─────┐
@@ -44,7 +44,7 @@
 
 - FastAPI
 - Uvicorn ASGI 서버
-- MariaDB 데이터베이스
+- PostgreSQL 데이터베이스
 - SQLAlchemy ORM
 
 #### Frontend
@@ -99,7 +99,7 @@ docker-compose up -d
 - **API 서버**: http://localhost:8000
 - **API 문서**: http://localhost:8000/docs
 - **Redis**: localhost:6381
-- **MariaDB**: localhost:3307
+- **PostgreSQL**: localhost:5432
 - **Kafka**: localhost:9092
 
 ## 프로젝트 구조
@@ -117,7 +117,7 @@ sogangcomputerclub.org/
 │   ├── integration/            # 통합 테스트
 │   │   ├── __init__.py
 │   │   ├── test_docker_services.py  # Docker 서비스 상태 테스트
-│   │   ├── test_database.py         # MariaDB 연결 테스트
+│   │   ├── test_database.py         # PostgreSQL 연결 테스트
 │   │   ├── test_redis.py            # Redis 연결 테스트
 │   │   ├── test_kafka.py            # Kafka 연결 테스트
 │   │   └── test_api_e2e.py          # E2E API 테스트
@@ -303,8 +303,8 @@ docker-compose down -v
 # Backend 컨테이너 접속
 docker-compose exec fastapi /bin/bash
 
-# MariaDB 접속 (.env에 설정한 비밀번호 사용)
-docker-compose exec mariadb mysql -umemo_user -p memo_app
+# PostgreSQL 접속 (.env에 설정한 비밀번호 사용)
+docker-compose exec postgres psql -U memo_user -d memo_app
 
 # Redis CLI 접속
 docker-compose exec redis redis-cli
@@ -468,13 +468,12 @@ cp .env.example .env
 
 ```bash
 # Database Configuration
-MYSQL_ROOT_PASSWORD=your_secure_root_password_here    # 변경 필수!
-MYSQL_DATABASE=memo_app
-MYSQL_USER=memo_user
-MYSQL_PASSWORD=your_secure_password_here              # 변경 필수!
+POSTGRES_USER=memo_user
+POSTGRES_PASSWORD=your_secure_password_here              # 변경 필수!
+POSTGRES_DB=memo_app
 
 # Database URL for FastAPI
-DATABASE_URL=mysql+aiomysql://memo_user:your_secure_password_here@mariadb:3306/memo_app
+DATABASE_URL=postgresql+asyncpg://memo_user:your_secure_password_here@postgres:5432/memo_app
 
 # Redis Configuration
 REDIS_URL=redis://redis:6379
@@ -513,9 +512,8 @@ kubectl apply -f k8s/mariadb-secret.yaml
 또는 커맨드라인에서 직접 생성:
 
 ```bash
-kubectl create secret generic mariadb-secret \
-  --from-literal=MYSQL_ROOT_PASSWORD='your_secure_root_password' \
-  --from-literal=MYSQL_PASSWORD='your_secure_password' \
+kubectl create secret generic postgres-secret \
+  --from-literal=POSTGRES_PASSWORD='your_secure_password' \
   -n sgcc
 ```
 
@@ -560,7 +558,7 @@ uv run pytest tests/integration/ -v
 
 # 특정 통합 테스트만 실행
 uv run pytest tests/integration/test_docker_services.py -v  # Docker 서비스 상태
-uv run pytest tests/integration/test_database.py -v         # MariaDB 연결
+uv run pytest tests/integration/test_database.py -v         # PostgreSQL 연결
 uv run pytest tests/integration/test_redis.py -v            # Redis 연결
 uv run pytest tests/integration/test_kafka.py -v            # Kafka 연결
 uv run pytest tests/integration/test_api_e2e.py -v          # E2E API 테스트
@@ -569,7 +567,7 @@ uv run pytest tests/integration/test_api_e2e.py -v          # E2E API 테스트
 #### 통합 테스트 항목
 
 - Docker Compose 서비스 상태 확인
-- MariaDB 데이터베이스 연결 및 CRUD
+- PostgreSQL 데이터베이스 연결 및 CRUD
 - Redis 캐시 작업 (set, get, delete, expiration)
 - Kafka 메시지 전송 및 수신
 - 전체 API 라이프사이클 (E2E)
@@ -669,7 +667,7 @@ docker-compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
 docker-compose ps
 
 # 네트워크 연결 확인
-docker-compose exec fastapi ping mariadb
+docker-compose exec fastapi ping postgres
 docker-compose exec fastapi ping redis
 docker-compose exec fastapi ping kafka
 ```
@@ -746,7 +744,7 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 
 ##### Jobs
 
-- MariaDB, Redis 서비스 컨테이너 시작
+- PostgreSQL, Redis 서비스 컨테이너 시작
 - 데이터베이스 스키마 초기화 (scripts/init_test_db.py)
 - 데이터베이스 연결 테스트
 - Redis 캐시 작업 테스트
