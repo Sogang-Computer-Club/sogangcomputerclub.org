@@ -4,12 +4,12 @@
 
 홈페이지는 FastAPI + SvelteKit 기반으로 설계되었으며, SGCC의 공식 서버에서는 홈페이지를 서비스하기 위해 Docker, Kubernetes, Redis, Kafka를 비롯한 클라우드 네이티브 아키텍처를 채택하고 있습니다.
 
-## 🏗️ 아키텍처
+## 아키텍처
 
 ```text
                     ┌──────────┐
                     │ Certbot  │
-                    │ (SSL)    │
+                    │  (SSL)   │
                     └────┬─────┘
                          │
           ┌──────────────▼──────────────┐
@@ -62,7 +62,7 @@
 - Certbot (SSL/TLS 인증서)
 - Kubernetes (선택적 배포)
 
-## 🚀 빠른 시작
+## 빠른 시작
 
 ### 필수 요구사항
 
@@ -98,18 +98,17 @@ docker-compose up -d
 - **프론트엔드**: http://localhost:3000 (직접 접속)
 - **API 서버**: http://localhost:8000
 - **API 문서**: http://localhost:8000/docs
-- **Redis**: localhost:6380
-- **MariaDB**: localhost:3306
+- **Redis**: localhost:6381
+- **MariaDB**: localhost:3307
 - **Kafka**: localhost:9092
 
-## 📁 프로젝트 구조
+## 프로젝트 구조
 
 ```text
 sogangcomputerclub.org/
 ├── app/                        # Backend (FastAPI)
 │   ├── __init__.py
-│   ├── main.py                 # 메인 API 애플리케이션
-│   └── services.py             # Redis/Kafka 서비스 로직
+│   └── main.py                 # 메인 API 애플리케이션
 ├── tests/                      # 테스트 코드
 │   ├── __init__.py
 │   ├── conftest.py             # pytest 설정 및 fixture
@@ -126,7 +125,12 @@ sogangcomputerclub.org/
 │       ├── locustfile.py       # Locust 트래픽 테스트
 │       └── performance_test.py # 성능 측정 스크립트
 ├── scripts/                    # 유틸리티 스크립트
-│   └── init_test_db.py         # CI용 데이터베이스 스키마 초기화
+│   ├── init_test_db.py         # CI용 데이터베이스 스키마 초기화
+│   ├── backup-database.sh      # DB 백업 스크립트
+│   ├── restore-database.sh     # DB 복구 스크립트
+│   ├── certbot.sh              # SSL 인증서 관리 스크립트
+│   ├── nginx.sh                # Nginx 시작 스크립트
+│   └── setup-production-server.sh # 프로덕션 서버 설정 스크립트
 ├── frontend/                   # Frontend (SvelteKit)
 │   ├── src/                    # 소스 코드
 │   │   ├── routes/             # SvelteKit 라우트
@@ -154,15 +158,28 @@ sogangcomputerclub.org/
 │   ├── ingress.yaml
 │   ├── configmap.yaml
 │   ├── kind-config.yaml
+│   ├── deploy-production.sh
+│   ├── deploy-staging.sh
 │   └── deploy.sh
 ├── backups/                    # 데이터베이스 백업
 │   └── README.md               # 백업/복구 가이드
 ├── .github/                    # GitHub 설정
 │   ├── workflows/              # GitHub Actions CI/CD
+│   │   ├── auto-merge.yml      # PR 자동 병합
 │   │   ├── backend-ci.yml      # Backend 테스트 자동화
-│   │   ├── frontend-ci.yml     # Frontend 테스트 자동화
+│   │   ├── codeql.yml          # 코드 보안 분석
+│   │   ├── deploy-production.yml # 프로덕션 배포
 │   │   ├── docker-build.yml    # Docker 이미지 빌드/푸시
-│   │   └── integration-tests.yml # 통합 테스트 자동화
+│   │   ├── frontend-ci.yml     # Frontend 테스트 자동화
+│   │   ├── integration-tests.yml # 통합 테스트 자동화
+│   │   ├── pr-auto-assign.yml  # PR 리뷰어 자동 할당
+│   │   ├── pr-labeler.yml      # PR 자동 레이블링
+│   │   ├── pr-validation.yml   # PR 유효성 검사
+│   │   ├── release.yml         # 릴리스 자동화
+│   │   ├── security-scan.yml   # 보안 스캔
+│   │   ├── stale.yml           # 오래된 이슈/PR 관리
+│   │   ├── sync-upstream.yml   # 업스트림 동기화
+│   │   └── validate-pr.yml     # PR 검증 (레거시)
 │   └── ISSUE_TEMPLATE/         # 이슈 템플릿
 ├── docker-compose.yml          # Docker Compose 설정
 ├── Dockerfile                  # Backend 컨테이너 이미지
@@ -170,16 +187,12 @@ sogangcomputerclub.org/
 ├── uv.lock                     # uv 의존성 잠금 파일
 ├── nginx.conf                  # Nginx 메인 설정
 ├── nginx-sogangcomputerclub.conf  # 사이트별 Nginx 설정
-├── nginx.sh                    # Nginx 시작 스크립트
-├── certbot.sh                  # SSL 인증서 관리 스크립트
-├── backup-database.sh          # DB 백업 스크립트
-├── restore-database.sh         # DB 복구 스크립트
 ├── LICENSE                     # MIT 라이선스
 ├── CODE_OF_CONDUCT.md          # 행동 강령
 └── SECURITY.md                 # 보안 정책
 ```
 
-## 🛠️ 개발 환경 설정
+## 개발 환경 설정
 
 ### Backend 로컬 개발
 
@@ -209,12 +222,12 @@ npm run dev
 npm run build
 ```
 
-## 🗄️ 데이터베이스
+## 데이터베이스
 
 ### 백업 생성
 
 ```bash
-./backup-database.sh
+./scripts/backup-database.sh
 ```
 
 백업 파일은 `backups/` 디렉토리에 타임스탬프와 함께 저장됩니다.
@@ -223,7 +236,7 @@ npm run build
 ### 복구
 
 ```bash
-./restore-database.sh backups/memo_app_backup_20251006_025125.sql.gz
+./scripts/restore-database.sh backups/memo_app_backup_20251006_025125.sql.gz
 ```
 
 자세한 내용은 [backups/README.md](backups/README.md)를 참조하세요.
@@ -231,7 +244,7 @@ npm run build
 ### 자동 백업 설정
 
 - 백업 주기: 매일 새벽 3시
-- 백업 스크립트: `./backup-database.sh`
+- 백업 스크립트: `./scripts/backup-database.sh`
 - 로그 파일: `./backups/backup.log`
 - Cron 서비스: 실행 중 및 부팅 시 자동 시작 활성화
 
@@ -246,7 +259,7 @@ crontab -l
 ##### 수동 백업 테스트
 
 ```bash
-./backup-database.sh
+./scripts/backup-database.sh
 ```
 
 ##### 백업 로그 확인
@@ -255,7 +268,7 @@ crontab -l
 tail -f ./backups/backup.log
 ```
 
-## 🐳 Docker 명령어
+## Docker 명령어
 
 ### 서비스 관리
 
@@ -303,7 +316,7 @@ docker-compose exec nginx nginx -t
 docker-compose exec nginx nginx -s reload
 ```
 
-## ☸️ Kubernetes 배포
+## Kubernetes 배포
 
 ### 자동 배포 (Recommended)
 
@@ -436,7 +449,7 @@ gh workflow run security-scan.yml
 # GitHub Security 탭에서 확인 가능
 ```
 
-## 🔧 환경 설정
+## 환경 설정
 
 ### 환경 변수 설정
 
@@ -506,7 +519,7 @@ kubectl create secret generic mariadb-secret \
   -n sgcc
 ```
 
-## 🧪 테스트
+## 테스트
 
 ### Unit Tests (Backend)
 
@@ -661,7 +674,7 @@ docker-compose exec fastapi ping redis
 docker-compose exec fastapi ping kafka
 ```
 
-## 🚀 CI/CD
+## CI/CD
 
 ### GitHub Actions 워크플로우
 
@@ -739,23 +752,8 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 - Redis 캐시 작업 테스트
 - 테스트 결과 아티팩트 업로드
 
-#### 5. Staging Deployment (`.github/workflows/deploy-staging.yml`)
 
-##### Trigger
-
-- `develop`, `staging` 브랜치에 push (자동 배포)
-- Pull Request에 레이블 추가 시
-- 수동 트리거 (GitHub Actions UI)
-
-##### Jobs
-
-- **Security Scan**: Trivy로 취약점 스캔
-- **Build & Push**: Docker 이미지 빌드 및 GHCR 푸시
-- **Deploy**: Staging Kubernetes 클러스터에 배포
-- **Health Check**: 헬스 체크 및 스모크 테스트
-- **Auto-Rollback**: 실패 시 자동 롤백
-
-#### 6. Production Deployment (`.github/workflows/deploy-production.yml`)
+#### 5. Production Deployment (`.github/workflows/deploy-production.yml`)
 
 ##### Trigger
 
@@ -779,7 +777,7 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 - **Auto-Rollback**: 실패 시 이전 버전으로 자동 롤백
 - **Notify**: 배포 결과 알림
 
-#### 7. Security Scanning (`.github/workflows/security-scan.yml`)
+#### 6. Security Scanning (`.github/workflows/security-scan.yml`)
 
 ##### Trigger
 
@@ -829,7 +827,7 @@ docker-compose restart certbot
 docker-compose exec certbot certbot certificates
 ```
 
-## 🔒 보안
+## 보안
 
 ### Git 보안
 
@@ -852,9 +850,9 @@ GitHub Actions에서는 테스트용 임시 비밀번호가 사용됩니다. 프
 
 자세한 내용은 [SECURITY.md](SECURITY.md)를 참조하세요.
 
-## 🤝 프로젝트에 기여하기
+## 프로젝트에 기여하기
 
-기여는 언제나 환영합니다!
+당신의 기여를 언제나 환영합니다!
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -864,11 +862,11 @@ GitHub Actions에서는 테스트용 임시 비밀번호가 사용됩니다. 프
 
 행동 강령은 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)를 참조하세요.
 
-## 📄 라이선스
+## 라이선스
 
 이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
 
-## 👥 개발팀
+## 개발팀
 
 ### Infra/Database
 

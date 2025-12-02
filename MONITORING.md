@@ -1,160 +1,160 @@
-# Monitoring Stack Documentation
+# 모니터링 스택 문서
 
-This document describes the Prometheus and Grafana monitoring implementation for the sogangcomputerclub.org project.
+이 문서는 sogangcomputerclub.org 프로젝트를 위한 Prometheus 및 Grafana 모니터링 구현에 대해 설명합니다.
 
-## Overview
+## 개요
 
-The monitoring stack consists of:
-- **Prometheus**: Metrics collection and storage
-- **Grafana**: Metrics visualization and dashboards
-- **FastAPI Instrumentation**: Application metrics exposure
+모니터링 스택은 다음으로 구성됩니다:
+- **Prometheus**: 지표 수집 및 저장
+- **Grafana**: 지표 시각화 및 대시보드
+- **FastAPI Instrumentation**: 애플리케이션 지표 노출
 
-## Architecture
+## 아키텍처
 
 ```
 FastAPI App (/metrics) -> Prometheus (scrapes) -> Grafana (queries) -> User Dashboard
 ```
 
-## Services and Ports
+## 서비스 및 포트
 
-| Service    | Port (Host) | Port (Container) | Purpose                     |
+| 서비스 | 포트 (Host) | 포트 (Container) | 목적 |
 |------------|-------------|------------------|----------------------------|
-| Prometheus | 9090        | 9090             | Metrics collection & queries|
-| Grafana    | 3001        | 3000             | Dashboard & visualization   |
-| FastAPI    | 8000        | 8000             | Application & metrics       |
-| MariaDB    | 3307        | 3306             | Database                    |
-| Redis      | 6381        | 6379             | Cache                       |
+| Prometheus | 9090 | 9090 | 지표 수집 및 쿼리 |
+| Grafana | 3001 | 3000 | 대시보드 및 시각화 |
+| FastAPI | 8000 | 8000 | 애플리케이션 및 지표 |
+| MariaDB | 3307 | 3306 | 데이터베이스 |
+| Redis | 6381 | 6379 | 캐시 |
 
-**Note**: MariaDB and Redis ports were changed from 3306 and 6380 respectively to avoid conflicts with host services.
+**참고**: MariaDB 및 Redis 포트는 호스트 서비스와의 충돌을 피하기 위해 각각 3306 및 6380에서 변경되었습니다.
 
-## Accessing the Monitoring Stack
+## 모니터링 스택 접속
 
 ### Prometheus
 - URL: http://localhost:9090
-- Use the "Targets" page to verify scraping status
-- Query examples:
-  - `fastapi_requests_total` - Total request count
-  - `rate(fastapi_requests_total[5m])` - Request rate per second
-  - `histogram_quantile(0.95, rate(fastapi_request_duration_seconds_bucket[5m]))` - 95th percentile latency
+- "Targets" 페이지를 사용하여 스크래핑 상태 확인
+- 쿼리 예시:
+  - `fastapi_requests_total` - 총 요청 수
+  - `rate(fastapi_requests_total[5m])` - 초당 요청 비율
+  - `histogram_quantile(0.95, rate(fastapi_request_duration_seconds_bucket[5m]))` - 95번째 백분위수 지연 시간
 
 ### Grafana
 - URL: http://localhost:3001
-- Default credentials: `admin` / `admin`
-- Pre-configured datasource: Prometheus
-- Pre-configured dashboard: "FastAPI Application Metrics"
+- 기본 자격 증명: `admin` / `admin`
+- 사전 구성된 데이터 소스: Prometheus
+- 사전 구성된 대시보드: "FastAPI Application Metrics"
 
-To change Grafana credentials, set environment variables:
+Grafana 자격 증명을 변경하려면 환경 변수를 설정하세요:
 ```bash
 GRAFANA_ADMIN_USER=your_username
 GRAFANA_ADMIN_PASSWORD=your_secure_password
 ```
 
-## Available Metrics
+## 사용 가능한 지표
 
-### Application Metrics
-- `fastapi_requests_total` - Counter of total requests (labels: method, endpoint, status_code)
-- `fastapi_request_duration_seconds` - Histogram of request durations (labels: method, endpoint)
-- `memo_total` - Gauge of total memos in database
-- `fastapi_active_connections` - Gauge of active database connections
+### 애플리케이션 지표
+- `fastapi_requests_total` - 총 요청 카운터 (레이블: method, endpoint, status_code)
+- `fastapi_request_duration_seconds` - 요청 지속 시간 히스토그램 (레이블: method, endpoint)
+- `memo_total` - 데이터베이스의 총 메모 게이지
+- `fastapi_active_connections` - 활성 데이터베이스 연결 게이지
 
-### Python Runtime Metrics
-- `python_gc_*` - Garbage collection statistics
-- `process_*` - Process memory, CPU usage
+### Python 런타임 지표
+- `python_gc_*` - 가비지 컬렉션 통계
+- `process_*` - 프로세스 메모리, CPU 사용량
 
-## Dashboard Panels
+## 대시보드 패널
 
-The pre-configured FastAPI dashboard includes:
-1. **Request Rate** - Requests per second over time
-2. **Request Duration** - p95 and p50 latency percentiles
-3. **Total Requests per Second** - Current RPS gauge
-4. **Response Status Codes** - Distribution pie chart
-5. **Requests by Endpoint** - Traffic breakdown by API endpoint
+사전 구성된 FastAPI 대시보드에는 다음이 포함됩니다:
+1. **Request Rate** - 시간 경과에 따른 초당 요청 수
+2. **Request Duration** - p95 및 p50 지연 시간 백분위수
+3. **Total Requests per Second** - 현재 RPS 게이지
+4. **Response Status Codes** - 분포 파이 차트
+5. **Requests by Endpoint** - API 엔드포인트별 트래픽 분석
 
-## Configuration Files
+## 설정 파일
 
-### Prometheus Configuration
-- File: `prometheus.yml`
-- Scrape interval: 15s (5s for FastAPI)
-- Targets:
-  - prometheus (self-monitoring)
+### Prometheus 설정
+- 파일: `prometheus.yml`
+- 스크래핑 간격: 15초 (FastAPI의 경우 5초)
+- 타겟:
+  - prometheus (자체 모니터링)
   - fastapi:8000/metrics
 
-### Grafana Provisioning
-- Datasources: `grafana/provisioning/datasources/prometheus.yml`
-- Dashboards: `grafana/provisioning/dashboards/default.yml`
-- Dashboard JSON: `grafana/provisioning/dashboards/fastapi-dashboard.json`
+### Grafana 프로비저닝
+- 데이터 소스: `grafana/provisioning/datasources/prometheus.yml`
+- 대시보드: `grafana/provisioning/dashboards/default.yml`
+- 대시보드 JSON: `grafana/provisioning/dashboards/fastapi-dashboard.json`
 
-## Docker Compose Configuration
+## Docker Compose 설정
 
-Services are defined in both `docker-compose.yml` (development) and `docker-compose.prod.yml` (production).
+서비스는 `docker-compose.yml` (개발) 및 `docker-compose.prod.yml` (프로덕션) 모두에 정의되어 있습니다.
 
-### Development
+### 개발
 ```bash
 docker-compose up -d
 ```
 
-### Production
+### 프로덕션
 ```bash
 docker-compose -f docker-compose.prod.yml up -d
 ```
 
-## Troubleshooting
+## 문제 해결
 
-### FastAPI metrics not showing up
-1. Check FastAPI is running: `docker-compose ps`
-2. Verify metrics endpoint: `curl http://localhost:8000/metrics`
-3. Check Prometheus targets: http://localhost:9090/targets
+### FastAPI 지표가 표시되지 않음
+1. FastAPI가 실행 중인지 확인: `docker-compose ps`
+2. 지표 엔드포인트 확인: `curl http://localhost:8000/metrics`
+3. Prometheus 타겟 확인: http://localhost:9090/targets
 
-### Grafana dashboard is empty
-1. Verify Prometheus datasource is connected (Configuration -> Data Sources)
-2. Check if Prometheus has data: http://localhost:9090/graph
-3. Verify dashboard queries are correct
+### Grafana 대시보드가 비어 있음
+1. Prometheus 데이터 소스가 연결되었는지 확인 (Configuration -> Data Sources)
+2. Prometheus에 데이터가 있는지 확인: http://localhost:9090/graph
+3. 대시보드 쿼리가 올바른지 확인
 
-### Port conflicts
-If you get port binding errors:
-1. Check what's using the port: `sudo ss -tlnp | grep <port>`
-2. Stop the conflicting service or change the port in docker-compose.yml
+### 포트 충돌
+포트 바인딩 오류가 발생하는 경우:
+1. 포트를 사용하는 프로세스 확인: `sudo ss -tlnp | grep <port>`
+2. 충돌하는 서비스를 중지하거나 docker-compose.yml에서 포트 변경
 
-## Adding More Metrics
+## 지표 추가하기
 
-To add custom metrics to FastAPI:
+FastAPI에 사용자 정의 지표를 추가하려면:
 
 ```python
 from prometheus_client import Counter, Histogram, Gauge
 
-# Define metric
+# 지표 정의
 MY_METRIC = Counter('my_metric_total', 'Description', ['label1', 'label2'])
 
-# Use in code
+# 코드에서 사용
 MY_METRIC.labels(label1='value1', label2='value2').inc()
 ```
 
-Metrics are automatically exported at the `/metrics` endpoint.
+지표는 `/metrics` 엔드포인트에서 자동으로 내보내집니다.
 
-## Health Checks
+## 헬스 체크
 
 - **FastAPI**: http://localhost:8000/health
 - **Prometheus**: http://localhost:9090/-/healthy
 - **Grafana**: http://localhost:3001/api/health
 
-## Data Persistence
+## 데이터 영속성
 
-Both Prometheus and Grafana use Docker volumes for persistence:
-- `prometheus_data` - Stores time-series metrics data
-- `grafana_data` - Stores dashboards, users, and settings
+Prometheus와 Grafana는 모두 지속성을 위해 Docker 볼륨을 사용합니다:
+- `prometheus_data` - 시계열 지표 데이터 저장
+- `grafana_data` - 대시보드, 사용자 및 설정 저장
 
-To backup:
+백업하려면:
 ```bash
 docker run --rm -v sogangcomputercluborg_prometheus_data:/data -v $(pwd):/backup alpine tar czf /backup/prometheus-backup.tar.gz /data
 docker run --rm -v sogangcomputercluborg_grafana_data:/data -v $(pwd):/backup alpine tar czf /backup/grafana-backup.tar.gz /data
 ```
 
-## Future Enhancements
+## 향후 개선 사항
 
-Optional exporters that can be added:
-- **Redis Exporter**: Monitor Redis cache metrics
-- **MySQL Exporter**: Monitor MariaDB database metrics
-- **Nginx Exporter**: Monitor nginx web server metrics
-- **Node Exporter**: Monitor host system metrics
+추가할 수 있는 선택적 익스포터:
+- **Redis Exporter**: Redis 캐시 지표 모니터링
+- **MySQL Exporter**: MariaDB 데이터베이스 지표 모니터링
+- **Nginx Exporter**: nginx 웹 서버 지표 모니터링
+- **Node Exporter**: 호스트 시스템 지표 모니터링
 
-These are pre-configured in prometheus.yml but not yet deployed.
+이들은 prometheus.yml에 사전 구성되어 있지만 아직 배포되지 않았습니다.

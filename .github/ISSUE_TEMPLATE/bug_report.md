@@ -1,58 +1,60 @@
 ---
-name: Bug Report
-about: Create a report to help us improve
+name: 버그 제보
+about: 이 프로젝트의 개선을 돕기 위한 보고서를 작성해주세요.
 title: '[BUG] '
 labels: bug
 assignees: ''
 ---
 
-## Description
+## 설명
 
-<!-- A clear and concise description of what the bug is -->
+<!-- 발생한 버그가 무엇인지 명확하고 간결하게 설명해주세요. -->
 
-## Steps to Reproduce
+## 해당 버그를 재현하기 위한 과정
 
-1. Go to '...'
-2. Click on '...'
-3. Scroll down to '...'
-4. See error
+<!-- 버그를 재현하기 위한 과정을 명확하고 간결하게 설명해주세요. -->
 
-## Expected Behavior
+1. '...'로 이동
+2. '...' 클릭
+3. '...'로 스크롤
+4. 오류 확인
 
-<!-- A clear and concise description of what you expected to happen -->
+## 예상되는 동작
 
-## Actual Behavior
+<!-- 원래 발생해야 하는 정상 동작을 명확하고 간결하게 설명해주세요. -->
 
-<!-- A clear and concise description of what actually happened -->
+## 실제 동작
 
-## Screenshots
+<!-- 실제로 발생한 동작에 대해 명확하고 간결하게 설명해주세요. -->
 
-<!-- If applicable, add screenshots to help explain your problem -->
+## 스크린샷
 
-## Environment
+<!-- 가능하다면 문제를 설명하는 데 도움이 되는 스크린샷을 추가해주세요. -->
 
-**Desktop/Server:**
-- OS: [e.g., Ubuntu 22.04, macOS 14.0]
-- Browser: [e.g., Chrome 120, Firefox 121]
-- Version: [e.g., commit hash or release version]
+## 환경
 
-**Mobile (if applicable):**
-- Device: [e.g., iPhone 12, Samsung Galaxy S21]
-- OS: [e.g., iOS 17.0, Android 13]
-- Browser: [e.g., Safari, Chrome]
+**데스크탑/서버:**
+- OS: [예: Ubuntu 22.04, macOS 14.0]
+- 브라우저: [예: Chrome 120, Firefox 121]
+- 버전: [예: 커밋 해시 또는 릴리스 버전]
 
-## Logs
+**모바일 (해당되는 경우):**
+- 기기: [예: iPhone 12, Samsung Galaxy S21]
+- OS: [예: iOS 17.0, Android 13]
+- 브라우저: [예: Safari, Chrome]
 
-<!-- If applicable, paste relevant logs here -->
+## 로그
+
+<!-- 해당되는 경우, 관련 로그를 여기에 붙여넣어 주세요. -->
 
 ```
-[paste logs here]
+[여기에 로그 붙여넣기]
 ```
 
-## Additional Context
+## 비고
 
-<!-- Add any other context about the problem here -->
+<!-- 문제에 대한 추가적인 내용을 여기에 추가해주세요. -->
 
-## Possible Solution
+## 가능한 해결책
 
-<!-- Optional: If you have ideas on how to fix this issue -->
+<!-- 이 문제를 해결하기 위한 아이디어가 있는 경우 여기에 적어주세요. -->
