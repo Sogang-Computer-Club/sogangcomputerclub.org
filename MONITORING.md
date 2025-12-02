@@ -22,10 +22,10 @@ FastAPI App (/metrics) -> Prometheus (scrapes) -> Grafana (queries) -> User Dash
 | Prometheus | 9090 | 9090 | 지표 수집 및 쿼리 |
 | Grafana | 3001 | 3000 | 대시보드 및 시각화 |
 | FastAPI | 8000 | 8000 | 애플리케이션 및 지표 |
-| MariaDB | 3307 | 3306 | 데이터베이스 |
+| PostgreSQL | 5432 | 5432 | 데이터베이스 |
 | Redis | 6381 | 6379 | 캐시 |
 
-**참고**: MariaDB 및 Redis 포트는 호스트 서비스와의 충돌을 피하기 위해 각각 3306 및 6380에서 변경되었습니다.
+**참고**: Redis 포트는 호스트 서비스와의 충돌을 피하기 위해 6380에서 변경되었습니다.
 
 ## 모니터링 스택 접속
 
@@ -153,7 +153,7 @@ docker run --rm -v sogangcomputercluborg_grafana_data:/data -v $(pwd):/backup al
 
 추가할 수 있는 선택적 익스포터:
 - **Redis Exporter**: Redis 캐시 지표 모니터링
-- **MySQL Exporter**: MariaDB 데이터베이스 지표 모니터링
+- **Postgres Exporter**: PostgreSQL 데이터베이스 지표 모니터링
 - **Nginx Exporter**: nginx 웹 서버 지표 모니터링
 - **Node Exporter**: 호스트 시스템 지표 모니터링
 

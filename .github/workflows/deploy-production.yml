@@ -2,9 +2,9 @@ name: Deploy to Production
 
 on:
   push:
-    branches: [ master ]
+    branches: [master]
     tags:
-      - 'v*.*.*'
+      - "v*.*.*"
   workflow_dispatch:
 
 env:
@@ -19,33 +19,33 @@ jobs:
       security-events: write
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Run Trivy vulnerability scanner
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'sarif'
-        output: 'trivy-results.sarif'
-        severity: 'CRITICAL,HIGH'
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
 
-    - name: Upload Trivy results to GitHub Security
-      uses: github/codeql-action/upload-sarif@v4
-      if: always()
-      with:
-        sarif_file: 'trivy-results.sarif'
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
 
-    - name: Block deployment on critical vulnerabilities
-      uses: aquasecurity/trivy-action@master
-      with:
-        scan-type: 'fs'
-        scan-ref: '.'
-        format: 'table'
-        exit-code: '1'
-        severity: 'CRITICAL'
-        ignore-unfixed: true
+      - name: Block deployment on critical vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL"
+          ignore-unfixed: true
 
   build-and-push:
     needs: security-scan
@@ -59,101 +59,100 @@ jobs:
       frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # --- FIX START: Normalize to lowercase ---
-    - name: Define lowercase image names
-      run: |
-        REPO_LC=${GITHUB_REPOSITORY,,}
-        echo "BACKEND_IMAGE_NAME=$REPO_LC/backend" >> $GITHUB_ENV
-        echo "FRONTEND_IMAGE_NAME=$REPO_LC/frontend" >> $GITHUB_ENV
-    # --- FIX END ---
+      # --- FIX START: Normalize to lowercase ---
+      - name: Define lowercase image names
+        run: |
+          REPO_LC=${GITHUB_REPOSITORY,,}
+          echo "BACKEND_IMAGE_NAME=$REPO_LC/backend" >> $GITHUB_ENV
+          echo "FRONTEND_IMAGE_NAME=$REPO_LC/frontend" >> $GITHUB_ENV
+      # --- FIX END ---
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-    - name: Log in to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ${{ env.REGISTRY }}
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata
+        id: meta
+        run: |
+          BACKEND_TAG="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}"
+          FRONTEND_TAG="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}"
+          echo "backend-tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
+          echo "frontend-tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
+          echo "Backend tag: $BACKEND_TAG"
+          echo "Frontend tag: $FRONTEND_TAG"
 
-    - name: Extract metadata
-      id: meta
-      run: |
-        BACKEND_TAG="${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:${{ github.sha }}"
-        FRONTEND_TAG="${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:${{ github.sha }}"
-        echo "backend-tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
-        echo "frontend-tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
-        echo "Backend tag: $BACKEND_TAG"
-        echo "Frontend tag: $FRONTEND_TAG"
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.backend-tag }}
+            ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
 
-    - name: Build and push Backend Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: |
-          ${{ steps.meta.outputs.backend-tag }}
-          ${{ env.REGISTRY }}/${{ env.BACKEND_IMAGE_NAME }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        provenance: true
-        sbom: true
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.frontend-tag }}
+            ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: true
+          sbom: true
 
-    - name: Build and push Frontend Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: ./frontend
-        file: ./frontend/Dockerfile
-        push: true
-        tags: |
-          ${{ steps.meta.outputs.frontend-tag }}
-          ${{ env.REGISTRY }}/${{ env.FRONTEND_IMAGE_NAME }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
-        provenance: true
-        sbom: true
+      - name: Scan Backend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.backend-tag }}
+          format: "sarif"
+          output: "trivy-backend-image.sarif"
 
-    - name: Scan Backend image with Trivy
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ steps.meta.outputs.backend-tag }}
-        format: 'sarif'
-        output: 'trivy-backend-image.sarif'
+      - name: Scan Frontend image with Trivy
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.frontend-tag }}
+          format: "sarif"
+          output: "trivy-frontend-image.sarif"
 
-    - name: Scan Frontend image with Trivy
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ steps.meta.outputs.frontend-tag }}
-        format: 'sarif'
-        output: 'trivy-frontend-image.sarif'
+      - name: Upload backend image scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: "trivy-backend-image.sarif"
+          category: "backend-image"
 
-    - name: Upload backend image scan results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always()
-      with:
-        sarif_file: 'trivy-backend-image.sarif'
-        category: 'backend-image'
+      - name: Upload frontend image scan results
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: "trivy-frontend-image.sarif"
+          category: "frontend-image"
 
-    - name: Upload frontend image scan results
-      uses: github/codeql-action/upload-sarif@v4
-      if: always()
-      with:
-        sarif_file: 'trivy-frontend-image.sarif'
-        category: 'frontend-image'
-
-    - name: Block on critical image vulnerabilities
-      uses: aquasecurity/trivy-action@master
-      with:
-        image-ref: ${{ steps.meta.outputs.backend-tag }}
-        format: 'table'
-        exit-code: '1'
-        severity: 'CRITICAL'
-        ignore-unfixed: true
+      - name: Block on critical image vulnerabilities
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: ${{ steps.meta.outputs.backend-tag }}
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL"
+          ignore-unfixed: true
 
   deploy-production:
     needs: build-and-push
@@ -163,81 +162,87 @@ jobs:
       url: https://sogangcomputerclub.org
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    # --- FIX START: Calculate lowercase repo for deployment ---
-    - name: Set Lowercase Repo Variable
-      run: |
-        echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
-    # --- FIX END ---
+      # --- FIX START: Calculate lowercase repo for deployment ---
+      - name: Set Lowercase Repo Variable
+        run: |
+          echo "REPO_LC=${GITHUB_REPOSITORY,,}" >> $GITHUB_ENV
+      # --- FIX END ---
+      - name: Deploy to production server
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 65522 }}
+          script_stop: true
+          script: |
+            # Navigate to deployment directory
+            cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
 
-    - name: Deploy to production server
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.PROD_HOST }}
-        username: ${{ secrets.PROD_USERNAME }}
-        key: ${{ secrets.PROD_SSH_KEY }}
-        port: ${{ secrets.PROD_SSH_PORT || 65522 }}
-        script_stop: true
-        script: |
-          # Navigate to deployment directory
-          cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
+            # Pull latest code
+            git fetch origin
+            git checkout master
+            git pull origin master
 
-          # Pull latest code
-          git fetch origin
-          git checkout master
-          git pull origin master
+            # Set environment variables
+            # --- FIX: Use the lowercase variable we calculated above ---
+            export GITHUB_REPOSITORY="${{ env.REPO_LC }}"
+            export IMAGE_TAG="${{ github.sha }}"
 
-          # Set environment variables
-          # --- FIX: Use the lowercase variable we calculated above ---
-          export GITHUB_REPOSITORY="${{ env.REPO_LC }}"
-          export IMAGE_TAG="${{ github.sha }}"
+            # Database Configuration
+            export POSTGRES_USER="${{ secrets.POSTGRES_USER }}"
+            export POSTGRES_PASSWORD="${{ secrets.POSTGRES_PASSWORD }}"
+            export POSTGRES_DB="${{ secrets.POSTGRES_DB }}"
+            export DATABASE_URL="${{ secrets.DATABASE_URL }}"
+            export GRAFANA_ADMIN_PASSWORD="${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
 
-          # Login to GitHub Container Registry
-          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+            # Login to GitHub Container Registry
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-          # Pull and deploy
-          docker-compose -f docker-compose.prod.yml pull
-          docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+            # Pull and deploy
+            docker-compose -f docker-compose.prod.yml pull
+            docker-compose -f docker-compose.prod.yml up -d --remove-orphans
 
-          # Check health
-          sleep 30
-          docker-compose -f docker-compose.prod.yml ps
+            # Check health
+            sleep 30
+            docker-compose -f docker-compose.prod.yml ps
 
-    - name: Run smoke tests
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.PROD_HOST }}
-        username: ${{ secrets.PROD_USERNAME }}
-        key: ${{ secrets.PROD_SSH_KEY }}
-        port: ${{ secrets.PROD_SSH_PORT || 65522 }}
-        script: |
-          # Test backend health endpoint
-          curl -f http://localhost:8000/health || exit 1
+      - name: Run smoke tests
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 65522 }}
+          script: |
+            # Test backend health endpoint
+            curl -f http://localhost:8000/health || exit 1
 
-          # Test frontend
-          curl -f http://localhost:3000 || exit 1
+            # Test frontend
+            curl -f http://localhost:3000 || exit 1
 
-          echo "Smoke tests passed!"
+            echo "Smoke tests passed!"
 
-    - name: Rollback on failure
-      if: failure()
-      uses: appleboy/ssh-action@v1.0.3
-      with:
-        host: ${{ secrets.PROD_HOST }}
-        username: ${{ secrets.PROD_USERNAME }}
-        key: ${{ secrets.PROD_SSH_KEY }}
-        port: ${{ secrets.PROD_SSH_PORT || 65522 }}
-        script: |
-          echo "Deployment failed, rolling back to previous version..."
-          cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USERNAME }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: ${{ secrets.PROD_SSH_PORT || 65522 }}
+          script: |
+            echo "Deployment failed, rolling back to previous version..."
+            cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
 
-          # Use latest tag (previous deployment)
-          export IMAGE_TAG=latest
-          docker-compose -f docker-compose.prod.yml up -d --force-recreate
+            # Use latest tag (previous deployment)
+            export IMAGE_TAG=latest
+            docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
-          echo "Rollback completed"
+            echo "Rollback completed"
 
   notify:
     needs: deploy-production
@@ -245,20 +250,20 @@ jobs:
     if: always()
 
     steps:
-    - name: Deployment notification
-      run: |
-        if [ "${{ needs.deploy-production.result }}" == "success" ]; then
-          echo "Production deployment successful!"
-          echo "Application is live at https://sogangcomputerclub.org"
-          echo "Commit: ${{ github.sha }}"
-          echo "Deployed by: ${{ github.actor }}"
-          echo "Security scans: Passed"
-          echo "Health checks: Passed"
-          echo "Smoke tests: Passed"
-        else
-          echo "Production deployment failed!"
-          echo "Automatic rollback has been initiated"
-          echo "Failed commit: ${{ github.sha }}"
-          echo "Please check the logs for details"
-          echo "::error::Production deployment failed - rollback completed"
-        fi
+      - name: Deployment notification
+        run: |
+          if [ "${{ needs.deploy-production.result }}" == "success" ]; then
+            echo "Production deployment successful!"
+            echo "Application is live at https://sogangcomputerclub.org"
+            echo "Commit: ${{ github.sha }}"
+            echo "Deployed by: ${{ github.actor }}"
+            echo "Security scans: Passed"
+            echo "Health checks: Passed"
+            echo "Smoke tests: Passed"
+          else
+            echo "Production deployment failed!"
+            echo "Automatic rollback has been initiated"
+            echo "Failed commit: ${{ github.sha }}"
+            echo "Please check the logs for details"
+            echo "::error::Production deployment failed - rollback completed"
+          fi

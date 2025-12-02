@@ -9,10 +9,10 @@ if [ -f .env ]; then
 fi
 
 BACKUP_DIR="${BACKUP_DIR:-./backups}"
-CONTAINER_NAME="${CONTAINER_NAME_PREFIX:-sogangcomputercluborg}-mariadb-1"
-DB_USER="${MYSQL_USER:-memo_user}"
-DB_PASS="${MYSQL_PASSWORD:-changeme}"
-DB_NAME="${MYSQL_DATABASE:-memo_app}"
+CONTAINER_NAME="${CONTAINER_NAME_PREFIX:-sogangcomputercluborg}-postgres-1"
+DB_USER="${POSTGRES_USER:-memo_user}"
+DB_PASS="${POSTGRES_PASSWORD:-phoenix}"
+DB_NAME="${POSTGRES_DB:-memo_app}"
 
 if [ -z "$1" ]; then
     echo "Usage: $0 <backup_file>"
@@ -52,7 +52,7 @@ fi
 echo "Restoring database from ${BACKUP_FILE}..."
 
 # Restore the backup
-docker exec -i ${CONTAINER_NAME} mysql -u${DB_USER} -p${DB_PASS} ${DB_NAME} < "${BACKUP_FILE}"
+cat "${BACKUP_FILE}" | docker exec -i -e PGPASSWORD=${DB_PASS} ${CONTAINER_NAME} psql -U ${DB_USER} -d ${DB_NAME}
 
 if [ $? -eq 0 ]; then
     echo "Database restored successfully!"
