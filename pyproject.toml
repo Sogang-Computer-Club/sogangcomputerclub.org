@@ -19,6 +19,7 @@ dependencies = [
     "uvicorn==0.32.0",
     "pymysql>=1.1.0",
     "psycopg2-binary>=2.9.9",
+    "aiomysql>=0.3.2",
 ]
 
 [dependency-groups]
