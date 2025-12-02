@@ -239,6 +239,7 @@ jobs:
             cd ${{ secrets.PROD_DEPLOY_PATH || '/opt/sogangcomputerclub.org' }}
 
             # Use latest tag (previous deployment)
+            export GITHUB_REPOSITORY="${{ env.REPO_LC }}"
             export IMAGE_TAG=latest
             docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
