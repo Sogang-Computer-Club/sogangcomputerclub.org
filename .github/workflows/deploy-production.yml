@@ -272,6 +272,8 @@ jobs:
             export IMAGE_TAG=latest
             # Force remove containers to avoid conflicts
             docker-compose -f docker-compose.prod.yml rm -f -s
+            # Explicitly remove sgcc-redis in case it's not tracked by the previous compose file
+            docker rm -f sgcc-redis || true
             docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
             echo "Rollback completed"
