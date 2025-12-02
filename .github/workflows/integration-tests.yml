@@ -23,7 +23,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd pg_isready
+          --health-cmd "pg_isready -U memo_user"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -60,7 +60,7 @@ jobs:
         run: |
           echo "Waiting for PostgreSQL..."
           for i in {1..30}; do
-            if docker exec ${{ job.services.postgres.id }} pg_isready; then
+            if docker exec ${{ job.services.postgres.id }} pg_isready -U memo_user; then
               echo "PostgreSQL is ready"
               break
             fi
@@ -79,10 +79,18 @@ jobs:
           done
 
       - name: Initialize database schema
+        env:
+          DATABASE_URL: postgresql+asyncpg://memo_user:phoenix@localhost:5432/memo_app
         run: |
           uv run python scripts/init_test_db.py
 
       - name: Run database integration tests
+        env:
+          POSTGRES_HOST: localhost
+          POSTGRES_PORT: 5432
+          POSTGRES_USER: memo_user
+          POSTGRES_PASSWORD: phoenix
+          POSTGRES_DB: memo_app
         run: |
           uv run pytest tests/integration/test_database.py -v
 
