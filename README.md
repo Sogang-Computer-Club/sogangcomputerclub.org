@@ -2,7 +2,7 @@
 
 서강대학교 중앙컴퓨터동아리 SGCC의 공식 웹사이트가 담긴 레포지토리입니다.
 
-홈페이지는 FastAPI + SvelteKit 기반으로 설계되었으며, SGCC의 공식 서버에서는 홈페이지를 서비스하기 위해 Docker, Kubernetes, Redis, Kafka를 비롯한 클라우드 네이티브 아키텍처를 채택하고 있습니다.
+홈페이지는 FastAPI + SvelteKit 기반으로 설계되었으며, SGCC의 공식 서버에서는 홈페이지를 서비스하기 위해 Docker, Redis, Kafka를 비롯한 클라우드 네이티브 아키텍처를 채택하고 있습니다.
 
 ## 아키텍처
 
@@ -60,7 +60,7 @@
 - Redis (캐시)
 - Apache Kafka + Zookeeper (메시지 큐)
 - Certbot (SSL/TLS 인증서)
-- Kubernetes (선택적 배포)
+
 
 ## 빠른 시작
 
@@ -148,19 +148,7 @@ sogangcomputerclub.org/
 │   ├── vitest-setup.ts         # 테스트 환경 설정
 │   ├── tsconfig.json           # TypeScript 설정
 │   └── svelte.config.js        # Svelte 설정
-├── k8s/                        # Kubernetes 매니페스트
-│   ├── namespace.yaml
-│   ├── mariadb.yaml
-│   ├── redis.yaml
-│   ├── kafka.yaml
-│   ├── fastapi.yaml
-│   ├── frontend.yaml
-│   ├── ingress.yaml
-│   ├── configmap.yaml
-│   ├── kind-config.yaml
-│   ├── deploy-production.sh
-│   ├── deploy-staging.sh
-│   └── deploy.sh
+
 ├── backups/                    # 데이터베이스 백업
 │   └── README.md               # 백업/복구 가이드
 ├── .github/                    # GitHub 설정
@@ -216,11 +204,35 @@ cd frontend
 npm install
 
 # 개발 서버 실행
+# 자동으로 http://localhost:8000 으로 API 요청을 프록시합니다.
 npm run dev
 
 # 프로덕션 빌드
 npm run build
 ```
+
+### Docker 없이 로컬 전체 실행
+
+1. **Backend 실행**:
+   ```bash
+   # 터미널 1
+   uv run uvicorn app.main:app --reload --port 8000
+   ```
+
+2. **Frontend 실행**:
+   ```bash
+   # 터미널 2
+   cd frontend
+   npm run dev
+   ```
+   브라우저에서 `http://localhost:5173`으로 접속하세요.
+
+### Docker Compose로 실행
+
+```bash
+docker-compose up -d
+```
+이 방식은 프로덕션과 유사한 환경을 제공합니다. Frontend는 `http://localhost:3000`에서 실행됩니다.
 
 ## 데이터베이스
 
@@ -316,128 +328,7 @@ docker-compose exec nginx nginx -t
 docker-compose exec nginx nginx -s reload
 ```
 
-## Kubernetes 배포
 
-### 자동 배포 (Recommended)
-
-#### Staging 환경
-```bash
-# develop 브랜치에 push하면 자동 배포
-git push origin develop
-
-# 또는 GitHub Actions에서 수동 실행
-gh workflow run deploy-staging.yml
-```
-
-#### Production 환경
-```bash
-# master 브랜치에 push하면 자동 배포
-git push origin master
-
-# 버전 태그로 배포
-git tag v1.0.0
-git push origin v1.0.0
-
-# 또는 GitHub Actions에서 수동 실행
-gh workflow run deploy-production.yml
-```
-
-### 수동 배포
-
-#### Staging 배포
-```bash
-cd k8s
-
-# Staging 환경 배포
-./deploy-staging.sh
-```
-
-#### Production 배포
-```bash
-cd k8s
-
-# Production 환경 배포
-./deploy-production.sh
-```
-
-#### 개별 리소스 배포
-```bash
-# Staging
-kubectl apply -f namespace-staging.yaml
-kubectl apply -f fastapi-staging.yaml
-kubectl apply -f frontend-staging.yaml
-
-# Production
-kubectl apply -f namespace.yaml
-kubectl apply -f fastapi-production.yaml
-kubectl apply -f frontend-production.yaml
-kubectl apply -f ingress.yaml
-```
-
-### 상태 확인
-
-```bash
-# Production Pod 상태
-kubectl get pods -n sgcc
-
-# Staging Pod 상태
-kubectl get pods -n sgcc-staging
-
-# 서비스 상태
-kubectl get svc -n sgcc
-
-# Ingress 상태
-kubectl get ingress -n sgcc
-
-# 배포 상태
-kubectl rollout status deployment/fastapi -n sgcc
-
-# 로그 확인
-kubectl logs -f deployment/fastapi -n sgcc
-```
-
-### 롤백
-
-#### 자동 롤백
-배포 실패 시 자동으로 이전 버전으로 롤백됩니다:
-- 배포 롤아웃 실패
-- 헬스 체크 실패
-- 스모크 테스트 실패
-- Pod 재시작 감지
-
-#### 수동 롤백 (GitHub Actions)
-```bash
-# GitHub Actions에서 Manual Rollback 워크플로우 실행
-# 1. Actions 탭으로 이동
-# 2. "Manual Rollback" 선택
-# 3. 환경과 롤백 타입 선택
-```
-
-#### 수동 롤백 (CLI)
-```bash
-# 이전 버전으로 롤백
-./k8s/rollback.sh production previous
-
-# 특정 리비전으로 롤백
-./k8s/rollback.sh staging revision 5
-
-# 특정 이미지로 롤백
-./k8s/rollback.sh production image \
-  --backend ghcr.io/owner/repo/backend:v1.2.3 \
-  --frontend ghcr.io/owner/repo/frontend:v1.2.3
-```
-
-#### kubectl 직접 사용
-```bash
-# 롤아웃 히스토리 확인
-kubectl rollout history deployment/fastapi -n sgcc
-
-# 이전 버전으로 롤백
-kubectl rollout undo deployment/fastapi -n sgcc
-
-# 특정 리비전으로 롤백
-kubectl rollout undo deployment/fastapi -n sgcc --to-revision=3
-```
 
 ### 보안 스캔
 
@@ -497,25 +388,7 @@ PORT=3000
 > - **반드시** 기본 비밀번호(`changeme`, `changeme_root`)를 강력한 비밀번호로 변경하세요
 > - 프로덕션 환경에서는 최소 16자 이상의 복잡한 비밀번호를 사용하세요
 
-### Kubernetes Secrets 설정
 
-Kubernetes 배포 시 Secret을 사용합니다:
-
-```bash
-# 예시 파일 복사
-cp k8s/mariadb-secret.yaml.example k8s/mariadb-secret.yaml
-
-# Secret 파일 편집 후 적용
-kubectl apply -f k8s/mariadb-secret.yaml
-```
-
-또는 커맨드라인에서 직접 생성:
-
-```bash
-kubectl create secret generic postgres-secret \
-  --from-literal=POSTGRES_PASSWORD='your_secure_password' \
-  -n sgcc
-```
 
 ## 테스트
 
@@ -764,11 +637,9 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 - **Security Scan**: Trivy로 CRITICAL 취약점 스캔 (블로킹)
 - **Build & Push**: Docker 이미지 빌드, SBOM/Provenance 생성 및 GHCR 푸시
 - **Image Scan**: 빌드된 이미지 보안 스캔
-- **Deploy**: Kubernetes 클러스터에 자동 배포
   - 현재 배포 상태 저장 (롤백용)
   - 이미지 태그 업데이트
   - 이미지 pull secret 생성
-  - Kubernetes 매니페스트 적용
   - 배포 롤아웃 대기
 - **Health Check**: 헬스 체크 및 스모크 테스트
 - **Stability Monitor**: 60초 안정성 모니터링
