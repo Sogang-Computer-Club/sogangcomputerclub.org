@@ -624,6 +624,33 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 - 테스트 결과 아티팩트 업로드
 
 
+#### 환경 설정 (Configuration)
+
+이 프로젝트는 환경 설정을 위해 **Local 환경에서는 `.env` 파일**, **Production 환경에서는 GitHub Secrets**를 사용합니다.
+
+### 1. Local Development (`.env`)
+로컬 개발 시에는 `.env` 파일이 필수입니다. `env.example` 파일을 복사하여 생성하세요.
+
+```bash
+cp env.example .env
+```
+
+`.env` 파일은 `.gitignore`에 등록되어 있어 git에 커밋되지 않습니다.
+
+### 2. Production (`GitHub Secrets`)
+프로덕션 배포 시에는 `.env` 파일을 사용하지 **않습니다**. 대신 GitHub Repository Settings > Secrets and variables > Actions에 다음 Secret들을 등록해야 합니다.
+
+| Secret Name | 설명 |
+|---|---|
+| `POSTGRES_USER` | DB 사용자 이름 |
+| `POSTGRES_PASSWORD` | DB 비밀번호 |
+| `POSTGRES_DB` | DB 이름 |
+| `DATABASE_URL` | `postgresql+asyncpg://USER:PASSWORD@sgcc-postgres:5432/DB_NAME` |
+| `GRAFANA_ADMIN_PASSWORD` | Grafana 관리자 비밀번호 |
+| `PROD_HOST` | 배포 서버 IP/도메인 |
+| `PROD_USERNAME` | 배포 서버 SSH 사용자 |
+| `PROD_SSH_KEY` | 배포 서버 SSH Private Key |
+
 #### 5. Production Deployment (`.github/workflows/deploy-production.yml`)
 
 ##### Trigger
