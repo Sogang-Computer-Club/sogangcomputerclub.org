@@ -223,10 +223,9 @@ jobs:
             docker-compose -f docker-compose.prod.yml down --remove-orphans || true
 
             # Cleanup legacy containers (to free up ports from old deployments)
-            legacy_containers="sgcc-redis sgcc-backend sgcc-frontend sgcc-nginx sgcc-postgres sgcc-kafka sgcc-zookeeper sgcc-prometheus sgcc-grafana sgcc-postgres-exporter sgcc-nginx-exporter"
-            for container in $legacy_containers; do
-              docker rm -f $container || true
-            done
+            # Use filter to catch all variations (e.g. sgcc-backend, sgcc-sgcc-backend-1, sogangcomputercluborg-backend-1)
+            docker ps -aq --filter "name=sgcc" | xargs -r docker rm -f || true
+            docker ps -aq --filter "name=sogangcomputercluborg" | xargs -r docker rm -f || true
 
             # Pull and deploy
             docker-compose -f docker-compose.prod.yml pull
@@ -262,7 +261,7 @@ jobs:
           port: ${{ secrets.PROD_SSH_PORT || 65522 }}
           script: |
             echo "=== BACKEND LOGS ==="
-            docker-compose -f docker-compose.prod.yml logs --tail 100 sgcc-backend
+            docker-compose -f docker-compose.prod.yml logs --tail 100 backend
             echo "===================="
 
       - name: Rollback on failure
@@ -283,7 +282,7 @@ jobs:
             export COMPOSE_PROJECT_NAME=sgcc
             # Force remove containers to avoid conflicts
             docker-compose -f docker-compose.prod.yml rm -f -s
-            # Explicitly remove sgcc-redis in case it's not tracked by the previous compose file
+            # Explicitly remove redis in case it's not tracked by the previous compose file
             docker rm -f sgcc-redis || true
             docker-compose -f docker-compose.prod.yml up -d --force-recreate
 
