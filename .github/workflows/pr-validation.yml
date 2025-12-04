@@ -85,8 +85,9 @@ jobs:
           repoToken: "${{ secrets.GITHUB_TOKEN }}"
 
       - name: Validate branch name
+        env:
+          BRANCH_NAME: ${{ github.head_ref }}
         run: |
-          BRANCH_NAME="${{ github.head_ref }}"
           if [[ ! "$BRANCH_NAME" =~ ^(feature|bugfix|hotfix|fix|docs|refactor|test|chore)/.+ ]]; then
             echo "Branch name must follow pattern: feature/*, bugfix/*, hotfix/*, fix/*, docs/*, refactor/*, test/*, or chore/*"
             echo "Current branch: $BRANCH_NAME"
