@@ -46,7 +46,7 @@ ACTIVE_CONNECTIONS = Gauge(
 # --- Environment Configuration ---
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "postgresql+asyncpg://memo_user:changeme@postgres:5432/memo_app"
+    "postgresql+asyncpg://memo_user:phoenix@postgres:5432/memo_app"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
