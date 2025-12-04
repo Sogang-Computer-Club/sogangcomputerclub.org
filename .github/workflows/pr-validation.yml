@@ -60,11 +60,19 @@ jobs:
             }
 
             // Check for required sections
-            const requiredSections = ['Description', 'Type of Change', 'Testing'];
-            const missingSections = requiredSections.filter(section => !body.includes(section));
+            const requiredSections = [
+              { name: 'Description', alternatives: ['Description', '설명'] },
+              { name: 'Type of Change', alternatives: ['Type of Change', '변경 유형'] },
+              { name: 'Testing', alternatives: ['Testing', '테스트'] }
+            ];
+
+            const missingSections = requiredSections.filter(section => 
+              !section.alternatives.some(alt => body.includes(alt))
+            );
 
             if (missingSections.length > 0) {
-              core.setFailed(`PR description is missing required sections: ${missingSections.join(', ')}`);
+              const missingNames = missingSections.map(s => `${s.name} (or ${s.alternatives[1]})`);
+              core.setFailed(`PR description is missing required sections: ${missingNames.join(', ')}`);
               return;
             }
 
