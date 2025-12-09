@@ -77,7 +77,7 @@ GRAFANA_ADMIN_PASSWORD=your_secure_password
 - 스크래핑 간격: 15초 (FastAPI의 경우 5초)
 - 타겟:
   - prometheus (자체 모니터링)
-  - fastapi:8000/metrics
+  - backend:8000/metrics
 
 ### Grafana 프로비저닝
 - 데이터 소스: `grafana/provisioning/datasources/prometheus.yml`
