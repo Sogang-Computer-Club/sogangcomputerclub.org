@@ -86,7 +86,7 @@ GRAFANA_ADMIN_PASSWORD=your_secure_password
 
 ### Prometheus 설정
 - 파일: `prometheus.yml`
-- 스크래핑 간격: 15초 (FastAPI의 경우 5초)
+- 스크래핑 간격: 15초 (Backend의 경우 5초)
 - 타겟:
   - prometheus (자체 모니터링)
   - backend:8000/metrics
@@ -115,7 +115,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ## 문제 해결
 
 ### FastAPI 지표가 표시되지 않음
-1. FastAPI가 실행 중인지 확인: `docker-compose ps`
+1. Backend가 실행 중인지 확인: `docker-compose ps`
 2. 지표 엔드포인트 확인: `curl http://localhost:8000/metrics`
 3. Prometheus 타겟 확인: http://localhost:9090/targets
 

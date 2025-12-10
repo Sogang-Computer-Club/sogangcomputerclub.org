@@ -1,7 +1,7 @@
 # Labeler configuration
 # Label PRs based on changed files
 
-fastapi:
+backend:
   - "app/**/*"
   - "tests/**/*"
   - "pyproject.toml"
