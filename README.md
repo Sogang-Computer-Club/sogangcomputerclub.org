@@ -29,7 +29,7 @@
                │                │                │
           ┌────▼─────┐     ┌────▼────┐      ┌────▼─────┐
           │PostgreSQL│     │  Redis  │      │  Kafka   │
-          │  :5432   │     │  :6380  │      │  :9092   │
+          │  :5432   │     │  :6379  │      │  :9092   │
           └──────────┘     └─────────┘      └────┬─────┘
                                                  │
                                             ┌────▼─────┐
@@ -72,7 +72,7 @@
 ### 1. 프로젝트 클론
 
 ```bash
-git clone https://github.com/revenantonthemission/sogangcomputerclub.org.git
+git clone https://github.com/your-org/sogangcomputerclub.org.git
 cd sogangcomputerclub.org
 ```
 
@@ -99,7 +99,7 @@ docker-compose up -d
 - **API 서버**: http://localhost:8000
 - **API 문서**: http://localhost:8000/docs
 - **Redis**: localhost:6381
-- **PostgreSQL**: localhost:5432
+- **PostgreSQL**: localhost:5433
 - **Kafka**: localhost:9092
 
 ## 프로젝트 구조
