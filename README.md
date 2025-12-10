@@ -292,7 +292,7 @@ docker-compose up -d
 docker-compose logs -f
 
 # 특정 서비스 로그
-docker-compose logs -f fastapi
+docker-compose logs -f backend
 docker-compose logs -f frontend
 docker-compose logs -f nginx
 
@@ -300,7 +300,7 @@ docker-compose logs -f nginx
 docker-compose restart
 
 # 개별 서비스 재시작
-docker-compose restart fastapi
+docker-compose restart backend
 
 # 서비스 중지
 docker-compose down
@@ -313,7 +313,7 @@ docker-compose down -v
 
 ```bash
 # Backend 컨테이너 접속
-docker-compose exec fastapi /bin/bash
+docker-compose exec backend /bin/bash
 
 # PostgreSQL 접속 (.env에 설정한 비밀번호 사용)
 docker-compose exec postgres psql -U memo_user -d memo_app
@@ -540,9 +540,9 @@ docker-compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
 docker-compose ps
 
 # 네트워크 연결 확인
-docker-compose exec fastapi ping postgres
-docker-compose exec fastapi ping redis
-docker-compose exec fastapi ping kafka
+docker-compose exec backend ping postgres
+docker-compose exec backend ping redis
+docker-compose exec backend ping kafka
 ```
 
 ## CI/CD

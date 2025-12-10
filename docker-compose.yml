@@ -1,5 +1,5 @@
 services:
-  fastapi:
+  backend:
     build: .
     ports:
       - "8000:8000"
@@ -73,7 +73,7 @@ services:
       - HOST=${HOST}
       - PORT=${PORT}
     depends_on:
-      - fastapi
+      - backend
     networks:
       - app-network
 
@@ -90,7 +90,7 @@ services:
     entrypoint: /bin/sh
     command: -c "/nginx.sh"
     depends_on:
-      - fastapi
+      - backend
       - frontend
     networks:
       - app-network
@@ -160,7 +160,7 @@ services:
     networks:
       - app-network
     depends_on:
-      - fastapi
+      - backend
 
   grafana:
     image: grafana/grafana:latest

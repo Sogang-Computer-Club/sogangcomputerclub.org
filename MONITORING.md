@@ -28,7 +28,19 @@ FastAPI App (/metrics) -> Prometheus (scrapes) -> Grafana (queries) -> User Dash
 **참고**: Redis 포트는 호스트 서비스와의 충돌을 피하기 위해 6380에서 변경되었습니다.
 
 ## 모니터링 스택 접속
-
+ 
+### 원격 접속 (SSH 터널링)
+보안상의 이유로 모니터링 포트는 외부에 노출되지 않습니다. 로컬 머신에서 서버의 모니터링 도구에 접속하려면 SSH 터널링을 사용하세요.
+ 
+```bash
+# 로컬 포트 3001(Grafana)과 9090(Prometheus)을 서버의 포트로 포워딩
+ssh -L 3001:localhost:3001 -L 9090:localhost:9090 -L 16686:localhost:16686 user@server_address
+```
+ 
+터널링이 연결되면 로컬 브라우저에서 다음 주소로 접속할 수 있습니다:
+- **Grafana**: http://localhost:3001
+- **Prometheus**: http://localhost:9090
+ 
 ### Prometheus
 - URL: http://localhost:9090
 - "Targets" 페이지를 사용하여 스크래핑 상태 확인
@@ -74,7 +86,7 @@ GRAFANA_ADMIN_PASSWORD=your_secure_password
 
 ### Prometheus 설정
 - 파일: `prometheus.yml`
-- 스크래핑 간격: 15초 (FastAPI의 경우 5초)
+- 스크래핑 간격: 15초 (Backend의 경우 5초)
 - 타겟:
   - prometheus (자체 모니터링)
   - backend:8000/metrics
@@ -82,7 +94,9 @@ GRAFANA_ADMIN_PASSWORD=your_secure_password
 ### Grafana 프로비저닝
 - 데이터 소스: `grafana/provisioning/datasources/prometheus.yml`
 - 대시보드: `grafana/provisioning/dashboards/default.yml`
-- 대시보드 JSON: `grafana/provisioning/dashboards/fastapi-dashboard.json`
+- 대시보드 JSON: 
+  - `grafana/provisioning/dashboards/fastapi-dashboard.json`
+  - `grafana/provisioning/dashboards/redis-dashboard.json`
 
 ## Docker Compose 설정
 
@@ -101,7 +115,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ## 문제 해결
 
 ### FastAPI 지표가 표시되지 않음
-1. FastAPI가 실행 중인지 확인: `docker-compose ps`
+1. Backend가 실행 중인지 확인: `docker-compose ps`
 2. 지표 엔드포인트 확인: `curl http://localhost:8000/metrics`
 3. Prometheus 타겟 확인: http://localhost:9090/targets
 
