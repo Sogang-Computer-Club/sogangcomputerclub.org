@@ -541,7 +541,32 @@ docker-compose ps
 docker-compose exec backend ping postgres
 docker-compose exec backend ping redis
 docker-compose exec backend ping kafka
+# 네트워크 연결 확인
+docker-compose exec backend ping postgres
+docker-compose exec backend ping redis
+docker-compose exec backend ping kafka
 ```
+
+## 문제 해결 (Troubleshooting)
+
+### 배포 실패: GITHUB_REPOSITORY 미설정
+배포 시 `invalid reference format` 에러가 발생하면 `.env` 파일을 확인하세요:
+1. `GITHUB_REPOSITORY` 변수가 설정되어 있어야 합니다.
+2. 값은 **반드시 소문자**여야 합니다 (예: `sogang-computer-club/sogangcomputerclub.org`).
+
+### 포트 충돌 (Bind failed)
+`Bind for 0.0.0.0:6379 failed` 등의 에러는 이전 컨테이너가 포트를 점유 중이기 때문입니다.
+다음 명령어로 정리할 수 있습니다 (주의: 모든 컨테이너 중단):
+```bash
+docker ps -aq --filter name=sgcc | xargs -r docker rm -f
+docker ps -aq --filter name=sogangcomputercluborg | xargs -r docker rm -f
+```
+
+### SSL 인증서 발급 실패 (Error 521)
+Certbot 로그에 `Invalid response ... 521` 에러가 보이면:
+- Cloudflare 등 외부 프록시/DNS 설정 문제입니다.
+- 원본 서버(Origin)가 다운되었거나 방화벽이 80번 포트를 차단하지 않는지 확인하세요.
+- 인증서 발급을 위해서는 80번 포트(HTTP) 접근이 가능해야 합니다.
 
 ## CI/CD
 
@@ -708,17 +733,24 @@ docker push sogangcomputerclub/backend:latest
 docker push sogangcomputerclub/frontend:latest
 ```
 
-### SSL 인증서 발급 (Let's Encrypt)
+### SSL 인증서 발급 (Let's Encrypt - Auto)
 
-Certbot 서비스가 자동으로 SSL 인증서를 관리합니다:
+`docker-compose.prod.yml`에 포함된 `certbot` 서비스가 자동으로 SSL 인증서를 관리합니다:
 
+1. 컨테이너 시작 시: 인증서가 없으면 자동으로 발급 요청
+2. 실행 중: 12시간마다 갱신 필요 여부 확인 및 자동 갱신
+3. `manage-certs.sh` 스크립트가 이 과정을 수행합니다.
+
+`nginx`는 공유 볼륨 `certbot_www`를 통해 ACME 챌린지를 처리하고, `./certs` 호스트 디렉토리를 통해 갱신된 인증서를 공유받습니다.
+
+수동으로 갱신을 트리거하려면:
 ```bash
-# certbot.sh 스크립트가 자동으로 실행됨
-# 수동 갱신이 필요한 경우:
 docker-compose restart certbot
+```
 
-# 인증서 확인
-docker-compose exec certbot certbot certificates
+인증서 갱신 후 Nginx 리로드 (필요한 경우):
+```bash
+docker-compose exec nginx nginx -s reload
 ```
 
 ## 보안
