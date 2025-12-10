@@ -28,8 +28,8 @@
                ┌────────────────┼────────────────┐
                │                │                │
           ┌────▼─────┐     ┌────▼────┐      ┌────▼─────┐
-          │ MariaDB  │     │  Redis  │      │  Kafka   │
-          │  :3306   │     │  :6380  │      │  :9092   │
+          │PostgreSQL│     │  Redis  │      │  Kafka   │
+          │  :5432   │     │  :6380  │      │  :9092   │
           └──────────┘     └─────────┘      └────┬─────┘
                                                  │
                                             ┌────▼─────┐
@@ -72,7 +72,7 @@
 ### 1. 프로젝트 클론
 
 ```bash
-git clone https://github.com/your-org/sogangcomputerclub.org.git
+git clone https://github.com/revenantonthemission/sogangcomputerclub.org.git
 cd sogangcomputerclub.org
 ```
 
@@ -99,7 +99,7 @@ docker-compose up -d
 - **API 서버**: http://localhost:8000
 - **API 문서**: http://localhost:8000/docs
 - **Redis**: localhost:6381
-- **MariaDB**: localhost:3307
+- **PostgreSQL**: localhost:5432
 - **Kafka**: localhost:9092
 
 ## 프로젝트 구조
@@ -177,9 +177,7 @@ sogangcomputerclub.org/
 │   │   ├── pr-validation.yml   # PR 유효성 검사
 │   │   ├── release.yml         # 릴리스 자동화
 │   │   ├── security-scan.yml   # 보안 스캔
-│   │   ├── stale.yml           # 오래된 이슈/PR 관리
-│   │   ├── sync-upstream.yml   # 업스트림 동기화
-│   │   └── validate-pr.yml     # PR 검증 (레거시)
+│   │   └── stale.yml           # 오래된 이슈/PR 관리
 │   └── ISSUE_TEMPLATE/         # 이슈 템플릿
 ├── docker-compose.yml          # Docker Compose 설정
 ├── Dockerfile                  # Backend 컨테이너 이미지

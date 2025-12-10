@@ -55,42 +55,42 @@ crontab -e
 ```bash
 # .env 파일에서 자격 증명 로드
 source .env
-docker exec ${CONTAINER_NAME_PREFIX}-mariadb-1 mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} -e "SELECT * FROM memos;"
+docker exec ${CONTAINER_NAME_PREFIX}-postgres-1 psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT * FROM memos;"
 ```
 
 ### 메모 수 계산하기:
 ```bash
 # .env 파일에서 자격 증명 로드
 source .env
-docker exec ${CONTAINER_NAME_PREFIX}-mariadb-1 mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} -e "SELECT COUNT(*) FROM memos;"
+docker exec ${CONTAINER_NAME_PREFIX}-postgres-1 psql -U ${POSTGRES_USER} -d ${POSTGRES_DB} -c "SELECT COUNT(*) FROM memos;"
 ```
 
 ### 수동 백업 생성하기:
 ```bash
 # .env 파일에서 자격 증명 로드
 source .env
-docker exec ${CONTAINER_NAME_PREFIX}-mariadb-1 mysqldump -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} > backups/manual_backup_$(date +%Y%m%d_%H%M%S).sql
+docker exec -e PGPASSWORD=${POSTGRES_PASSWORD} ${CONTAINER_NAME_PREFIX}-postgres-1 pg_dump -U ${POSTGRES_USER} ${POSTGRES_DB} > backups/manual_backup_$(date +%Y%m%d_%H%M%S).sql
 ```
 
 ### 수동 백업 복구하기:
 ```bash
 # .env 파일에서 자격 증명 로드
 source .env
-docker exec -i ${CONTAINER_NAME_PREFIX}-mariadb-1 mysql -u${MYSQL_USER} -p${MYSQL_PASSWORD} ${MYSQL_DATABASE} < backups/manual_backup_YYYYMMDD_HHMMSS.sql
+cat backups/manual_backup_YYYYMMDD_HHMMSS.sql | docker exec -i -e PGPASSWORD=${POSTGRES_PASSWORD} ${CONTAINER_NAME_PREFIX}-postgres-1 psql -U ${POSTGRES_USER} -d ${POSTGRES_DB}
 ```
 
 ## Docker 볼륨에 백업하기
 
-데이터베이스는 Docker 볼륨인 `sogangcomputercluborg_mariadb_data`에 저장됩니다.
+데이터베이스는 Docker 볼륨인 `postgres_data`에 저장됩니다. (프로젝트 이름 접두사가 붙을 수 있습니다, 예: `sogangcomputercluborg_postgres_data`)
 
 ### 전체 볼륨 백업하기:
 ```bash
-docker run --rm -v sogangcomputercluborg_mariadb_data:/data -v $(pwd)/backups:/backup ubuntu tar czf /backup/mariadb_volume_$(date +%Y%m%d_%H%M%S).tar.gz -C /data .
+docker run --rm -v sogangcomputercluborg_postgres_data:/data -v $(pwd)/backups:/backup ubuntu tar czf /backup/postgres_volume_$(date +%Y%m%d_%H%M%S).tar.gz -C /data .
 ```
 
 ### 볼륨 복구하기:
 ```bash
-docker run --rm -v sogangcomputercluborg_mariadb_data:/data -v $(pwd)/backups:/backup ubuntu tar xzf /backup/mariadb_volume_YYYYMMDD_HHMMSS.tar.gz -C /data
+docker run --rm -v sogangcomputercluborg_postgres_data:/data -v $(pwd)/backups:/backup ubuntu tar xzf /backup/postgres_volume_YYYYMMDD_HHMMSS.tar.gz -C /data
 ```
 
 ## 복구 옵션
@@ -108,4 +108,3 @@ docker run --rm -v sogangcomputercluborg_mariadb_data:/data -v $(pwd)/backups:/b
 1. **자동 백업 설정**
 2. **Docker 볼륨 사용**
 3. **정기적인 수동 백업**
-4. **중요한 메모 내보내기**

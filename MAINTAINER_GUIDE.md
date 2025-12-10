@@ -211,7 +211,6 @@ git push origin v1.2.3-alpha.1
 | `stale.yml` | 매일 | 오래된 PR/이슈 표시 및 닫기 |
 | `auto-merge.yml` | 리뷰/검사 | 승인된 PR 자동 병합 |
 | `release.yml` | 태그 푸시 | 변경 로그와 함께 릴리스 생성 |
-| `sync-upstream.yml` | 일정/수동 | 업스트림 저장소와 동기화 |
 
 ### 배포 워크플로우
 
