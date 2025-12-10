@@ -72,7 +72,7 @@
 ### 1. 프로젝트 클론
 
 ```bash
-git clone https://github.com/your-org/sogangcomputerclub.org.git
+git clone https://github.com/revenantonthemission/sogangcomputerclub.org.git
 cd sogangcomputerclub.org
 ```
 
@@ -165,9 +165,7 @@ sogangcomputerclub.org/
 │   │   ├── pr-validation.yml   # PR 유효성 검사
 │   │   ├── release.yml         # 릴리스 자동화
 │   │   ├── security-scan.yml   # 보안 스캔
-│   │   ├── stale.yml           # 오래된 이슈/PR 관리
-│   │   ├── sync-upstream.yml   # 업스트림 동기화
-│   │   └── validate-pr.yml     # PR 검증 (레거시)
+│   │   └── stale.yml           # 오래된 이슈/PR 관리
 │   └── ISSUE_TEMPLATE/         # 이슈 템플릿
 ├── docker-compose.yml          # Docker Compose 설정
 ├── Dockerfile                  # Backend 컨테이너 이미지

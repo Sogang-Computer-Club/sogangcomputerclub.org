@@ -22,7 +22,7 @@ FastAPI App (/metrics) -> Prometheus (scrapes) -> Grafana (queries) -> User Dash
 | Prometheus | 9090 | 9090 | 지표 수집 및 쿼리 |
 | Grafana | 3001 | 3000 | 대시보드 및 시각화 |
 | FastAPI | 8000 | 8000 | 애플리케이션 및 지표 |
-| PostgreSQL | 5432 | 5432 | 데이터베이스 |
+| PostgreSQL | 5433 | 5432 | 데이터베이스 |
 | Redis | 6381 | 6379 | 캐시 |
 
 **참고**: Redis 포트는 호스트 서비스와의 충돌을 피하기 위해 6380에서 변경되었습니다.
@@ -171,4 +171,8 @@ docker run --rm -v sogangcomputercluborg_grafana_data:/data -v $(pwd):/backup al
 - **Nginx Exporter**: nginx 웹 서버 지표 모니터링
 - **Node Exporter**: 호스트 시스템 지표 모니터링
 
-이들은 prometheus.yml에 사전 구성되어 있지만 아직 배포되지 않았습니다.
+이들은 **현재 배포되어 있으며** `docker-compose.yml` 및 `docker-compose.prod.yml`에 구성되어 있습니다.
+
+- `redis-exporter` (Port: 9121)
+- `postgres-exporter` (Port: 9187)
+- `nginx-exporter` (Port: 9113)
