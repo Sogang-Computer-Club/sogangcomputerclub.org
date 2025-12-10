@@ -22,7 +22,6 @@ logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
-
 # --- Prometheus Metrics ---
 REQUEST_COUNT = Counter(
     'fastapi_requests_total',
@@ -43,10 +42,11 @@ ACTIVE_CONNECTIONS = Gauge(
     'Number of active database connections'
 )
 
+
 # --- Environment Configuration ---
 DATABASE_URL = os.getenv(
     "DATABASE_URL",
-    "mysql+aiomysql://memo_user:changeme@mariadb:3306/memo_app"
+    "postgresql+asyncpg://memo_user:phoenix@postgres:5432/memo_app"
 )
 REDIS_URL = os.getenv("REDIS_URL", "redis://redis:6379")
 KAFKA_BOOTSTRAP_SERVERS = os.getenv("KAFKA_BOOTSTRAP_SERVERS", "kafka:9092")
@@ -81,6 +81,8 @@ async def monitor_database_connections(app: FastAPI):
             logger.error(f"Error monitoring DB connections: {e}")
         await asyncio.sleep(5)
 
+
+
 # --- Application Lifespan Management ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -108,9 +110,14 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: 데이터베이스 리소스가 app.state에 저장되었습니다.")
 
     # Create tables
-    async with engine.begin() as conn:
-        await conn.run_sync(metadata.create_all)
-    logger.info("Lifespan: 데이터베이스 테이블이 성공적으로 준비되었습니다.")
+    try:
+        async with engine.begin() as conn:
+            await conn.run_sync(metadata.create_all)
+        logger.info("Lifespan: 데이터베이스 테이블이 성공적으로 준비되었습니다.")
+    except Exception as e:
+        logger.error(f"Lifespan: 데이터베이스 테이블 생성 실패 - {e}")
+        # We don't raise here to allow the app to start and report health status
+
 
     # Initialize Redis
     try:
@@ -151,6 +158,10 @@ async def lifespan(app: FastAPI):
     monitoring_task = asyncio.create_task(monitor_database_connections(app))
 
 
+
+
+
+
     yield
 
     # Shutdown
@@ -169,6 +180,8 @@ async def lifespan(app: FastAPI):
         await monitoring_task
     except asyncio.CancelledError:
         pass
+
+
     
     await app.state.db_engine.dispose()
     logger.info("Lifespan: 데이터베이스 연결 종료 완료")
@@ -207,6 +220,8 @@ async def prometheus_middleware(request: Request, call_next):
     REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
 
     return response
+
+
 
 # --- Pydantic Models ---
 class MemoBase(BaseModel):
@@ -293,12 +308,12 @@ async def health_check(request: Request) -> Dict[str, Any]:
 
     return health_status
 
+
 # --- Prometheus Metrics Endpoint ---
 @app.get("/metrics", tags=["System"])
 async def metrics():
     """Prometheus metrics endpoint"""
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
-
 # --- Memo API Endpoints ---
 @app.post("/memos/", response_model=MemoInDB, status_code=status.HTTP_201_CREATED, tags=["Memos"])
 async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Depends(get_db)):
@@ -313,11 +328,10 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
             is_archived=memo.is_archived,
             is_favorite=memo.is_favorite,
             author=memo.author
-        )
+        ).returning(memos.c.id)
         result = await db.execute(query)
+        created_id = result.scalar_one()
         await db.commit()
-
-        created_id = result.lastrowid
         created_memo_query = memos.select().where(memos.c.id == created_id)
         created_memo = await db.execute(created_memo_query)
         memo_data = created_memo.mappings().one()
@@ -332,14 +346,13 @@ async def create_memo(memo: MemoCreate, request: Request, db: AsyncSession = Dep
             except Exception as e:
                 logger.warning(f"Failed to publish to Kafka: {e}")
 
+        MEMO_COUNT.inc()
         return memo_data
     except Exception as e:
         await db.rollback()
         logger.error(f"메모 생성 중 오류 발생: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="메모 생성에 실패했습니다.")
-    finally:
-        if 'created_id' in locals():
-             MEMO_COUNT.inc()
+
 
 @app.get("/memos/", response_model=List[MemoInDB], tags=["Memos"])
 async def read_memos(skip: int = 0, limit: int = 100, db: AsyncSession = Depends(get_db)):
@@ -439,6 +452,7 @@ async def delete_memo(memo_id: int, request: Request, db: AsyncSession = Depends
     finally:
         if 'delete_query' in locals(): # Simple check if we reached the deletion point
              MEMO_COUNT.dec()
+
 
 @app.get("/memos/search/", response_model=List[MemoInDB], tags=["Memos"])
 async def search_memos(q: str = Query(..., min_length=1, description="검색어"), db: AsyncSession = Depends(get_db)):

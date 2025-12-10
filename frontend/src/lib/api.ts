@@ -1,8 +1,8 @@
 // API configuration
 // Use full URL for SSR, relative URL for client
-const API_BASE_URL = typeof window === 'undefined'
-    ? 'http://fastapi:8000'
-    : '/api';
+const API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL || (typeof window === 'undefined'
+    ? 'http://backend:8000'
+    : '/api');
 
 export interface Memo {
     id: number;

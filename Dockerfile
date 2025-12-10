@@ -1,6 +1,7 @@
 FROM python:3.13
 WORKDIR /code
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
+RUN pip install uv
+RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 COPY ./pyproject.toml ./uv.lock ./README.md /code/
 RUN uv sync --frozen --no-cache
 COPY ./app /code/app

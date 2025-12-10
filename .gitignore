@@ -130,3 +130,7 @@ __pycache__
 
 # IDE
 .claude/
+.agent/
+
+# temporary scripts
+scripts/fix_sequence.py
