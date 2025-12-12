@@ -106,6 +106,7 @@ backups/backup.log
 *.key
 *.crt
 *.csr
+/letsencrypt
 
 # Vite
 vite.config.js.timestamp-*
@@ -130,7 +131,7 @@ __pycache__
 
 # IDE
 .claude/
-.agent/
+.agent/rules/
 
 # temporary scripts
 scripts/fix_sequence.py

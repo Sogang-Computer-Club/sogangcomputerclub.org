@@ -19,7 +19,10 @@
   "links": [],
   "panels": [
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -44,7 +47,10 @@
       "pluginVersion": "8.4.3",
       "targets": [
         {
-          "datasource": "Prometheus",
+          "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
           "expr": "redis_up",
           "refId": "A"
         }
@@ -53,7 +59,10 @@
       "type": "stat"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -127,7 +136,10 @@
       },
       "targets": [
         {
-          "datasource": "Prometheus",
+          "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
           "expr": "redis_connected_clients",
           "refId": "A"
         }
@@ -136,7 +148,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -211,7 +226,10 @@
       },
       "targets": [
         {
-          "datasource": "Prometheus",
+          "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
           "expr": "redis_memory_used_bytes",
           "refId": "A"
         }
@@ -220,7 +238,10 @@
       "type": "timeseries"
     },
     {
-      "datasource": "Prometheus",
+      "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -294,7 +315,10 @@
       },
       "targets": [
         {
-          "datasource": "Prometheus",
+          "datasource": {
+        "type": "prometheus",
+        "uid": "P1809F7CD0C75ACF3"
+      },
           "expr": "rate(redis_commands_processed_total[5m])",
           "refId": "A"
         }
