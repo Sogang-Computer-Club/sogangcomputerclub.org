@@ -660,7 +660,28 @@ cp .env.example .env
 
 `.env` 파일은 `.gitignore`에 등록되어 있어 git에 커밋되지 않습니다.
 
-### 2. Production (`GitHub Secrets`)
+### 2. Database Migrations (Alembic)
+데이터베이스 스키마 변경 시에는 Alembic을 사용하여 마이그레이션을 관리합니다.
+
+#### 마이그레이션 생성 (스키마 변경 시)
+```bash
+# 로컬 개발 환경 (uv 사용)
+uv run alembic revision --autogenerate -m "설명"
+```
+
+#### 마이그레이션 적용 (DB 업데이트)
+```bash
+# 로컬 개발 환경
+uv run alembic upgrade head
+```
+
+#### 마이그레이션 취소 (롤백)
+```bash
+# 직전 버전으로 롤백
+uv run alembic downgrade -1
+```
+
+### 3. Production (`GitHub Secrets`)
 프로덕션 배포 시에는 `.env` 파일을 사용하지 **않습니다**. 대신 GitHub Repository Settings > Secrets and variables > Actions에 다음 Secret들을 등록해야 합니다.
 
 | Secret Name | 설명 |
