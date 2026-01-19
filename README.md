@@ -652,10 +652,10 @@ docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
 이 프로젝트는 환경 설정을 위해 **Local 환경에서는 `.env` 파일**, **Production 환경에서는 GitHub Secrets**를 사용합니다.
 
 ### 1. Local Development (`.env`)
-로컬 개발 시에는 `.env` 파일이 필수입니다. `env.example` 파일을 복사하여 생성하세요.
+로컬 개발 시에는 `.env` 파일이 필수입니다. `.env.example` 파일을 복사하여 생성하세요.
 
 ```bash
-cp env.example .env
+cp .env.example .env
 ```
 
 `.env` 파일은 `.gitignore`에 등록되어 있어 git에 커밋되지 않습니다.
