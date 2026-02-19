@@ -25,7 +25,7 @@ from .core.config import get_settings
 from .core.database import engine, async_session_factory
 from .routers import health_router, memos_router, auth_router
 from .common.middleware import PrometheusMiddleware
-from .events.publisher import KafkaEventPublisher
+from .events.publisher import create_event_publisher
 from .common.metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
 from .common.rate_limit import limiter, rate_limit_exceeded_handler
 
@@ -91,14 +91,14 @@ async def lifespan(app: FastAPI):
         logger.warning(f"Lifespan: Redis 연결 실패 - {e}")
         app.state.redis = None
 
-    # Initialize Kafka Producer
-    kafka_publisher = KafkaEventPublisher()
+    # Initialize Event Publisher (Kafka, SQS, or Null based on config)
+    event_publisher = create_event_publisher()
     try:
-        await kafka_publisher.start()
-        app.state.kafka = kafka_publisher
-        logger.info("Lifespan: Kafka Producer 연결 성공")
+        await event_publisher.start()
+        app.state.kafka = event_publisher  # Keep same state name for compatibility
+        logger.info(f"Lifespan: Event Publisher 연결 성공 (backend: {settings.event_backend})")
     except Exception as e:
-        logger.warning(f"Lifespan: Kafka 연결 실패 - {e}")
+        logger.warning(f"Lifespan: Event Publisher 연결 실패 - {e}")
         app.state.kafka = None
 
     logger.info("Lifespan: 모든 서비스가 성공적으로 시작되었습니다.")
@@ -123,7 +123,7 @@ async def lifespan(app: FastAPI):
 
     if app.state.kafka:
         await app.state.kafka.stop()
-        logger.info("Lifespan: Kafka Producer 종료 완료")
+        logger.info("Lifespan: Event Publisher 종료 완료")
 
     if app.state.redis:
         await app.state.redis.aclose()

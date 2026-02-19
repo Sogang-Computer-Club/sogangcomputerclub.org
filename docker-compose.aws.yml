@@ -1,0 +1,153 @@
+# Docker Compose for AWS EC2 + RDS deployment
+# Uses external RDS for PostgreSQL, SQS for events
+# Redis runs as container, Nginx for reverse proxy
+
+services:
+  backend:
+    image: ${ECR_REGISTRY}/${PROJECT_NAME}/backend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    expose:
+      - "8000"
+    environment:
+      # Database - from AWS Secrets Manager via .env
+      - DATABASE_URL=${DATABASE_URL}
+      # Redis - local container
+      - REDIS_URL=redis://redis:6379
+      # SQS instead of Kafka
+      - SQS_QUEUE_URL=${SQS_QUEUE_URL}
+      - AWS_REGION=${AWS_REGION:-ap-northeast-2}
+      - EVENT_BACKEND=sqs
+      # Application settings
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=false
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - sgcc-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: /aws/ec2/sgcc
+        awslogs-stream: backend
+        awslogs-create-group: "true"
+
+  frontend:
+    image: ${ECR_REGISTRY}/${PROJECT_NAME}/frontend:${IMAGE_TAG:-latest}
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - NODE_ENV=production
+      - HOST=0.0.0.0
+      - PORT=3000
+    depends_on:
+      - backend
+    networks:
+      - sgcc-network
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: awslogs
+      options:
+        awslogs-region: ${AWS_REGION:-ap-northeast-2}
+        awslogs-group: /aws/ec2/sgcc
+        awslogs-stream: frontend
+        awslogs-create-group: "true"
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - sgcc-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    command: redis-server --appendonly yes
+
+  nginx:
+    image: nginx:alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-aws.conf:/etc/nginx/conf.d/default.conf:ro
+      - ./certs:/etc/nginx/certs:ro
+      - certbot_www:/var/www/html
+    networks:
+      - sgcc-network
+    depends_on:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Prometheus for metrics (optional, can be removed to save resources)
+  prometheus:
+    image: prom/prometheus:latest
+    restart: unless-stopped
+    expose:
+      - "9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=7d"
+    networks:
+      - sgcc-network
+    profiles:
+      - monitoring
+
+  # Grafana for dashboards (optional)
+  grafana:
+    image: grafana/grafana:latest
+    restart: unless-stopped
+    expose:
+      - "3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SERVER_ROOT_URL=${GRAFANA_ROOT_URL:-http://localhost:3001}
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - sgcc-network
+    depends_on:
+      - prometheus
+    profiles:
+      - monitoring
+
+volumes:
+  redis_data:
+  certbot_www:
+  prometheus_data:
+  grafana_data:
+
+networks:
+  sgcc-network:
+    driver: bridge

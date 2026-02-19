@@ -23,6 +23,14 @@ class Settings(BaseSettings):
     # Kafka
     kafka_bootstrap_servers: str = "kafka:9092"
 
+    # AWS SQS (alternative to Kafka)
+    sqs_queue_url: str | None = None
+    aws_region: str = "ap-northeast-2"
+    event_backend: str = Field(
+        default="kafka",
+        description="Event backend: 'kafka', 'sqs', or 'null'"
+    )
+
     # Application
     debug: bool = False
     log_level: str = "INFO"

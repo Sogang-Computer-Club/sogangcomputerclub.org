@@ -1,0 +1,26 @@
+# Terraform Variables Example
+# Copy this file to terraform.tfvars and fill in the values
+
+# AWS Configuration
+aws_region  = "ap-northeast-2"
+environment = "production"
+
+# EC2 Configuration
+ec2_instance_type = "t3.small"
+ec2_key_name      = "your-ssh-key-name"  # Create this in AWS Console first
+ec2_volume_size   = 30
+
+# RDS Configuration
+db_instance_class = "db.t4g.micro"
+db_name           = "sgcc_db"
+db_username       = "sgcc_admin"
+db_password       = "YOUR_SECURE_PASSWORD_HERE"  # Use a strong password!
+db_multi_az       = true  # Set to false to save costs (~50% reduction)
+
+# Domain
+domain_name = "sogangcomputerclub.org"
+
+# Security - SSH Access
+# Add your IP addresses for SSH access (e.g., ["1.2.3.4/32"])
+# Leave empty to allow all (not recommended for production)
+allowed_ssh_cidrs = []
