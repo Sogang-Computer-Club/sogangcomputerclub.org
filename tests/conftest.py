@@ -4,9 +4,9 @@ import asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
 from app.main import app
-from app.dependencies import get_db
-from app.database import metadata
-from app.auth import create_access_token
+from app.core.dependencies import get_db
+from app.core.database import metadata
+from app.core.security import create_access_token
 from typing import AsyncGenerator
 
 
@@ -84,6 +84,9 @@ async def client(test_engine, test_session_factory):
     app.state.db_session_factory = test_session_factory
     app.state.redis = None  # Disable Redis for tests
     app.state.kafka = None  # Disable Kafka for tests
+
+    # Disable rate limiting for tests
+    app.state.limiter.enabled = False
 
     async with AsyncClient(
         transport=ASGITransport(app=app),

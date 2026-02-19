@@ -11,8 +11,8 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from alembic import context
-from app.database import metadata
-from app.config import get_settings
+from app.core.database import metadata
+from app.core.config import get_settings
 from app.models import memos, users  # Ensure models are imported/registered
 
 # this is the Alembic Config object, which provides

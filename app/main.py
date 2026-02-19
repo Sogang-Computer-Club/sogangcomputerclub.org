@@ -21,13 +21,13 @@ import sqlalchemy
 
 from slowapi.errors import RateLimitExceeded
 
-from .config import get_settings
-from .database import engine, async_session_factory
+from .core.config import get_settings
+from .core.database import engine, async_session_factory
 from .routers import health_router, memos_router, auth_router
-from .middleware import PrometheusMiddleware
-from .services.kafka import kafka_service
-from .metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
-from .rate_limit import limiter, rate_limit_exceeded_handler
+from .common.middleware import PrometheusMiddleware
+from .events.publisher import KafkaEventPublisher
+from .common.metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
+from .common.rate_limit import limiter, rate_limit_exceeded_handler
 
 # --- Logging Configuration ---
 logging.basicConfig(
@@ -92,9 +92,10 @@ async def lifespan(app: FastAPI):
         app.state.redis = None
 
     # Initialize Kafka Producer
+    kafka_publisher = KafkaEventPublisher()
     try:
-        await kafka_service.start()
-        app.state.kafka = kafka_service
+        await kafka_publisher.start()
+        app.state.kafka = kafka_publisher
         logger.info("Lifespan: Kafka Producer 연결 성공")
     except Exception as e:
         logger.warning(f"Lifespan: Kafka 연결 실패 - {e}")
@@ -121,7 +122,7 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: 애플리케이션 종료 중...")
 
     if app.state.kafka:
-        await kafka_service.stop()
+        await app.state.kafka.stop()
         logger.info("Lifespan: Kafka Producer 종료 완료")
 
     if app.state.redis:

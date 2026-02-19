@@ -1,11 +1,9 @@
 """
-Authentication module for JWT-based authentication.
-Provides token creation, validation, and FastAPI dependencies.
+Security module for JWT authentication and password hashing.
+Provides token creation, validation, and password utilities.
 """
 from datetime import datetime, timedelta, UTC
 from typing import Optional
-from fastapi import Depends, HTTPException, status
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import hashlib
 import hmac
 import base64
@@ -16,7 +14,6 @@ import os
 from .config import get_settings
 
 logger = logging.getLogger(__name__)
-security = HTTPBearer(auto_error=False)
 settings = get_settings()
 
 
@@ -105,49 +102,6 @@ def verify_token(token: str) -> Optional[dict]:
     except Exception as e:
         logger.warning(f"Token verification failed: {e}")
         return None
-
-
-async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> Optional[dict]:
-    """
-    FastAPI dependency to get the current authenticated user.
-    Returns None if no valid token is provided.
-
-    Use this for optional authentication.
-    """
-    if credentials is None:
-        return None
-
-    payload = verify_token(credentials.credentials)
-    return payload
-
-
-async def require_auth(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
-) -> dict:
-    """
-    FastAPI dependency that requires authentication.
-    Raises HTTPException if no valid token is provided.
-
-    Use this for endpoints that require authentication.
-    """
-    if credentials is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Authentication required",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    payload = verify_token(credentials.credentials)
-    if payload is None:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Invalid or expired token",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-
-    return payload
 
 
 # Password hashing using PBKDF2 with SHA-256 (secure, stdlib-only)

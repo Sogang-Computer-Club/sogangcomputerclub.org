@@ -1,5 +1,8 @@
-"""Models package."""
-from .memo import memos
-from .user import users
+"""
+Models package.
+Re-exports tables from domain modules for backward compatibility and Alembic.
+"""
+from ..memos.models import memos
+from ..users.models import users
 
 __all__ = ["memos", "users"]

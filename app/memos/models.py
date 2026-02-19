@@ -2,7 +2,7 @@
 Memo database model (SQLAlchemy Table).
 """
 import sqlalchemy
-from ..database import metadata
+from ..core.database import metadata
 
 memos = sqlalchemy.Table(
     "memos",
