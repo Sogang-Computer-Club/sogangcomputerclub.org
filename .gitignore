@@ -119,9 +119,6 @@ vite.config.ts.timestamp-*
 *.backup
 *.orig
 
-# Docs
-/docs
-
 # Cleanup
 test.db
 .venv
