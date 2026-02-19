@@ -1,8 +1,9 @@
 // API configuration
 // Use full URL for SSR, relative URL for client
+// API v1 is the current version
 const API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL || (typeof window === 'undefined'
-    ? 'http://backend:8000'
-    : '/api');
+    ? 'http://backend:8000/v1'
+    : '/api/v1');
 
 export interface Memo {
     id: number;
@@ -43,6 +44,34 @@ export interface MemoUpdate {
 export interface ApiError {
     detail: string;
     status: number;
+}
+
+export interface LoginRequest {
+    email: string;
+    password: string;
+}
+
+export interface RegisterRequest {
+    email: string;
+    password: string;
+    name: string;
+    student_id?: string;
+}
+
+export interface AuthToken {
+    access_token: string;
+    token_type: string;
+}
+
+export interface User {
+    id: number;
+    email: string;
+    name: string;
+    student_id: string | null;
+    is_active: boolean;
+    is_admin: boolean;
+    created_at: string;
+    updated_at: string;
 }
 
 /**
@@ -165,6 +194,63 @@ export async function searchMemos(
     const response = await fetch(`${API_BASE_URL}/memos/search/?${params}`);
     if (!response.ok) {
         await handleApiError(response, `Failed to search memos: ${response.statusText}`);
+    }
+    return response.json();
+}
+
+/**
+ * Login user and return access token
+ */
+export async function login(credentials: LoginRequest): Promise<AuthToken> {
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(credentials),
+    });
+    if (!response.ok) {
+        await handleApiError(response, 'Login failed');
+    }
+    return response.json();
+}
+
+/**
+ * Register a new user
+ */
+export async function register(userData: RegisterRequest): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(userData),
+    });
+    if (!response.ok) {
+        await handleApiError(response, 'Registration failed');
+    }
+    return response.json();
+}
+
+/**
+ * Get current user info
+ */
+export async function getCurrentUser(token: string): Promise<User> {
+    const response = await fetch(`${API_BASE_URL}/auth/me`, {
+        headers: getAuthHeaders(token),
+    });
+    if (!response.ok) {
+        await handleApiError(response, 'Failed to get user info');
+    }
+    return response.json();
+}
+
+/**
+ * Refresh access token
+ */
+export async function refreshToken(token: string): Promise<AuthToken> {
+    const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
+        method: 'POST',
+        headers: getAuthHeaders(token),
+    });
+    if (!response.ok) {
+        await handleApiError(response, 'Token refresh failed');
     }
     return response.json();
 }

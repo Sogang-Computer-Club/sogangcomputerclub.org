@@ -1,5 +1,5 @@
 # build stage
-FROM node:18-alpine AS build
+FROM node:20-alpine AS build
 WORKDIR /app
 COPY package*.json ./
 RUN npm install
@@ -7,7 +7,7 @@ COPY . .
 RUN npm run build
 
 # production stage
-FROM node:18-alpine AS production
+FROM node:20-alpine AS production
 
 # Create non-root user for security
 RUN addgroup --gid 1000 appgroup && \

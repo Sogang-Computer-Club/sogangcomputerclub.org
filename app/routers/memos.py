@@ -19,6 +19,16 @@ router = APIRouter(prefix="/memos", tags=["Memos"])
 logger = logging.getLogger(__name__)
 
 
+def check_memo_ownership(memo: dict, current_user: dict) -> bool:
+    """Check if current user owns the memo or is admin."""
+    # Admins can modify any memo
+    if current_user.get("is_admin", False):
+        return True
+    # Check if user is the author (match by email)
+    user_email = current_user.get("sub", "")
+    return memo.get("author") == user_email
+
+
 @router.post("/", response_model=MemoInDB, status_code=status.HTTP_201_CREATED)
 @limiter.limit(RATE_LIMIT_WRITE)
 async def create_memo(
@@ -29,6 +39,8 @@ async def create_memo(
 ):
     """Create a new memo. Requires authentication."""
     try:
+        # Set author to authenticated user's email
+        author = current_user.get("sub", memo.author)
         query = memos.insert().values(
             title=memo.title,
             content=memo.content,
@@ -37,7 +49,7 @@ async def create_memo(
             category=memo.category,
             is_archived=memo.is_archived,
             is_favorite=memo.is_favorite,
-            author=memo.author
+            author=author
         ).returning(memos.c.id)
         result = await db.execute(query)
         created_id = result.scalar_one()
@@ -129,12 +141,19 @@ async def update_memo(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_auth)
 ):
-    """Update a memo. Requires authentication."""
+    """Update a memo. Requires authentication and ownership."""
     try:
         existing_memo_query = memos.select().where(memos.c.id == memo_id)
         existing_memo = (await db.execute(existing_memo_query)).mappings().first()
         if existing_memo is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
+
+        # Check ownership
+        if not check_memo_ownership(dict(existing_memo), current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to modify this memo"
+            )
 
         update_data = memo.model_dump(exclude_unset=True)
         if not update_data:
@@ -171,12 +190,19 @@ async def delete_memo(
     db: AsyncSession = Depends(get_db),
     current_user: dict = Depends(require_auth)
 ):
-    """Delete a memo. Requires authentication."""
+    """Delete a memo. Requires authentication and ownership."""
     try:
         existing_memo_query = memos.select().where(memos.c.id == memo_id)
         existing_memo = (await db.execute(existing_memo_query)).mappings().first()
         if existing_memo is None:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
+
+        # Check ownership
+        if not check_memo_ownership(dict(existing_memo), current_user):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not authorized to delete this memo"
+            )
 
         delete_query = memos.delete().where(memos.c.id == memo_id)
         await db.execute(delete_query)

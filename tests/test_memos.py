@@ -13,10 +13,10 @@ async def test_create_memo(client: AsyncClient, auth_headers: dict):
         "category": "testing",
         "is_archived": False,
         "is_favorite": True,
-        "author": "Test User"
+        "author": "Test User"  # This will be overwritten by authenticated user's email
     }
 
-    response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
 
     assert response.status_code == 201
 
@@ -28,7 +28,8 @@ async def test_create_memo(client: AsyncClient, auth_headers: dict):
     assert data["category"] == memo_data["category"]
     assert data["is_archived"] == memo_data["is_archived"]
     assert data["is_favorite"] == memo_data["is_favorite"]
-    assert data["author"] == memo_data["author"]
+    # Author is set from authenticated user's email (token sub claim)
+    assert data["author"] == "test@example.com"
     assert "id" in data
     assert "created_at" in data
     assert "updated_at" in data
@@ -42,7 +43,7 @@ async def test_create_memo_minimal(client: AsyncClient, auth_headers: dict):
         "content": "Just the basics"
     }
 
-    response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
 
     assert response.status_code == 201
 
@@ -63,7 +64,7 @@ async def test_create_memo_validation_error(client: AsyncClient, auth_headers: d
         "title": "No content"
     }
 
-    response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     assert response.status_code == 422
 
     # Invalid priority
@@ -73,7 +74,7 @@ async def test_create_memo_validation_error(client: AsyncClient, auth_headers: d
         "priority": 10  # Should be 1-4
     }
 
-    response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     assert response.status_code == 422
 
 
@@ -85,7 +86,7 @@ async def test_create_memo_unauthorized(client: AsyncClient):
         "content": "This should fail"
     }
 
-    response = await client.post("/memos/", json=memo_data)
+    response = await client.post("/v1/memos/", json=memo_data)
     assert response.status_code == 401
 
 
@@ -98,10 +99,10 @@ async def test_get_memos(client: AsyncClient, auth_headers: dict):
             "title": f"Test Memo {i}",
             "content": f"Content {i}"
         }
-        await client.post("/memos/", json=memo_data, headers=auth_headers)
+        await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
 
     # Get all memos (no auth required for read)
-    response = await client.get("/memos/")
+    response = await client.get("/v1/memos/")
 
     assert response.status_code == 200
 
@@ -119,16 +120,16 @@ async def test_get_memos_with_pagination(client: AsyncClient, auth_headers: dict
             "title": f"Memo {i}",
             "content": f"Content {i}"
         }
-        await client.post("/memos/", json=memo_data, headers=auth_headers)
+        await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
 
     # Get first 5 memos
-    response = await client.get("/memos/?skip=0&limit=5")
+    response = await client.get("/v1/memos/?skip=0&limit=5")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 5
 
     # Get next 5 memos
-    response = await client.get("/memos/?skip=5&limit=5")
+    response = await client.get("/v1/memos/?skip=5&limit=5")
     assert response.status_code == 200
     data = response.json()
     assert len(data) == 5
@@ -142,11 +143,11 @@ async def test_get_memo_by_id(client: AsyncClient, auth_headers: dict):
         "title": "Specific Memo",
         "content": "Specific content"
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Get the memo by ID (no auth required for read)
-    response = await client.get(f"/memos/{created_memo['id']}")
+    response = await client.get(f"/v1/memos/{created_memo['id']}")
 
     assert response.status_code == 200
 
@@ -159,7 +160,7 @@ async def test_get_memo_by_id(client: AsyncClient, auth_headers: dict):
 @pytest.mark.asyncio
 async def test_get_memo_not_found(client: AsyncClient):
     """Test getting a memo that doesn't exist"""
-    response = await client.get("/memos/999999")
+    response = await client.get("/v1/memos/999999")
 
     assert response.status_code == 404
 
@@ -172,7 +173,7 @@ async def test_update_memo(client: AsyncClient, auth_headers: dict):
         "title": "Original Title",
         "content": "Original content"
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Update the memo
@@ -182,7 +183,7 @@ async def test_update_memo(client: AsyncClient, auth_headers: dict):
         "priority": 4,
         "is_favorite": True
     }
-    response = await client.put(f"/memos/{created_memo['id']}", json=update_data, headers=auth_headers)
+    response = await client.put(f"/v1/memos/{created_memo['id']}", json=update_data, headers=auth_headers)
 
     assert response.status_code == 200
 
@@ -203,14 +204,14 @@ async def test_update_memo_partial(client: AsyncClient, auth_headers: dict):
         "content": "Original content",
         "priority": 2
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Partial update (only title)
     update_data = {
         "title": "New Title Only"
     }
-    response = await client.put(f"/memos/{created_memo['id']}", json=update_data, headers=auth_headers)
+    response = await client.put(f"/v1/memos/{created_memo['id']}", json=update_data, headers=auth_headers)
 
     assert response.status_code == 200
 
@@ -226,7 +227,7 @@ async def test_update_memo_not_found(client: AsyncClient, auth_headers: dict):
     update_data = {
         "title": "Updated Title"
     }
-    response = await client.put("/memos/999999", json=update_data, headers=auth_headers)
+    response = await client.put("/v1/memos/999999", json=update_data, headers=auth_headers)
 
     assert response.status_code == 404
 
@@ -239,11 +240,11 @@ async def test_update_memo_empty_data(client: AsyncClient, auth_headers: dict):
         "title": "Test Memo",
         "content": "Test content"
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Try to update with empty data
-    response = await client.put(f"/memos/{created_memo['id']}", json={}, headers=auth_headers)
+    response = await client.put(f"/v1/memos/{created_memo['id']}", json={}, headers=auth_headers)
 
     assert response.status_code == 400
 
@@ -256,12 +257,12 @@ async def test_update_memo_unauthorized(client: AsyncClient, auth_headers: dict)
         "title": "Test Memo",
         "content": "Test content"
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Try to update without auth
     update_data = {"title": "Unauthorized Update"}
-    response = await client.put(f"/memos/{created_memo['id']}", json=update_data)
+    response = await client.put(f"/v1/memos/{created_memo['id']}", json=update_data)
 
     assert response.status_code == 401
 
@@ -274,23 +275,23 @@ async def test_delete_memo(client: AsyncClient, auth_headers: dict):
         "title": "To Be Deleted",
         "content": "This will be deleted"
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Delete the memo
-    response = await client.delete(f"/memos/{created_memo['id']}", headers=auth_headers)
+    response = await client.delete(f"/v1/memos/{created_memo['id']}", headers=auth_headers)
 
     assert response.status_code == 204
 
     # Verify it's deleted
-    get_response = await client.get(f"/memos/{created_memo['id']}")
+    get_response = await client.get(f"/v1/memos/{created_memo['id']}")
     assert get_response.status_code == 404
 
 
 @pytest.mark.asyncio
 async def test_delete_memo_not_found(client: AsyncClient, auth_headers: dict):
     """Test deleting a memo that doesn't exist"""
-    response = await client.delete("/memos/999999", headers=auth_headers)
+    response = await client.delete("/v1/memos/999999", headers=auth_headers)
 
     assert response.status_code == 404
 
@@ -303,11 +304,11 @@ async def test_delete_memo_unauthorized(client: AsyncClient, auth_headers: dict)
         "title": "Test Memo",
         "content": "Test content"
     }
-    create_response = await client.post("/memos/", json=memo_data, headers=auth_headers)
+    create_response = await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
     created_memo = create_response.json()
 
     # Try to delete without auth
-    response = await client.delete(f"/memos/{created_memo['id']}")
+    response = await client.delete(f"/v1/memos/{created_memo['id']}")
 
     assert response.status_code == 401
 
@@ -323,10 +324,10 @@ async def test_search_memos(client: AsyncClient, auth_headers: dict):
     ]
 
     for memo_data in memos_data:
-        await client.post("/memos/", json=memo_data, headers=auth_headers)
+        await client.post("/v1/memos/", json=memo_data, headers=auth_headers)
 
     # Search for "Python" (no auth required for search)
-    response = await client.get("/memos/search/?q=Python")
+    response = await client.get("/v1/memos/search/?q=Python")
 
     assert response.status_code == 200
 
@@ -336,7 +337,7 @@ async def test_search_memos(client: AsyncClient, auth_headers: dict):
     assert "Python" in data[0]["title"]
 
     # Search for "API"
-    response = await client.get("/memos/search/?q=API")
+    response = await client.get("/v1/memos/search/?q=API")
 
     assert response.status_code == 200
 
@@ -348,7 +349,7 @@ async def test_search_memos(client: AsyncClient, auth_headers: dict):
 @pytest.mark.asyncio
 async def test_search_memos_no_results(client: AsyncClient):
     """Test searching with no matching results"""
-    response = await client.get("/memos/search/?q=nonexistent")
+    response = await client.get("/v1/memos/search/?q=nonexistent")
 
     assert response.status_code == 200
 
@@ -361,6 +362,6 @@ async def test_search_memos_no_results(client: AsyncClient):
 async def test_search_memos_validation_error(client: AsyncClient):
     """Test search with invalid query parameter"""
     # Empty query should fail
-    response = await client.get("/memos/search/?q=")
+    response = await client.get("/v1/memos/search/?q=")
 
     assert response.status_code == 422

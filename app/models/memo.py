@@ -8,7 +8,7 @@ memos = sqlalchemy.Table(
     "memos",
     metadata,
     sqlalchemy.Column("id", sqlalchemy.Integer, primary_key=True, index=True),
-    sqlalchemy.Column("title", sqlalchemy.String(100), nullable=False),
+    sqlalchemy.Column("title", sqlalchemy.String(100), nullable=False, index=True),
     sqlalchemy.Column("content", sqlalchemy.Text, nullable=False),
     sqlalchemy.Column("tags", sqlalchemy.JSON, nullable=True, default=[]),
     sqlalchemy.Column("priority", sqlalchemy.Integer, nullable=False, default=2, server_default="2"),

@@ -23,7 +23,7 @@ from slowapi.errors import RateLimitExceeded
 
 from .config import get_settings
 from .database import engine, async_session_factory
-from .routers import health_router, memos_router
+from .routers import health_router, memos_router, auth_router
 from .middleware import PrometheusMiddleware
 from .services.kafka import kafka_service
 from .metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
@@ -174,8 +174,13 @@ app.add_middleware(
 )
 
 # --- Routers ---
+# Health router at root level (not versioned)
 app.include_router(health_router)
-app.include_router(memos_router)
+
+# API v1 routers
+API_V1_PREFIX = "/v1"
+app.include_router(auth_router, prefix=API_V1_PREFIX)
+app.include_router(memos_router, prefix=API_V1_PREFIX)
 
 
 # --- Development Server ---

@@ -98,7 +98,11 @@ async def client(test_engine, test_session_factory):
 @pytest.fixture
 def auth_token() -> str:
     """Create a test authentication token"""
-    return create_access_token({"sub": "test_user", "email": "test@example.com"})
+    return create_access_token({
+        "sub": "test@example.com",  # Email used as subject for ownership checks
+        "user_id": 1,
+        "is_admin": False
+    })
 
 
 @pytest.fixture

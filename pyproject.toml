@@ -26,6 +26,7 @@ dependencies = [
 
     # Security & Rate Limiting
     "slowapi>=0.1.9",
+    "email-validator>=2.0.0",
 ]
 
 # REMOVED unused dependencies:
@@ -42,6 +43,7 @@ dev = [
     "httpx>=0.27.0",
     "locust>=2.32.0",
     "aiosqlite>=0.20.0",  # For SQLite test database
+    "ruff>=0.4.0",  # Code linting and formatting
 ]
 
 [tool.uv]
