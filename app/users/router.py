@@ -1,6 +1,10 @@
 """
-Authentication API endpoints.
-Thin router that delegates to UserService.
+인증 API 엔드포인트.
+
+보안 설계 원칙:
+- Rate Limiting: 인증 엔드포인트는 브루트포스 공격의 주요 대상이므로 엄격한 제한 적용
+- 에러 메시지: 공격자에게 힌트를 주지 않도록 일반적인 메시지 사용 (예: "이메일 또는 비밀번호가 잘못됨")
+- WWW-Authenticate 헤더: 401 응답 시 RFC 6750 표준 준수
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 import logging
@@ -21,6 +25,7 @@ router = APIRouter(prefix="/auth", tags=["Authentication"])
 logger = logging.getLogger(__name__)
 
 
+# Rate Limit 설명: 회원가입은 봇에 의한 대량 계정 생성을 방지하기 위해 제한
 @router.post("/register", response_model=UserInDB, status_code=status.HTTP_201_CREATED)
 @limiter.limit(RATE_LIMIT_AUTH)
 async def register(
@@ -31,6 +36,7 @@ async def register(
     """Register a new user account."""
     try:
         return await service.register(user_data)
+    # 409 Conflict: 리소스 충돌을 명시적으로 표현 (RESTful 관례)
     except EmailAlreadyExistsError as e:
         raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
     except StudentIdAlreadyExistsError as e:
@@ -54,11 +60,14 @@ async def login(
     try:
         return await service.login(credentials)
     except InvalidCredentialsError as e:
+        # WWW-Authenticate 헤더: OAuth 2.0 Bearer Token 스펙(RFC 6750) 준수
+        # 클라이언트에게 인증 방식을 알려줌
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail=str(e),
             headers={"WWW-Authenticate": "Bearer"},
         )
+    # 403 vs 401: 인증은 됐지만(토큰 유효) 접근 권한이 없는 경우 403
     except AccountDeactivatedError as e:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:

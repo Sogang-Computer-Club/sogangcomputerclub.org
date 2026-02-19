@@ -1,8 +1,12 @@
+# 프론트엔드 CI 파이프라인
+# 목적: PR 병합 전 타입 체크, 테스트, 빌드 성공 여부 검증
+# 트리거: frontend/ 디렉토리 변경 시에만 실행
 name: Frontend CI
 
 on:
   push:
     branches: [main, master, "feature/frontend-*", "feature/CI-CD"]
+    # paths 필터: 프론트엔드 파일 변경 시에만 CI 실행
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
@@ -14,6 +18,7 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    # 모든 명령어의 기본 작업 디렉토리 설정
     defaults:
       run:
         working-directory: ./frontend
@@ -33,18 +38,23 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
+      # npm ci: package-lock.json 기준으로 정확한 버전 설치 (재현 가능한 빌드)
       - name: Install dependencies
         run: npm ci
 
+      # svelte-check: Svelte 컴포넌트 + TypeScript 타입 검사
       - name: Run type checking
         run: npm run check
 
+      # Vitest: 컴포넌트 단위 테스트
       - name: Run tests
         run: npm run test
 
+      # 프로덕션 빌드: SSR/정적 어댑터로 최적화된 번들 생성
       - name: Build project
         run: npm run build
 
+      # 빌드 아티팩트 업로드: 배포 job에서 재사용 가능
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
         if: success()

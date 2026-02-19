@@ -1,8 +1,12 @@
+# 백엔드 CI 파이프라인
+# 목적: PR 병합 전에 코드 품질과 테스트 통과 여부를 자동 검증
+# 트리거: app/, tests/ 디렉토리 변경 시에만 실행 (불필요한 빌드 방지)
 name: Backend CI
 
 on:
   push:
     branches: [main, master, "feature/backend-*", "feature/CI-CD"]
+    # paths 필터: 백엔드 관련 파일 변경 시에만 CI 실행 (비용/시간 절약)
     paths:
       - "app/**"
       - "tests/**"
@@ -18,6 +22,7 @@ on:
       - "uv.lock"
 
 jobs:
+  # 단위 테스트 job: 통합/부하 테스트는 별도 워크플로우에서 실행
   test:
     runs-on: ubuntu-latest
 
@@ -43,10 +48,14 @@ jobs:
         run: |
           uv sync
 
+      # 통합/부하 테스트 제외: CI에서는 빠른 피드백을 위해 단위 테스트만 실행
+      # 통합 테스트는 integration-tests.yml에서 별도 실행
       - name: Run unit tests
         run: |
           uv run pytest tests/ -v --ignore=tests/integration --ignore=tests/load
 
+      # continue-on-error: 커버리지 리포트 실패가 전체 CI를 막지 않도록
+      # (코드 커버리지는 참고용이지 필수 게이트가 아님)
       - name: Generate coverage report
         run: |
           uv run pytest tests/ --cov=app --cov-report=xml --cov-report=html --ignore=tests/integration --ignore=tests/load
@@ -61,6 +70,8 @@ jobs:
           name: codecov-umbrella
         continue-on-error: true
 
+  # 린트 job: 코드 스타일과 잠재적 버그 검사
+  # test job과 병렬 실행되어 빠른 피드백 제공
   lint:
     runs-on: ubuntu-latest
 
@@ -71,6 +82,7 @@ jobs:
       - name: Install uv
         uses: astral-sh/setup-uv@v5
         with:
+          # 캐시 활성화: 의존성 재설치 시간 단축 (약 30초 → 5초)
           enable-cache: true
 
       - name: Set up Python
@@ -82,10 +94,12 @@ jobs:
         run: |
           uv sync
 
+      # Ruff: Rust로 작성된 초고속 Python 린터 (flake8 + isort + black 대체)
       - name: Lint with ruff
         run: |
           uv run ruff check app/ tests/
 
+      # 포맷 검사: 실제 수정 없이 포맷 위반만 확인 (--check 플래그)
       - name: Check formatting with ruff
         run: |
           uv run ruff format --check app/ tests/

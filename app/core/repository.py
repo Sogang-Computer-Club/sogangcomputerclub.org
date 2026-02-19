@@ -1,22 +1,29 @@
 """
-Abstract repository pattern for data access.
-Provides a consistent interface for data operations that can be easily mocked in tests.
+리포지토리 패턴 추상화.
+
+왜 리포지토리 패턴을 사용하는가:
+1. 테스트 용이성: Mock 객체로 쉽게 교체 가능 (DB 없이 서비스 로직 테스트)
+2. 관심사 분리: 비즈니스 로직(Service)과 데이터 접근(Repository) 분리
+3. 데이터 소스 교체: PostgreSQL → MongoDB 등 변경 시 Repository만 수정
+4. 트랜잭션 경계: Repository가 트랜잭션 단위를 명확히 정의
+
+사용 시 주의:
+- Service 계층에서는 항상 추상 인터페이스(AbstractRepository)에 의존
+- 구체 구현체(MemoRepository)는 의존성 주입으로 제공
 """
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, Optional, List
 
-T = TypeVar('T')  # Entity type
-ID = TypeVar('ID')  # ID type
+T = TypeVar('T')  # 엔티티 타입 (예: dict, Pydantic 모델)
+ID = TypeVar('ID')  # 식별자 타입 (예: int, UUID)
 
 
 class AbstractRepository(ABC, Generic[T, ID]):
     """
-    Abstract base class for repository pattern.
+    리포지토리 패턴의 추상 기반 클래스.
 
-    This provides a consistent interface for data operations that:
-    1. Abstracts away database implementation details
-    2. Makes testing easier with mock repositories
-    3. Centralizes data access logic
+    모든 도메인별 리포지토리는 이 클래스를 상속받아
+    일관된 CRUD 인터페이스를 구현한다.
     """
 
     @abstractmethod
