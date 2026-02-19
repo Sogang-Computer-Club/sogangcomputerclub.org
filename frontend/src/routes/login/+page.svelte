@@ -40,8 +40,8 @@
             
             <!-- 하단 링크 -->
             <div class="w-full px-12 flex justify-between">
-                <a href="find" class="text-[10px] text-white font-normal">비밀번호 찾기</a>
-                <a href="sign-up" class="text-[10px] text-white font-normal">회원가입</a>
+                <a href="/find" class="text-[10px] text-white font-normal">비밀번호 찾기</a>
+                <a href="/sign-up" class="text-[10px] text-white font-normal">회원가입</a>
             </div>
         </div>
     </div>

@@ -40,13 +40,50 @@ export interface MemoUpdate {
     author?: string | null;
 }
 
+export interface ApiError {
+    detail: string;
+    status: number;
+}
+
+/**
+ * Helper to extract error message from response
+ */
+async function handleApiError(response: Response, defaultMessage: string): Promise<never> {
+    let detail = defaultMessage;
+    try {
+        const errorBody = await response.json();
+        if (errorBody.detail) {
+            detail = errorBody.detail;
+        }
+    } catch {
+        // Use default message if body can't be parsed
+    }
+
+    const error = new Error(detail) as Error & { status: number };
+    error.status = response.status;
+    throw error;
+}
+
+/**
+ * Get authorization headers if token is available
+ */
+function getAuthHeaders(token?: string): HeadersInit {
+    const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+    };
+    if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+    }
+    return headers;
+}
+
 /**
  * Fetch all memos
  */
 export async function getMemos(skip: number = 0, limit: number = 100): Promise<Memo[]> {
     const response = await fetch(`${API_BASE_URL}/memos/?skip=${skip}&limit=${limit}`);
     if (!response.ok) {
-        throw new Error(`Failed to fetch memos: ${response.statusText}`);
+        await handleApiError(response, `Failed to fetch memos: ${response.statusText}`);
     }
     return response.json();
 }
@@ -57,64 +94,77 @@ export async function getMemos(skip: number = 0, limit: number = 100): Promise<M
 export async function getMemo(id: number): Promise<Memo> {
     const response = await fetch(`${API_BASE_URL}/memos/${id}`);
     if (!response.ok) {
-        throw new Error(`Failed to fetch memo ${id}: ${response.statusText}`);
+        await handleApiError(response, `Failed to fetch memo ${id}: ${response.statusText}`);
     }
     return response.json();
 }
 
 /**
- * Create a new memo
+ * Create a new memo (requires authentication)
+ * @param memo - The memo data to create
+ * @param token - Optional auth token. If not provided, request will fail with 401.
  */
-export async function createMemo(memo: MemoCreate): Promise<Memo> {
+export async function createMemo(memo: MemoCreate, token?: string): Promise<Memo> {
     const response = await fetch(`${API_BASE_URL}/memos/`, {
         method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify(memo),
     });
     if (!response.ok) {
-        throw new Error(`Failed to create memo: ${response.statusText}`);
+        await handleApiError(response, `Failed to create memo: ${response.statusText}`);
     }
     return response.json();
 }
 
 /**
- * Update an existing memo
+ * Update an existing memo (requires authentication)
+ * @param id - The memo ID to update
+ * @param memo - The updated memo data
+ * @param token - Optional auth token. If not provided, request will fail with 401.
  */
-export async function updateMemo(id: number, memo: MemoUpdate): Promise<Memo> {
+export async function updateMemo(id: number, memo: MemoUpdate, token?: string): Promise<Memo> {
     const response = await fetch(`${API_BASE_URL}/memos/${id}`, {
         method: 'PUT',
-        headers: {
-            'Content-Type': 'application/json',
-        },
+        headers: getAuthHeaders(token),
         body: JSON.stringify(memo),
     });
     if (!response.ok) {
-        throw new Error(`Failed to update memo ${id}: ${response.statusText}`);
+        await handleApiError(response, `Failed to update memo ${id}: ${response.statusText}`);
     }
     return response.json();
 }
 
 /**
- * Delete a memo
+ * Delete a memo (requires authentication)
+ * @param id - The memo ID to delete
+ * @param token - Optional auth token. If not provided, request will fail with 401.
  */
-export async function deleteMemo(id: number): Promise<void> {
+export async function deleteMemo(id: number, token?: string): Promise<void> {
     const response = await fetch(`${API_BASE_URL}/memos/${id}`, {
         method: 'DELETE',
+        headers: getAuthHeaders(token),
     });
     if (!response.ok) {
-        throw new Error(`Failed to delete memo ${id}: ${response.statusText}`);
+        await handleApiError(response, `Failed to delete memo ${id}: ${response.statusText}`);
     }
 }
 
 /**
- * Search memos
+ * Search memos with pagination
  */
-export async function searchMemos(query: string): Promise<Memo[]> {
-    const response = await fetch(`${API_BASE_URL}/memos/search/?q=${encodeURIComponent(query)}`);
+export async function searchMemos(
+    query: string,
+    skip: number = 0,
+    limit: number = 100
+): Promise<Memo[]> {
+    const params = new URLSearchParams({
+        q: query,
+        skip: skip.toString(),
+        limit: limit.toString(),
+    });
+    const response = await fetch(`${API_BASE_URL}/memos/search/?${params}`);
     if (!response.ok) {
-        throw new Error(`Failed to search memos: ${response.statusText}`);
+        await handleApiError(response, `Failed to search memos: ${response.statusText}`);
     }
     return response.json();
 }

@@ -20,12 +20,16 @@ services:
     build: .
     image: ghcr.io/${GITHUB_REPOSITORY}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    ports:
-      - "8000:8000"
+    # No external port exposure - accessed via nginx only
+    expose:
+      - "8000"
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
       - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9093}
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=false
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}
     depends_on:
       kafka:
         condition: service_started
@@ -54,9 +58,10 @@ services:
     restart: unless-stopped
     depends_on:
       - zookeeper
-    ports:
-      - "9092:9092"
-      - "9093:9093"
+    # No external port exposure in production
+    expose:
+      - "9092"
+      - "9093"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -72,8 +77,9 @@ services:
     build: ./frontend
     image: ghcr.io/${GITHUB_REPOSITORY}/frontend:${IMAGE_TAG:-latest}
     restart: unless-stopped
-    ports:
-      - "3000:3000"
+    # No external port exposure - accessed via nginx only
+    expose:
+      - "3000"
     environment:
       - NODE_ENV=production
       - HOST=0.0.0.0
@@ -124,8 +130,9 @@ services:
   redis:
     image: redis:7-alpine
     restart: unless-stopped
-    ports:
-      - "6379:6379"
+    # No external port exposure in production
+    expose:
+      - "6379"
     volumes:
       - redis_data:/data
     networks:
@@ -139,8 +146,9 @@ services:
   redis-exporter:
     image: oliver006/redis_exporter:latest
     restart: unless-stopped
-    ports:
-      - "9121:9121"
+    # Internal only - scraped by Prometheus
+    expose:
+      - "9121"
     environment:
       - REDIS_ADDR=redis://redis:6379
     networks:
@@ -151,8 +159,9 @@ services:
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     restart: unless-stopped
-    ports:
-      - "9187:9187"
+    # Internal only - scraped by Prometheus
+    expose:
+      - "9187"
     environment:
       - DATA_SOURCE_NAME=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}?sslmode=disable
     networks:
@@ -163,8 +172,9 @@ services:
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
     restart: unless-stopped
-    ports:
-      - "9113:9113"
+    # Internal only - scraped by Prometheus
+    expose:
+      - "9113"
     environment:
       - SCRAPE_URI=http://nginx:80/stub_status
     networks:
@@ -175,8 +185,9 @@ services:
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
-    ports:
-      - "9090:9090"
+    # Internal only - access via SSH tunnel or reverse proxy
+    expose:
+      - "9090"
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
@@ -207,8 +218,9 @@ services:
   grafana:
     image: grafana/grafana:latest
     restart: unless-stopped
-    ports:
-      - "3001:3000"
+    # Internal only - access via SSH tunnel or add nginx auth proxy
+    expose:
+      - "3000"
     environment:
       - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
       - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}

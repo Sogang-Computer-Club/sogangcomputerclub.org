@@ -10,4 +10,10 @@ declare global {
 	}
 }
 
+// Declare private environment variables
+declare module '$env/static/private' {
+	export const GOOGLE_API_KEY: string;
+	export const CALENDAR_ID: string;
+}
+
 export {};
