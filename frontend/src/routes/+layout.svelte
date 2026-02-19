@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { setContext } from 'svelte';
+    import { setContext, onMount } from 'svelte';
     import { UIStore, UI_CONTEXT_KEY, AuthStore, AUTH_CONTEXT_KEY } from '$lib/stores';
     import "../app.css";
     import { page } from '$app/state';
@@ -15,6 +15,11 @@
 
     setContext(UI_CONTEXT_KEY, uiStore);
     setContext(AUTH_CONTEXT_KEY, authStore);
+
+    // Initialize auth state (validate token, load user)
+    onMount(() => {
+        authStore.initialize();
+    });
 </script>
 
 

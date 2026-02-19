@@ -1,6 +1,7 @@
 <script lang="ts">
     import { getContext } from 'svelte';
     import { UI_CONTEXT_KEY, type UIStore } from '$lib/stores';
+    import { navItems } from '$lib/config/navigation';
 
     const ui = getContext<UIStore>(UI_CONTEXT_KEY);
 
@@ -14,46 +15,6 @@
         ui.close();
         openSubMenu = null;
     }
-
-    const navItems = [
-        {
-            name: "About Us",
-            color: "#AE1F1F",
-            subItems: [
-                { name: "인사말", path: "/about-us/welcome" },
-                { name: "활동/행사", path: "/about-us/activity" },
-                { name: "SNS", path: "/about-us/SNS" },
-            ],
-        },
-        {
-            name: "Notice",
-            color: "#AE1F1F",
-            subItems: [
-                { name: "공지", path: "/notice/announcements" },
-                { name: "동아리방", path: "/notice/lighthouse" },
-                { name: "달력", path: "/notice/calendar" },
-                { name: "모집 안내", path: "/notice/recruitment" },
-            ],
-        },
-        {
-            name: "Community",
-            color: "#AE1F1F",
-            subItems: [
-                { name: "미디어관", path: "/community/media" },
-                { name: "피드", path: "/community/feed" },
-            ],
-        },
-        {
-            name: "Study",
-            color: "#AE1F1F",
-            subItems: [{ name: "????", path: "/study" }],
-        },
-        {
-            name: "Library",
-            color: "#AE1F1F",
-            subItems: [{ name: "SGCS Library", path: "/library" }],
-        },
-    ];
 </script>
 
 <div class="relative flex bg-black w-full h-full py-1.5">

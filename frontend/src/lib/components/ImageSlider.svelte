@@ -44,16 +44,20 @@
 	});
 </script>
 
-<div class="relative w-full mx-auto overflow-hidden bg-black">
-	<div class="h-[calc(100vh-70px)] relative">
+<div class="relative w-full mx-auto overflow-hidden bg-black" role="region" aria-roledescription="carousel" aria-label="Image slideshow">
+	<div class="h-[calc(100vh-70px)] relative" aria-live="polite" aria-atomic="true">
 		{#key currentImageIndex}
 			<img
 				src={images[currentImageIndex]}
-				alt={`Slide ${currentImageIndex + 1}`}
+				alt={`Slide ${currentImageIndex + 1} of ${images.length}`}
 				class="absolute inset-0 w-full h-full object-cover"
 				in:fade={{ duration: 200 }}
 				out:fade={{ duration: 200 }}/>
 		{/key}
+	</div>
+	<!-- Hidden live region for screen reader announcements -->
+	<div class="sr-only" aria-live="polite">
+		Slide {currentImageIndex + 1} of {images.length}
 	</div>
 
 	<h2 class="absolute text-center top-[calc(30vh)] w-full text-[35px] desktop:text-[64px] text-white">Sogang Computer Club</h2>

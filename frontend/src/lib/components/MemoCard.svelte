@@ -1,17 +1,35 @@
 <script lang="ts">
+    import { getContext } from 'svelte';
     import 'highlight.js/styles/github-dark.css';
     import { marked } from 'marked';
     import DOMPurify from 'dompurify';
     import hljs from 'highlight.js';
     import type { Memo } from '$lib/api';
     import { updateMemo, deleteMemo } from '$lib/api';
+    import { AUTH_CONTEXT_KEY, type AuthStore } from '$lib/stores';
 
-    let { memo, memoColor }: { memo: Memo; memoColor: string } = $props();
+    interface Props {
+        memo: Memo;
+        memoColor: string;
+        onMemoUpdate?: (updatedMemo: Memo) => void;
+        onMemoDelete?: (deletedId: number) => void;
+    }
 
+    let { memo, memoColor, onMemoUpdate, onMemoDelete }: Props = $props();
+
+    const auth = getContext<AuthStore>(AUTH_CONTEXT_KEY);
+
+    // Local editing state (copy on edit pattern)
     let memoText = $state(memo.content);
     let memoTitle = $state(memo.title);
     let markdownRenderedMemoText = $state('');
     let isModalOpen = $state(false);
+
+    // Sync local state when prop changes
+    $effect(() => {
+        memoText = memo.content;
+        memoTitle = memo.title;
+    });
 
     // Configure marked
     (marked.setOptions as any)({
@@ -72,11 +90,10 @@
             const updatedMemo = await updateMemo(memo.id, {
                 title: memoTitle,
                 content: memoText
-            });
-            memo = updatedMemo;
+            }, auth?.token ?? undefined);
             closeModal();
-            // Reload to refresh the list
-            location.reload();
+            // Notify parent via callback instead of location.reload()
+            onMemoUpdate?.(updatedMemo);
         } catch (error) {
             console.error('Failed to update memo:', error);
             alert('메모 저장에 실패했습니다.');
@@ -86,8 +103,10 @@
     async function handleDeleteMemo() {
         if (confirm('정말로 이 메모를 삭제하시겠습니까?')) {
             try {
-                await deleteMemo(memo.id);
-                location.reload();
+                await deleteMemo(memo.id, auth?.token ?? undefined);
+                closeModal();
+                // Notify parent via callback instead of location.reload()
+                onMemoDelete?.(memo.id);
             } catch (error) {
                 console.error('Failed to delete memo:', error);
                 alert('메모 삭제에 실패했습니다.');
