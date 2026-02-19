@@ -88,3 +88,10 @@ variable "allowed_ssh_cidrs" {
   type        = list(string)
   default     = []  # Add your IP addresses for SSH access
 }
+
+# VPC Endpoints (cost optimization)
+variable "enable_vpc_endpoints" {
+  description = "Enable VPC Interface Endpoints (adds ~$22/month but improves security)"
+  type        = bool
+  default     = false  # Disabled by default to save costs; EC2 in public subnet can use internet
+}

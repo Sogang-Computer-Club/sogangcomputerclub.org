@@ -84,21 +84,41 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-# VPC Endpoints for AWS services (avoid NAT Gateway costs)
-resource "aws_vpc_endpoint" "sqs" {
+# VPC Endpoints for AWS services
+# Note: EC2 is in public subnet with internet access, so most interface endpoints
+# are optional. We only keep S3 Gateway (free) and Secrets Manager (security).
+# Enable additional endpoints via variables if needed for private subnet deployments.
+
+# S3 Gateway Endpoint (FREE - always recommended)
+resource "aws_vpc_endpoint" "s3" {
+  vpc_id            = aws_vpc.main.id
+  service_name      = "com.amazonaws.${var.aws_region}.s3"
+  vpc_endpoint_type = "Gateway"
+  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
+
+  tags = {
+    Name = "${var.project_name}-s3-endpoint"
+  }
+}
+
+# Secrets Manager Endpoint (recommended for security - secrets stay in AWS network)
+resource "aws_vpc_endpoint" "secretsmanager" {
+  count               = var.enable_vpc_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.sqs"
+  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
   vpc_endpoint_type   = "Interface"
   subnet_ids          = aws_subnet.private[*].id
   security_group_ids  = [aws_security_group.vpc_endpoints.id]
   private_dns_enabled = true
 
   tags = {
-    Name = "${var.project_name}-sqs-endpoint"
+    Name = "${var.project_name}-secretsmanager-endpoint"
   }
 }
 
+# Optional: ECR endpoints (enable if pulling images from private subnets)
 resource "aws_vpc_endpoint" "ecr_api" {
+  count               = var.enable_vpc_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.api"
   vpc_endpoint_type   = "Interface"
@@ -112,6 +132,7 @@ resource "aws_vpc_endpoint" "ecr_api" {
 }
 
 resource "aws_vpc_endpoint" "ecr_dkr" {
+  count               = var.enable_vpc_endpoints ? 1 : 0
   vpc_id              = aws_vpc.main.id
   service_name        = "com.amazonaws.${var.aws_region}.ecr.dkr"
   vpc_endpoint_type   = "Interface"
@@ -121,42 +142,5 @@ resource "aws_vpc_endpoint" "ecr_dkr" {
 
   tags = {
     Name = "${var.project_name}-ecr-dkr-endpoint"
-  }
-}
-
-resource "aws_vpc_endpoint" "s3" {
-  vpc_id            = aws_vpc.main.id
-  service_name      = "com.amazonaws.${var.aws_region}.s3"
-  vpc_endpoint_type = "Gateway"
-  route_table_ids   = [aws_route_table.public.id, aws_route_table.private.id]
-
-  tags = {
-    Name = "${var.project_name}-s3-endpoint"
-  }
-}
-
-resource "aws_vpc_endpoint" "secretsmanager" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.secretsmanager"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-
-  tags = {
-    Name = "${var.project_name}-secretsmanager-endpoint"
-  }
-}
-
-resource "aws_vpc_endpoint" "logs" {
-  vpc_id              = aws_vpc.main.id
-  service_name        = "com.amazonaws.${var.aws_region}.logs"
-  vpc_endpoint_type   = "Interface"
-  subnet_ids          = aws_subnet.private[*].id
-  security_group_ids  = [aws_security_group.vpc_endpoints.id]
-  private_dns_enabled = true
-
-  tags = {
-    Name = "${var.project_name}-logs-endpoint"
   }
 }

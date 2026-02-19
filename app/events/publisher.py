@@ -139,29 +139,42 @@ class SQSEventPublisher(AbstractEventPublisher):
         self._session = None
         logger.info("SQS publisher stopped")
 
-    async def publish(self, topic: str, message: dict) -> None:
+    async def publish(self, topic: str, message: dict, max_retries: int = 3) -> None:
         """
-        Publish a message to SQS.
+        Publish a message to SQS with retry logic.
 
         The topic is included as a message attribute for routing/filtering.
+        Implements exponential backoff for transient failures.
         """
         if not self._client or not self._queue_url:
             return
 
-        try:
-            await self._client.send_message(
-                QueueUrl=self._queue_url,
-                MessageBody=json.dumps(message),
-                MessageAttributes={
-                    'topic': {
-                        'DataType': 'String',
-                        'StringValue': topic
+        import asyncio
+        last_error = None
+
+        for attempt in range(max_retries):
+            try:
+                await self._client.send_message(
+                    QueueUrl=self._queue_url,
+                    MessageBody=json.dumps(message),
+                    MessageAttributes={
+                        'topic': {
+                            'DataType': 'String',
+                            'StringValue': topic
+                        }
                     }
-                }
-            )
-            logger.debug(f"Published message to SQS topic={topic}")
-        except Exception as e:
-            logger.warning(f"Failed to publish to SQS: {e}")
+                )
+                logger.debug(f"Published message to SQS topic={topic}")
+                return  # Success, exit retry loop
+            except Exception as e:
+                last_error = e
+                if attempt < max_retries - 1:
+                    # Exponential backoff: 0.5s, 1s, 2s
+                    wait_time = 0.5 * (2 ** attempt)
+                    logger.warning(f"SQS publish failed (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s: {e}")
+                    await asyncio.sleep(wait_time)
+
+        logger.error(f"Failed to publish to SQS after {max_retries} attempts: {last_error}")
 
     @property
     def is_connected(self) -> bool:

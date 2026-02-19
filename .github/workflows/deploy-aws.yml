@@ -28,10 +28,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -46,7 +46,7 @@ jobs:
           sarif_file: "trivy-results.sarif"
 
       - name: Block deployment on critical vulnerabilities
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -68,10 +68,10 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v4
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
           aws-region: ${{ env.AWS_REGION }}
@@ -81,10 +81,10 @@ jobs:
 
       - name: Login to Amazon ECR
         id: login-ecr
-        uses: aws-actions/amazon-ecr-login@v2
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076  # v2.0.1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226  # v3.0.0
 
       - name: Extract metadata and define tags
         id: meta
@@ -103,7 +103,7 @@ jobs:
           echo "Frontend tag: $FRONTEND_TAG"
 
       - name: Build and push Backend Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56  # v5.1.0
         with:
           context: .
           file: ./Dockerfile
@@ -116,7 +116,7 @@ jobs:
           provenance: false  # ECR doesn't support attestations yet
 
       - name: Build and push Frontend Docker image
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56  # v5.1.0
         with:
           context: ./frontend
           file: ./frontend/Dockerfile
@@ -129,7 +129,7 @@ jobs:
           provenance: false
 
       - name: Scan Backend image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ steps.meta.outputs.backend-tag }}
           format: "table"
@@ -137,7 +137,7 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Scan Frontend image with Trivy
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.28.0
         with:
           image-ref: ${{ steps.meta.outputs.frontend-tag }}
           format: "table"
@@ -153,7 +153,7 @@ jobs:
 
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Check for required secrets
         env:
@@ -174,7 +174,7 @@ jobs:
           fi
 
       - name: Deploy to EC2
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
         env:
           COMMIT_SHA: ${{ github.sha }}
         with:
@@ -222,7 +222,7 @@ jobs:
             docker compose -f docker-compose.aws.yml ps
 
       - name: Run smoke tests
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
@@ -242,7 +242,7 @@ jobs:
 
       - name: Debug on failure
         if: failure()
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
@@ -263,7 +263,7 @@ jobs:
 
       - name: Rollback on failure
         if: failure()
-        uses: appleboy/ssh-action@v1.0.3
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USERNAME }}
