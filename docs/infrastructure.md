@@ -9,12 +9,12 @@ flowchart TB
     subgraph AWS["AWS Cloud (ap-northeast-2)"]
         subgraph VPC["VPC (10.0.0.0/16)"]
             subgraph Public["Public Subnets"]
-                EC2[EC2 Instance<br/>t3.small]
+                EC2["EC2 (t3.small)"]
                 NAT[NAT Gateway]
             end
 
             subgraph Private["Private Subnets"]
-                RDS[(RDS PostgreSQL<br/>db.t4g.micro)]
+                RDS[("RDS PostgreSQL (db.t4g.micro)")]
             end
         end
 

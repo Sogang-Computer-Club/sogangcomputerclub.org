@@ -34,23 +34,23 @@ flowchart TB
             subgraph PublicSubnet["Public Subnet"]
                 subgraph EC2["EC2 (t3.small)"]
                     subgraph Docker["docker-compose"]
-                        Nginx["Nginx\n:80/443"]
-                        Backend["Backend\nFastAPI :8000"]
-                        Frontend["Frontend\nSvelteKit :3000"]
-                        Redis["Redis\n:6379"]
+                        Nginx["Nginx :80/443"]
+                        Backend["Backend FastAPI :8000"]
+                        Frontend["Frontend SvelteKit :3000"]
+                        Redis["Redis :6379"]
                     end
                 end
             end
 
             subgraph PrivateSubnet["Private Subnet"]
-                RDS[("RDS PostgreSQL\nMulti-AZ")]
+                RDS[("RDS PostgreSQL Multi-AZ")]
             end
         end
 
-        ECR["ECR\n(Container Images)"]
-        SQS["SQS\n(Event Queue)"]
+        ECR["ECR (Container Images)"]
+        SQS["SQS (Event Queue)"]
         Secrets["Secrets Manager"]
-        CloudWatch["CloudWatch\n(Monitoring)"]
+        CloudWatch["CloudWatch (Monitoring)"]
     end
 
     Users -->|HTTPS| Nginx
@@ -69,24 +69,24 @@ flowchart TB
 flowchart TB
     subgraph DockerCompose["docker-compose"]
         subgraph Services["Application Services"]
-            Nginx["Nginx\n:80"]
-            Backend["Backend\n:8000"]
-            Frontend["Frontend\n:3000"]
+            Nginx["Nginx :80"]
+            Backend["Backend :8000"]
+            Frontend["Frontend :3000"]
         end
 
         subgraph DataStores["Data Stores"]
-            Postgres[("PostgreSQL\n:5433")]
-            Redis["Redis\n:6381"]
+            Postgres[("PostgreSQL :5433")]
+            Redis["Redis :6381"]
         end
 
         subgraph Messaging["Messaging"]
-            Kafka["Kafka\n:9092"]
-            Zookeeper["Zookeeper\n:2181"]
+            Kafka["Kafka :9092"]
+            Zookeeper["Zookeeper :2181"]
         end
 
         subgraph Monitoring["Monitoring"]
-            Prometheus["Prometheus\n:9090"]
-            Grafana["Grafana\n:3001"]
+            Prometheus["Prometheus :9090"]
+            Grafana["Grafana :3001"]
         end
     end
 
