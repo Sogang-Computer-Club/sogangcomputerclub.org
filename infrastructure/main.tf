@@ -1,5 +1,5 @@
-# AWS Infrastructure for Sogang Computer Club Website
-# Architecture: EC2 + RDS (Middle tier)
+# 서강대학교 중앙컴퓨터동아리 웹사이트 AWS 인프라
+# 아키텍처: EC2 + RDS (중간 티어, ~$56/월)
 
 terraform {
   required_version = ">= 1.0"
@@ -15,7 +15,8 @@ terraform {
     }
   }
 
-  # Uncomment to use S3 backend for state management
+  # S3 백엔드 사용 시 주석 해제 (팀 협업 시 상태 파일 공유 필요)
+  # DynamoDB 테이블은 동시 apply 방지를 위한 락 용도
   # backend "s3" {
   #   bucket         = "sgcc-terraform-state"
   #   key            = "production/terraform.tfstate"
@@ -28,6 +29,7 @@ terraform {
 provider "aws" {
   region = var.aws_region
 
+  # 모든 리소스에 자동으로 태그 추가 (비용 추적 및 리소스 관리용)
   default_tags {
     tags = {
       Project     = "sogangcomputerclub"
@@ -37,7 +39,7 @@ provider "aws" {
   }
 }
 
-# Data sources
+# 데이터 소스 - AWS 계정/리전 정보 조회
 data "aws_availability_zones" "available" {
   state = "available"
 }

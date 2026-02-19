@@ -1,3 +1,6 @@
+# 로컬 개발용 Docker Compose
+# 모든 서비스가 컨테이너로 실행됨 (AWS 서비스 없음)
+
 services:
   backend:
     build: .
@@ -12,7 +15,7 @@ services:
       - redis
       - kafka
     volumes:
-      - ./app:/code/app
+      - ./app:/code/app  # 핫 리로드: 코드 변경 시 자동 반영
     networks:
       - app-network
 
@@ -38,6 +41,7 @@ services:
     networks:
       - app-network
 
+  # Zookeeper - Kafka 클러스터 관리 (Kafka 의존성)
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
@@ -46,21 +50,24 @@ services:
     networks:
       - app-network
 
+  # Kafka - 로컬 개발용 이벤트 브로커
+  # 프로덕션에서는 SQS 사용 (EVENT_BACKEND=sqs)
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
-      - "9093:9093"
+      - "9092:9092"   # 호스트에서 접근용 (EXTERNAL)
+      - "9093:9093"   # 컨테이너 간 통신용 (INTERNAL)
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      # 리스너 설정: 내부/외부 분리로 Docker 네트워크 이슈 해결
       KAFKA_LISTENERS: INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
       KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9093,EXTERNAL://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # 단일 브로커이므로 1
     networks:
       - app-network
 
@@ -111,6 +118,9 @@ services:
     links:
       - nginx
 
+  # ===== 모니터링 스택 (Prometheus + Grafana) =====
+
+  # Prometheus Exporter들 - 각 서비스의 메트릭을 Prometheus 형식으로 변환
   redis-exporter:
     image: oliver006/redis_exporter
     ports:
@@ -144,6 +154,8 @@ services:
     depends_on:
       - nginx
 
+  # Prometheus - 메트릭 수집 및 저장
+  # http://localhost:9090 에서 쿼리 및 그래프 확인 가능
   prometheus:
     image: prom/prometheus:latest
     ports:
@@ -156,12 +168,14 @@ services:
       - "--storage.tsdb.path=/prometheus"
       - "--web.console.libraries=/etc/prometheus/console_libraries"
       - "--web.console.templates=/etc/prometheus/consoles"
-      - "--web.enable-lifecycle"
+      - "--web.enable-lifecycle"  # /-/reload로 설정 리로드 가능
     networks:
       - app-network
     depends_on:
       - backend
 
+  # Grafana - 대시보드 및 시각화
+  # http://localhost:3001 (기본 계정: admin/admin)
   grafana:
     image: grafana/grafana:latest
     ports:
@@ -172,7 +186,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ./grafana/provisioning:/etc/grafana/provisioning  # 대시보드 자동 프로비저닝
     networks:
       - app-network
     depends_on:

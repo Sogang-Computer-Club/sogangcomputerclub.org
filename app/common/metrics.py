@@ -1,9 +1,14 @@
 """
-Prometheus metrics definitions.
+Prometheus 메트릭 정의.
+
+메트릭 타입:
+- Counter: 단조 증가 값 (요청 수, 에러 수)
+- Histogram: 분포 측정 (응답 시간 - p50, p90, p99 계산 가능)
+- Gauge: 현재 상태 값 (활성 커넥션 수, 메모 수)
 """
 from prometheus_client import Counter, Histogram, Gauge
 
-# HTTP request metrics
+# HTTP 요청 메트릭
 REQUEST_COUNT = Counter(
     'fastapi_requests_total',
     'Total number of requests',
@@ -16,7 +21,7 @@ REQUEST_DURATION = Histogram(
     ['method', 'endpoint']
 )
 
-# Application metrics
+# 애플리케이션 비즈니스 메트릭
 MEMO_COUNT = Gauge(
     'memo_total',
     'Total number of memos in the database'

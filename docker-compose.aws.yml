@@ -1,29 +1,29 @@
-# Docker Compose for AWS EC2 + RDS deployment
-# Uses external RDS for PostgreSQL, SQS for events
-# Redis runs as container, Nginx for reverse proxy
+# AWS 프로덕션 배포용 Docker Compose
+# 외부 서비스: RDS (PostgreSQL), SQS (이벤트)
+# 컨테이너 서비스: Backend, Frontend, Redis, Nginx
 
 services:
   backend:
     image: ${ECR_REGISTRY}/${PROJECT_NAME}/backend:${IMAGE_TAG:-latest}
     restart: unless-stopped
     expose:
-      - "8000"
+      - "8000"  # Nginx를 통해 외부 노출, 직접 포트 바인딩 안함
     environment:
-      # Database - from AWS Secrets Manager via .env
+      # 데이터베이스 - AWS Secrets Manager에서 .env로 주입
       - DATABASE_URL=${DATABASE_URL}
-      # Redis - local container
+      # Redis - 로컬 컨테이너 (캐시용)
       - REDIS_URL=redis://redis:6379
-      # SQS instead of Kafka
+      # SQS - Kafka 대체 (비용 절감)
       - SQS_QUEUE_URL=${SQS_QUEUE_URL}
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
       - EVENT_BACKEND=sqs
-      # Application settings
+      # 앱 설정
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=false
       - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}
     depends_on:
       redis:
-        condition: service_healthy
+        condition: service_healthy  # Redis 준비 완료 후 시작
     networks:
       - sgcc-network
     healthcheck:
@@ -31,9 +31,9 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 40s
+      start_period: 40s  # 앱 초기화 대기 시간
     logging:
-      driver: awslogs
+      driver: awslogs  # CloudWatch Logs로 직접 전송
       options:
         awslogs-region: ${AWS_REGION:-ap-northeast-2}
         awslogs-group: /aws/ec2/sgcc
@@ -103,7 +103,8 @@ services:
       timeout: 10s
       retries: 3
 
-  # Prometheus for metrics (optional, can be removed to save resources)
+  # Prometheus - 메트릭 수집 (선택 사항, 리소스 절약 시 제거 가능)
+  # 실행: docker compose --profile monitoring up
   prometheus:
     image: prom/prometheus:latest
     restart: unless-stopped
@@ -115,13 +116,13 @@ services:
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--storage.tsdb.path=/prometheus"
-      - "--storage.tsdb.retention.time=7d"
+      - "--storage.tsdb.retention.time=7d"  # 7일간 메트릭 보관
     networks:
       - sgcc-network
     profiles:
-      - monitoring
+      - monitoring  # --profile monitoring 옵션으로만 실행
 
-  # Grafana for dashboards (optional)
+  # Grafana - 대시보드 (선택 사항)
   grafana:
     image: grafana/grafana:latest
     restart: unless-stopped

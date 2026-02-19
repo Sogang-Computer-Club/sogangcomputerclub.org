@@ -1,6 +1,9 @@
 """
-Security module for JWT authentication and password hashing.
-Provides token creation, validation, and password utilities.
+보안 모듈 - JWT 인증 및 비밀번호 해싱
+
+외부 라이브러리(PyJWT, bcrypt) 없이 표준 라이브러리만 사용하여 구현.
+- JWT: 수동으로 header.payload.signature 구조 생성 (HS256 알고리즘)
+- 비밀번호: PBKDF2-HMAC-SHA256 해싱 (OWASP 권장 60만 회 반복)
 """
 from datetime import datetime, timedelta, UTC
 from typing import Optional
@@ -18,12 +21,18 @@ settings = get_settings()
 
 
 def _base64url_encode(data: bytes) -> str:
-    """Base64url encode without padding."""
+    """
+    Base64url 인코딩 (패딩 제거).
+    JWT 표준에서는 URL-safe Base64를 사용하며 '=' 패딩을 제거함.
+    """
     return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
 
 
 def _base64url_decode(data: str) -> bytes:
-    """Base64url decode with padding restoration."""
+    """
+    Base64url 디코딩 (패딩 복원).
+    인코딩 시 제거된 패딩을 4의 배수가 되도록 복원 후 디코딩.
+    """
     padding = 4 - len(data) % 4
     if padding != 4:
         data += '=' * padding
@@ -78,7 +87,8 @@ def verify_token(token: str) -> Optional[dict]:
 
         header_b64, payload_b64, signature_b64 = parts
 
-        # Verify signature
+        # 서명 검증: header.payload를 SECRET_KEY로 HMAC-SHA256 해싱하여 비교
+        # compare_digest를 사용하여 타이밍 공격(timing attack) 방지
         message = f"{header_b64}.{payload_b64}"
         expected_signature = hmac.new(
             settings.secret_key.encode(),
@@ -104,15 +114,19 @@ def verify_token(token: str) -> Optional[dict]:
         return None
 
 
-# Password hashing using PBKDF2 with SHA-256 (secure, stdlib-only)
-# For higher security, consider using bcrypt or argon2-cffi
-PBKDF2_ITERATIONS = 600000  # OWASP recommendation for SHA-256
+# PBKDF2-SHA256 비밀번호 해싱 (표준 라이브러리만 사용)
+# 반복 횟수: OWASP 2023 권장 기준 (SHA-256의 경우 60만 회)
+# 더 강력한 보안이 필요하면 bcrypt 또는 argon2-cffi 사용 고려
+PBKDF2_ITERATIONS = 600000
 
 
 def hash_password(password: str) -> str:
     """
-    Hash a password using PBKDF2-HMAC-SHA256 with random salt.
-    Returns format: salt$hash (both hex-encoded)
+    비밀번호 해싱 (PBKDF2-HMAC-SHA256).
+
+    저장 형식: "salt$hash" (둘 다 hex 인코딩)
+    - salt: 32바이트 무작위 값 (레인보우 테이블 공격 방지)
+    - hash: 비밀번호 + salt를 60만 회 반복 해싱한 결과
     """
     salt = os.urandom(32)
     key = hashlib.pbkdf2_hmac(
@@ -125,7 +139,12 @@ def hash_password(password: str) -> str:
 
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    """Verify a password against its PBKDF2 hash."""
+    """
+    비밀번호 검증.
+
+    저장된 salt를 추출하여 입력 비밀번호를 동일하게 해싱한 후 비교.
+    compare_digest를 사용하여 타이밍 공격 방지.
+    """
     try:
         salt_hex, key_hex = hashed_password.split('$')
         salt = bytes.fromhex(salt_hex)

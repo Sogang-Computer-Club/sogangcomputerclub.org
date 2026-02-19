@@ -1,6 +1,10 @@
-// API configuration
-// Use full URL for SSR, relative URL for client
-// API v1 is the current version
+/**
+ * API 클라이언트 설정.
+ *
+ * SSR vs CSR 환경에 따라 다른 URL 사용:
+ * - SSR (서버): Docker 내부 네트워크로 직접 백엔드 호출 (http://backend:8000)
+ * - CSR (브라우저): Vite 프록시를 통해 호출 (/api → localhost:8000)
+ */
 const API_BASE_URL = import.meta.env.PUBLIC_API_BASE_URL || (typeof window === 'undefined'
     ? 'http://backend:8000/v1'
     : '/api/v1');

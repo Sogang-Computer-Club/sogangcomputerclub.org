@@ -1,16 +1,15 @@
 """
-Event publisher abstraction for decoupling business logic from message brokers.
+이벤트 발행 추상화 레이어.
 
-This module provides:
-- AbstractEventPublisher: Interface for event publishing
-- KafkaEventPublisher: Production implementation using aiokafka
-- SQSEventPublisher: AWS SQS implementation using aioboto3
-- NullEventPublisher: No-op implementation for testing
+비즈니스 로직을 메시지 브로커(Kafka, SQS)로부터 분리하여:
+1. 테스트 시 NullEventPublisher로 교체 가능
+2. 운영 환경에 따라 Kafka 또는 SQS 선택 가능
+3. 서비스 코드 변경 없이 메시지 브로커 교체 가능
 
-The event backend can be configured via EVENT_BACKEND environment variable:
-- 'kafka': Use Kafka (default)
-- 'sqs': Use AWS SQS
-- 'null': Use NullEventPublisher (no-op)
+EVENT_BACKEND 환경변수로 구현체 선택:
+- 'kafka': 로컬 개발용 (docker-compose에 포함)
+- 'sqs': AWS 프로덕션용 (비용 절감, 관리형 서비스)
+- 'null': 테스트용 (이벤트 발행 없이 기록만)
 """
 from abc import ABC, abstractmethod
 from aiokafka import AIOKafkaProducer
@@ -107,7 +106,12 @@ class SQSEventPublisher(AbstractEventPublisher):
         self._queue_url = settings.sqs_queue_url
 
     async def start(self) -> None:
-        """Initialize the SQS client (reused for all publishes)."""
+        """
+        SQS 클라이언트 초기화.
+
+        클라이언트를 한 번만 생성하여 모든 publish에서 재사용.
+        매 요청마다 클라이언트를 생성하면 성능 저하 및 연결 누수 발생.
+        """
         if not self._queue_url:
             logger.warning("SQS_QUEUE_URL not set, SQS publisher disabled")
             return
@@ -115,7 +119,7 @@ class SQSEventPublisher(AbstractEventPublisher):
         try:
             import aioboto3
             self._session = aioboto3.Session()
-            # Create a persistent client context
+            # 컨텍스트 매니저를 수동으로 진입하여 앱 수명 동안 클라이언트 유지
             self._client_context = self._session.client(
                 'sqs',
                 region_name=settings.aws_region
@@ -141,10 +145,10 @@ class SQSEventPublisher(AbstractEventPublisher):
 
     async def publish(self, topic: str, message: dict, max_retries: int = 3) -> None:
         """
-        Publish a message to SQS with retry logic.
+        SQS에 메시지 발행 (재시도 로직 포함).
 
-        The topic is included as a message attribute for routing/filtering.
-        Implements exponential backoff for transient failures.
+        - topic은 MessageAttribute로 저장되어 SQS 필터링/라우팅에 사용
+        - 일시적 실패(네트워크 오류 등) 시 지수 백오프로 재시도
         """
         if not self._client or not self._queue_url:
             return
@@ -165,11 +169,11 @@ class SQSEventPublisher(AbstractEventPublisher):
                     }
                 )
                 logger.debug(f"Published message to SQS topic={topic}")
-                return  # Success, exit retry loop
+                return  # 성공 시 즉시 반환
             except Exception as e:
                 last_error = e
                 if attempt < max_retries - 1:
-                    # Exponential backoff: 0.5s, 1s, 2s
+                    # 지수 백오프: 0.5초 → 1초 → 2초 (일시적 장애 복구 대기)
                     wait_time = 0.5 * (2 ** attempt)
                     logger.warning(f"SQS publish failed (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s: {e}")
                     await asyncio.sleep(wait_time)

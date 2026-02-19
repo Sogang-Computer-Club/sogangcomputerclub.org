@@ -67,8 +67,9 @@ class MemoRepository(AbstractMemoRepository):
         return True
 
     async def search(self, query: str, skip: int = 0, limit: int = 100) -> List[dict]:
-        """Search memos by keyword in title or content."""
-        # Escape LIKE pattern characters to prevent pattern injection
+        """제목 또는 내용에서 키워드 검색."""
+        # LIKE 패턴 특수문자(%, _, \) 이스케이프하여 패턴 인젝션 방지
+        # 예: 사용자가 "100%"를 검색하면 "%100\%%" 로 변환되어 정확히 매칭
         escaped_q = re.sub(r'([%_\\])', r'\\\1', query)
         search_pattern = f"%{escaped_q}%"
 

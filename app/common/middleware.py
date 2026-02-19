@@ -1,5 +1,5 @@
 """
-Custom middleware for the application.
+애플리케이션 미들웨어.
 """
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
@@ -10,10 +10,11 @@ from .metrics import REQUEST_COUNT, REQUEST_DURATION
 
 def get_path_template(request: Request) -> str:
     """
-    Get the route template instead of the actual path.
-    This prevents high cardinality in Prometheus labels.
+    실제 경로 대신 라우트 템플릿 반환.
 
-    Example: /memos/123 -> /memos/{memo_id}
+    Prometheus 레이블의 고카디널리티(high cardinality) 문제 방지.
+    - 문제: /memos/1, /memos/2, /memos/3... 각각 다른 레이블로 기록되면 메트릭 폭발
+    - 해결: /memos/{memo_id} 템플릿으로 통합하여 집계 가능하게 함
     """
     for route in request.app.routes:
         match, _ = route.matches(request.scope)

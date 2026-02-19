@@ -1,286 +1,189 @@
 # sogangcomputerclub.org
 
-서강대학교 중앙컴퓨터동아리 SGCC의 공식 웹사이트가 담긴 레포지토리입니다.
+서강대학교 중앙컴퓨터동아리 SGCC의 공식 웹사이트입니다.
 
-홈페이지는 FastAPI + SvelteKit 기반으로 설계되었으며, SGCC의 공식 서버에서는 홈페이지를 서비스하기 위해 Docker, Redis, Kafka를 비롯한 클라우드 네이티브 아키텍처를 채택하고 있습니다.
+FastAPI + SvelteKit 기반으로 설계되었으며, AWS 클라우드 네이티브 아키텍처를 채택하고 있습니다.
+
+## 목차
+
+1. [아키텍처](#아키텍처)
+2. [기술 스택](#기술-스택)
+3. [개발 환경 설정](#개발-환경-설정)
+4. [로컬 개발 가이드](#로컬-개발-가이드)
+5. [테스트](#테스트)
+6. [AWS 인프라 배포](#aws-인프라-배포)
+7. [CI/CD 파이프라인](#cicd-파이프라인)
+8. [운영 및 관리](#운영-및-관리)
+9. [문제 해결](#문제-해결)
+10. [기여하기](#기여하기)
+
+---
 
 ## 아키텍처
 
-```text
-                    ┌──────────┐
-                    │ Certbot  │
-                    │  (SSL)   │
-                    └────┬─────┘
-                         │
-          ┌──────────────▼──────────────┐
-          │   Nginx (Reverse Proxy)     │
-          │    sogangcomputerclub.org   │
-          └──────────┬──────────────────┘
-                     │
-          ┌──────────┴──────────┐
-          │                     │
-     ┌────▼─────┐          ┌────▼─────┐
-     │ Frontend │          │ Backend  │
-     │SvelteKit │          │ FastAPI  │
-     │  :3000   │          │  :8000   │
-     └──────────┘          └────┬─────┘
-                                │
-               ┌────────────────┼────────────────┐
-               │                │                │
-          ┌────▼─────┐     ┌────▼────┐      ┌────▼─────┐
-          │PostgreSQL│     │  Redis  │      │  Kafka   │
-          │  :5432   │     │  :6379  │      │  :9092   │
-          └──────────┘     └─────────┘      └────┬─────┘
-                                                 │
-                                            ┌────▼─────┐
-                                            │Zookeeper │
-                                            │  :2181   │
-                                            └──────────┘
+### AWS 프로덕션 환경
+
+```mermaid
+flowchart TB
+    subgraph Internet
+        Users[Users]
+    end
+
+    subgraph AWS["AWS Cloud (ap-northeast-2)"]
+        subgraph VPC["VPC (10.0.0.0/16)"]
+            subgraph PublicSubnet["Public Subnet"]
+                subgraph EC2["EC2 (t3.small)"]
+                    subgraph Docker["docker-compose"]
+                        Nginx["Nginx\n:80/443"]
+                        Backend["Backend\nFastAPI :8000"]
+                        Frontend["Frontend\nSvelteKit :3000"]
+                        Redis["Redis\n:6379"]
+                    end
+                end
+            end
+
+            subgraph PrivateSubnet["Private Subnet"]
+                RDS[("RDS PostgreSQL\nMulti-AZ")]
+            end
+        end
+
+        ECR["ECR\n(Container Images)"]
+        SQS["SQS\n(Event Queue)"]
+        Secrets["Secrets Manager"]
+        CloudWatch["CloudWatch\n(Monitoring)"]
+    end
+
+    Users -->|HTTPS| Nginx
+    Nginx --> Backend
+    Nginx --> Frontend
+    Backend --> Redis
+    Backend --> RDS
+    Backend --> SQS
+    Backend -.-> Secrets
+    EC2 -.-> ECR
 ```
 
-### 기술 스택
+### 로컬 개발 환경
 
-#### Backend
+```mermaid
+flowchart TB
+    subgraph DockerCompose["docker-compose"]
+        subgraph Services["Application Services"]
+            Nginx["Nginx\n:80"]
+            Backend["Backend\n:8000"]
+            Frontend["Frontend\n:3000"]
+        end
 
-- FastAPI
-- Uvicorn ASGI 서버
-- PostgreSQL 데이터베이스
-- SQLAlchemy ORM
+        subgraph DataStores["Data Stores"]
+            Postgres[("PostgreSQL\n:5433")]
+            Redis["Redis\n:6381"]
+        end
 
-#### Frontend
+        subgraph Messaging["Messaging"]
+            Kafka["Kafka\n:9092"]
+            Zookeeper["Zookeeper\n:2181"]
+        end
 
-- SvelteKit + TypeScript
-- Tailwind CSS
-- Vite 빌드 도구
+        subgraph Monitoring["Monitoring"]
+            Prometheus["Prometheus\n:9090"]
+            Grafana["Grafana\n:3001"]
+        end
+    end
 
-#### Infrastructure
+    Nginx --> Backend
+    Nginx --> Frontend
+    Backend --> Postgres
+    Backend --> Redis
+    Backend --> Kafka
+    Kafka --> Zookeeper
+    Prometheus --> Backend
+    Grafana --> Prometheus
+```
 
-- Docker & Docker Compose
-- Nginx 리버스 프록시
-- Redis (캐시)
-- Apache Kafka + Zookeeper (메시지 큐)
-- Certbot (SSL/TLS 인증서)
+---
 
+## 기술 스택
 
-## 빠른 시작
+| 카테고리 | 기술 |
+|----------|------|
+| Backend | FastAPI, SQLAlchemy 2.0, Pydantic, Uvicorn |
+| Frontend | SvelteKit 2.0, Svelte 5, TypeScript, Tailwind CSS |
+| Database | PostgreSQL 15 (AWS RDS Multi-AZ) |
+| Cache | Redis 7 |
+| Messaging | AWS SQS (프로덕션) / Apache Kafka (로컬) |
+| Infrastructure | Terraform, Docker, Nginx |
+| CI/CD | GitHub Actions, Amazon ECR |
+| Monitoring | Prometheus, Grafana, AWS CloudWatch |
+
+---
+
+## 개발 환경 설정
 
 ### 필수 요구사항
 
-- Docker & Docker Compose
+- Python 3.13 이상
+- Node.js 20 이상
+- Docker 및 Docker Compose
 - Git
 
 ### 1. 프로젝트 클론
 
 ```bash
-git clone https://github.com/your-org/sogangcomputerclub.org.git
+git clone https://github.com/Sogang-Computer-Club/sogangcomputerclub.org.git
 cd sogangcomputerclub.org
 ```
 
-### 2. 환경 설정
+### 2. 환경 변수 설정
 
 ```bash
-# .env 파일 생성 (예시 파일 복사)
 cp .env.example .env
-
-# .env 파일을 편집하여 보안 설정 변경
-# 특히 데이터베이스 비밀번호를 반드시 변경하세요!
-nano .env  # 또는 원하는 에디터 사용
 ```
 
-### 3. 서비스 실행
+`.env` 파일을 열어 다음 값들을 설정합니다:
 
 ```bash
-docker-compose up -d
+# Database Configuration
+POSTGRES_USER=memo_user
+POSTGRES_PASSWORD=your_secure_password    # 반드시 변경
+POSTGRES_DB=memo_app
+DATABASE_URL=postgresql+asyncpg://memo_user:your_secure_password@postgres:5432/memo_app
+
+# Redis Configuration
+REDIS_URL=redis://redis:6379
+
+# Event Backend (kafka, sqs, null 중 선택)
+EVENT_BACKEND=kafka
+KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+
+# Security
+SECRET_KEY=your_secret_key_here           # 반드시 변경
 ```
 
-### 4. 접속
-
-- **프론트엔드**: http://localhost:3000 (직접 접속)
-- **API 서버**: http://localhost:8000
-- **API 문서**: http://localhost:8000/docs
-- **Redis**: localhost:6381
-- **PostgreSQL**: localhost:5433
-- **Kafka**: localhost:9092
-
-## 프로젝트 구조
-
-```text
-sogangcomputerclub.org/
-├── app/                        # Backend (FastAPI)
-│   ├── __init__.py
-│   └── main.py                 # 메인 API 애플리케이션
-├── tests/                      # 테스트 코드
-│   ├── __init__.py
-│   ├── conftest.py             # pytest 설정 및 fixture
-│   ├── test_health.py          # Health check 테스트
-│   ├── test_memos.py           # 메모 API 단위 테스트
-│   ├── integration/            # 통합 테스트
-│   │   ├── __init__.py
-│   │   ├── test_docker_services.py  # Docker 서비스 상태 테스트
-│   │   ├── test_database.py         # PostgreSQL 연결 테스트
-│   │   ├── test_redis.py            # Redis 연결 테스트
-│   │   ├── test_kafka.py            # Kafka 연결 테스트
-│   │   └── test_api_e2e.py          # E2E API 테스트
-│   └── load/                   # 부하 테스트
-│       ├── locustfile.py       # Locust 트래픽 테스트
-│       └── performance_test.py # 성능 측정 스크립트
-├── scripts/                    # 유틸리티 스크립트
-│   ├── init_test_db.py         # CI용 데이터베이스 스키마 초기화
-│   ├── backup-database.sh      # DB 백업 스크립트
-│   ├── restore-database.sh     # DB 복구 스크립트
-│   ├── certbot.sh              # SSL 인증서 관리 스크립트
-│   ├── nginx.sh                # Nginx 시작 스크립트
-│   └── setup-production-server.sh # 프로덕션 서버 설정 스크립트
-├── frontend/                   # Frontend (SvelteKit)
-│   ├── src/                    # 소스 코드
-│   │   ├── routes/             # SvelteKit 라우트
-│   │   ├── lib/                # 공유 컴포넌트/유틸
-│   │   │   ├── components/     # Svelte 컴포넌트
-│   │   │   └── utils/          # 유틸리티 함수
-│   │   ├── __tests__/          # 테스트 파일
-│   │   │   └── routes/         # 페이지 테스트
-│   │   ├── vitest-env.d.ts     # Vitest 타입 선언
-│   │   └── app.html            # HTML 템플릿
-│   ├── static/                 # 정적 파일
-│   ├── Dockerfile              # Frontend 컨테이너 이미지
-│   ├── package.json            # Node.js 의존성
-│   ├── vitest.config.ts        # Vitest 설정
-│   ├── vitest-setup.ts         # 테스트 환경 설정
-│   ├── tsconfig.json           # TypeScript 설정
-│   └── svelte.config.js        # Svelte 설정
-
-├── backups/                    # 데이터베이스 백업
-│   └── README.md               # 백업/복구 가이드
-├── .github/                    # GitHub 설정
-│   ├── workflows/              # GitHub Actions CI/CD
-│   │   ├── auto-merge.yml      # PR 자동 병합
-│   │   ├── backend-ci.yml      # Backend 테스트 자동화
-│   │   ├── codeql.yml          # 코드 보안 분석
-│   │   ├── deploy-production.yml # 프로덕션 배포
-│   │   ├── docker-build.yml    # Docker 이미지 빌드/푸시
-│   │   ├── frontend-ci.yml     # Frontend 테스트 자동화
-│   │   ├── integration-tests.yml # 통합 테스트 자동화
-│   │   ├── pr-auto-assign.yml  # PR 리뷰어 자동 할당
-│   │   ├── pr-labeler.yml      # PR 자동 레이블링
-│   │   ├── pr-validation.yml   # PR 유효성 검사
-│   │   ├── release.yml         # 릴리스 자동화
-│   │   ├── security-scan.yml   # 보안 스캔
-│   │   └── stale.yml           # 오래된 이슈/PR 관리
-│   └── ISSUE_TEMPLATE/         # 이슈 템플릿
-├── docker-compose.yml          # Docker Compose 설정
-├── Dockerfile                  # Backend 컨테이너 이미지
-├── pyproject.toml              # Python 프로젝트 설정 및 의존성
-├── uv.lock                     # uv 의존성 잠금 파일
-├── nginx.conf                  # Nginx 메인 설정
-├── nginx-sogangcomputerclub.conf  # 사이트별 Nginx 설정
-├── LICENSE                     # MIT 라이선스
-├── CODE_OF_CONDUCT.md          # 행동 강령
-└── SECURITY.md                 # 보안 정책
-```
-
-## 개발 환경 설정
-
-### Backend 로컬 개발
+### 3. uv 패키지 매니저 설치 (Backend)
 
 ```bash
-# uv 설치 (설치되지 않은 경우)
 curl -LsSf https://astral.sh/uv/install.sh | sh
+```
 
-# 의존성 설치 및 가상환경 자동 생성
+### 4. 의존성 설치
+
+```bash
+# Backend 의존성
 uv sync
 
-# 개발 서버 실행
-uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-```
-
-### Frontend 로컬 개발
-
-```bash
+# Frontend 의존성
 cd frontend
-
-# 의존성 설치
 npm install
-
-# 개발 서버 실행
-# 자동으로 http://localhost:8000 으로 API 요청을 프록시합니다.
-npm run dev
-
-# 프로덕션 빌드
-npm run build
+cd ..
 ```
 
-### Docker 없이 로컬 전체 실행
+---
 
-1. **Backend 실행**:
-   ```bash
-   # 터미널 1
-   uv run uvicorn app.main:app --reload --port 8000
-   ```
+## 로컬 개발 가이드
 
-2. **Frontend 실행**:
-   ```bash
-   # 터미널 2
-   cd frontend
-   npm run dev
-   ```
-   브라우저에서 `http://localhost:5173`으로 접속하세요.
+### 방법 1: Docker Compose (권장)
 
-### Docker Compose로 실행
-
-```bash
-docker-compose up -d
-```
-이 방식은 프로덕션과 유사한 환경을 제공합니다. Frontend는 `http://localhost:3000`에서 실행됩니다.
-
-## 데이터베이스
-
-### 백업 생성
-
-```bash
-./scripts/backup-database.sh
-```
-
-백업 파일은 `backups/` 디렉토리에 타임스탬프와 함께 저장됩니다.
-최근 30개의 백업만 자동으로 유지됩니다.
-
-### 복구
-
-```bash
-./scripts/restore-database.sh backups/memo_app_backup_20251006_025125.sql.gz
-```
-
-자세한 내용은 [backups/README.md](backups/README.md)를 참조하세요.
-
-### 자동 백업 설정
-
-- 백업 주기: 매일 새벽 3시
-- 백업 스크립트: `./scripts/backup-database.sh`
-- 로그 파일: `./backups/backup.log`
-- Cron 서비스: 실행 중 및 부팅 시 자동 시작 활성화
-
-#### 백업 설정 확인
-
-##### crontab 확인
-
-```bash
-crontab -l
-```
-
-##### 수동 백업 테스트
-
-```bash
-./scripts/backup-database.sh
-```
-
-##### 백업 로그 확인
-
-```bash
-tail -f ./backups/backup.log
-```
-
-## Docker 명령어
-
-### 서비스 관리
+모든 서비스를 한 번에 실행합니다.
 
 ```bash
 # 전체 서비스 시작
@@ -292,514 +195,549 @@ docker-compose logs -f
 # 특정 서비스 로그
 docker-compose logs -f backend
 docker-compose logs -f frontend
-docker-compose logs -f nginx
-
-# 서비스 재시작
-docker-compose restart
-
-# 개별 서비스 재시작
-docker-compose restart backend
 
 # 서비스 중지
 docker-compose down
 
-# 볼륨까지 완전 삭제
+# 볼륨까지 삭제 (DB 초기화)
 docker-compose down -v
 ```
 
-### 컨테이너 접속
+접속 주소:
+- Frontend: http://localhost:3000
+- Backend API: http://localhost:8000
+- API 문서 (Swagger): http://localhost:8000/docs
+- Grafana: http://localhost:3001 (admin/admin)
+- Prometheus: http://localhost:9090
+
+### 방법 2: Backend 단독 실행
 
 ```bash
-# Backend 컨테이너 접속
-docker-compose exec backend /bin/bash
+# 개발 서버 실행 (핫 리로드 활성화)
+uv run uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# PostgreSQL 접속 (.env에 설정한 비밀번호 사용)
-docker-compose exec postgres psql -U memo_user -d memo_app
-
-# Redis CLI 접속
-docker-compose exec redis redis-cli
-
-# Nginx 설정 테스트
-docker-compose exec nginx nginx -t
-
-# Nginx 리로드
-docker-compose exec nginx nginx -s reload
+# 또는 특정 환경 변수와 함께
+DATABASE_URL=postgresql+asyncpg://user:pass@localhost:5433/memo_app \
+REDIS_URL=redis://localhost:6381 \
+EVENT_BACKEND=null \
+uv run uvicorn app.main:app --reload --port 8000
 ```
 
-
-
-### 보안 스캔
+### 방법 3: Frontend 단독 실행
 
 ```bash
-# 수동으로 보안 스캔 실행
-gh workflow run security-scan.yml
+cd frontend
 
-# 스캔 결과 확인
-# GitHub Security 탭에서 확인 가능
+# 개발 서버 실행 (핫 리로드 활성화)
+npm run dev
+
+# 프로덕션 빌드
+npm run build
+
+# 빌드된 결과 실행
+npm run preview
 ```
 
-## 환경 설정
+Frontend 개발 서버는 `/api/*` 요청을 자동으로 `http://localhost:8000`으로 프록시합니다.
 
-### 환경 변수 설정
+### 데이터베이스 마이그레이션
 
-프로젝트는 `.env` 파일을 통해 환경 변수를 관리합니다.
-
-#### 1. .env 파일 생성
+Alembic을 사용하여 데이터베이스 스키마를 관리합니다.
 
 ```bash
-# .env.example 파일을 복사하여 .env 생성
-cp .env.example .env
+# 마이그레이션 적용
+uv run alembic upgrade head
+
+# 새 마이그레이션 생성 (모델 변경 후)
+uv run alembic revision --autogenerate -m "설명"
+
+# 마이그레이션 롤백 (직전 버전)
+uv run alembic downgrade -1
+
+# 마이그레이션 히스토리 확인
+uv run alembic history
+
+# 현재 버전 확인
+uv run alembic current
 ```
 
-#### 2. 필수 환경 변수 설정
-
-`.env` 파일 내용:
+### 코드 스타일 및 린팅
 
 ```bash
-# Database Configuration
-POSTGRES_USER=memo_user
-POSTGRES_PASSWORD=your_secure_password_here              # 변경 필수!
-POSTGRES_DB=memo_app
+# Backend 린팅 (Ruff)
+uv run ruff check app/
+uv run ruff format app/
 
-# Database URL for FastAPI
-DATABASE_URL=postgresql+asyncpg://memo_user:your_secure_password_here@postgres:5432/memo_app
-
-# Redis Configuration
-REDIS_URL=redis://redis:6379
-
-# Kafka Configuration
-KAFKA_BOOTSTRAP_SERVERS=kafka:9092
-
-# Backup Configuration
-BACKUP_DIR=./backups
-CONTAINER_NAME_PREFIX=sogangcomputercluborg
-
-# Node Environment
-NODE_ENV=production
-HOST=0.0.0.0
-PORT=3000
+# Frontend 타입 체크
+cd frontend
+npm run check
 ```
 
-> ⚠️ **보안 관련 중요사항**:
->
-> - `.env` 파일은 Git에 커밋되지 않습니다 (`.gitignore`에 포함됨)
-> - **반드시** 기본 비밀번호(`changeme`, `changeme_root`)를 강력한 비밀번호로 변경하세요
-> - 프로덕션 환경에서는 최소 16자 이상의 복잡한 비밀번호를 사용하세요
-
-
+---
 
 ## 테스트
 
-### Unit Tests (Backend)
-
-#### 백엔드 API 엔드포인트에 대한 단위 테스트
+### Backend 단위 테스트
 
 ```bash
-# 모든 단위 테스트 실행
+# 전체 테스트 실행
 uv run pytest tests/ -v
 
-# 특정 테스트 파일만 실행
+# 특정 테스트 파일
 uv run pytest tests/test_memos.py -v
 
-# 커버리지와 함께 실행
+# 특정 테스트 함수
+uv run pytest tests/test_memos.py::test_create_memo -v
+
+# 커버리지 리포트
 uv run pytest tests/ --cov=app --cov-report=html
+# htmlcov/index.html 에서 확인
+
+# 통합 테스트 제외
+uv run pytest tests/ --ignore=tests/integration -v
 ```
 
-#### 테스트 항목
+### Backend 통합 테스트
 
-- Health check 엔드포인트
-- 메모 CRUD 작업 (생성, 조회, 수정, 삭제)
-- 메모 검색 기능
-- 유효성 검증 및 에러 처리
-- 페이지네이션
-
-### Integration Tests (서버)
-
-#### 실제 Docker 컨테이너와 연동하는 통합 테스트
+Docker 서비스가 실행 중이어야 합니다.
 
 ```bash
-# 먼저 Docker 서비스 시작
+# Docker 서비스 시작
 docker-compose up -d
 
-# 서비스가 완전히 시작될 때까지 대기 (약 30초)
+# 서비스 준비 대기 (약 30초)
 sleep 30
 
 # 통합 테스트 실행
 uv run pytest tests/integration/ -v
 
-# 특정 통합 테스트만 실행
-uv run pytest tests/integration/test_docker_services.py -v  # Docker 서비스 상태
-uv run pytest tests/integration/test_database.py -v         # PostgreSQL 연결
-uv run pytest tests/integration/test_redis.py -v            # Redis 연결
-uv run pytest tests/integration/test_kafka.py -v            # Kafka 연결
-uv run pytest tests/integration/test_api_e2e.py -v          # E2E API 테스트
+# 개별 통합 테스트
+uv run pytest tests/integration/test_database.py -v
+uv run pytest tests/integration/test_redis.py -v
+uv run pytest tests/integration/test_kafka.py -v
+uv run pytest tests/integration/test_api_e2e.py -v
 ```
 
-#### 통합 테스트 항목
-
-- Docker Compose 서비스 상태 확인
-- PostgreSQL 데이터베이스 연결 및 CRUD
-- Redis 캐시 작업 (set, get, delete, expiration)
-- Kafka 메시지 전송 및 수신
-- 전체 API 라이프사이클 (E2E)
-- 동시 요청 처리
-
 ### Frontend 테스트
-
-#### 컴포넌트 및 유틸리티 단위 테스트
 
 ```bash
 cd frontend
 
-# 모든 테스트 실행
+# 전체 테스트 실행
 npm run test
 
-# 타입 체크
-npm run check
+# 감시 모드 (파일 변경 시 자동 실행)
+npm run test:watch
 
-# 프로덕션 빌드
-npm run build
+# 커버리지 리포트
+npm run test:coverage
 ```
 
-#### 테스트 항목
-
-- **컴포넌트 테스트 (27개)**
-  - Header, Footer, NavigationBar, FeedCard 등
-- **유틸리티 테스트 (9개)**
-  - slugify 함수
-- **페이지 테스트 (4개)**
-  - 홈페이지, Welcome 페이지
-
-#### 테스트 환경
-
-- Vitest + jsdom
-- @testing-library/svelte
-- @testing-library/jest-dom
-
-#### 개발 서버 실행
+### 부하 테스트
 
 ```bash
-npm run dev
-```
-
-### Load Tests (부하 테스트)
-
-#### Locust를 이용한 트래픽 테스트
-
-```bash
-# CLI 모드로 실행
+# Locust Web UI 모드
 uv run locust -f tests/load/locustfile.py --host=http://localhost:8000
 
-# Web UI 모드로 실행 (http://localhost:8089 접속)
-uv run locust -f tests/load/locustfile.py --host=http://localhost:8000 --web-host=0.0.0.0
-
 # Headless 모드 (자동 실행)
-uv run locust -f tests/load/locustfile.py --host=http://localhost:8000 \
-  --users 100 --spawn-rate 10 --run-time 1m --headless
+uv run locust -f tests/load/locustfile.py \
+  --host=http://localhost:8000 \
+  --users 100 \
+  --spawn-rate 10 \
+  --run-time 1m \
+  --headless
 ```
 
-##### 테스트 시나리오
+---
 
-- Health check (30%)
-- 메모 목록 조회 (50%)
-- 메모 생성 (10%)
-- 단일 메모 조회 (10%)
+## AWS 인프라 배포
 
-#### 성능 테스트
+### 사전 요구사항
+
+1. AWS 계정
+2. AWS CLI 설정 완료 (`aws configure`)
+3. Terraform 1.0 이상 설치
+4. EC2 SSH 키 페어 생성
+
+### 1. SSH 키 페어 생성
+
+AWS Console에서 생성하거나 CLI 사용:
 
 ```bash
-# 간단한 성능 측정 스크립트 실행
-uv run python tests/load/performance_test.py
+aws ec2 create-key-pair \
+  --key-name sgcc-key \
+  --query 'KeyMaterial' \
+  --output text > sgcc-key.pem
+chmod 400 sgcc-key.pem
 ```
 
-##### 측정 항목
-
-- 엔드포인트별 응답 시간 (평균, 중앙값, 최소, 최대, 표준편차)
-- 동시 요청 처리 성능 (10명, 50명, 100명)
-- 초당 처리 가능한 요청 수 (RPS)
-
-### 수동 테스트
+### 2. Terraform 변수 설정
 
 ```bash
-# Health check
+cd infrastructure
+cp terraform.tfvars.example terraform.tfvars
+```
+
+`terraform.tfvars` 파일 편집:
+
+```hcl
+# AWS 설정
+aws_region  = "ap-northeast-2"
+environment = "production"
+
+# EC2 설정
+ec2_instance_type = "t3.small"
+ec2_key_name      = "sgcc-key"        # 위에서 생성한 키 이름
+ec2_volume_size   = 30
+
+# RDS 설정
+db_instance_class = "db.t4g.micro"
+db_name           = "sgcc_db"
+db_username       = "sgcc_admin"
+db_password       = "YourSecurePassword123!"  # 강력한 비밀번호 사용
+db_multi_az       = true
+
+# 도메인
+domain_name = "sogangcomputerclub.org"
+
+# SSH 접근 허용 IP (본인 IP 추가)
+allowed_ssh_cidrs = ["123.456.789.0/32"]
+
+# VPC 엔드포인트 (비용 절감을 위해 기본 비활성화)
+enable_vpc_endpoints = false
+```
+
+### 3. 인프라 생성
+
+```bash
+cd infrastructure
+
+# Terraform 초기화
+terraform init
+
+# 실행 계획 확인
+terraform plan
+
+# 인프라 생성 (약 15-20분 소요)
+terraform apply
+
+# 출력값 확인
+terraform output
+```
+
+### 4. DNS 설정
+
+도메인 DNS 관리자에서 A 레코드를 추가합니다:
+
+```
+sogangcomputerclub.org      A    <EC2_PUBLIC_IP>
+www.sogangcomputerclub.org  A    <EC2_PUBLIC_IP>
+```
+
+EC2 Public IP는 `terraform output ec2_public_ip` 명령으로 확인할 수 있습니다.
+
+### 5. EC2 초기 설정
+
+```bash
+# EC2 접속
+ssh -i sgcc-key.pem ec2-user@<EC2_PUBLIC_IP>
+
+# 앱 디렉토리 이동
+cd /opt/sgcc
+
+# 환경변수 로드
+source .deploy-env
+
+# docker-compose.aws.yml 복사 (GitHub에서)
+# git clone 또는 수동 복사
+
+# 배포 스크립트 실행
+./deploy.sh
+```
+
+### 6. SSL 인증서 설정
+
+```bash
+# EC2에서 root 권한으로 실행
+sudo /opt/sgcc/scripts/setup-ssl.sh sogangcomputerclub.org admin@sogangcomputerclub.org
+```
+
+### 7. GitHub Secrets 설정
+
+GitHub Repository Settings > Secrets and variables > Actions에 추가:
+
+| Secret | 설명 | 예시 |
+|--------|------|------|
+| `AWS_ROLE_ARN` | AWS IAM Role ARN (OIDC용) | `arn:aws:iam::123456789:role/github-actions` |
+| `ECR_BACKEND_REPO` | ECR 백엔드 저장소 이름 | `sgcc/backend` |
+| `ECR_FRONTEND_REPO` | ECR 프론트엔드 저장소 이름 | `sgcc/frontend` |
+| `EC2_HOST` | EC2 퍼블릭 IP | `1.2.3.4` |
+| `EC2_USERNAME` | EC2 사용자 | `ec2-user` |
+| `EC2_SSH_KEY` | EC2 SSH 프라이빗 키 (PEM 내용 전체) | `-----BEGIN RSA...` |
+
+### 예상 월 비용
+
+| 서비스 | 구성 | 월 비용 (USD) |
+|--------|------|---------------|
+| EC2 | t3.small (2vCPU, 2GB) | ~15 |
+| EBS | 30GB gp3 | ~3 |
+| RDS PostgreSQL | db.t4g.micro, Multi-AZ | ~30 |
+| Elastic IP | 1개 | ~4 |
+| SQS | 저용량 | ~1 |
+| ECR | 이미지 저장 | ~1 |
+| Secrets Manager | 1개 비밀 | ~2 |
+| 총계 | | ~56 |
+
+VPC 엔드포인트 활성화 시 약 $36/월 추가됩니다.
+
+---
+
+## CI/CD 파이프라인
+
+### 워크플로우 구성
+
+| 워크플로우 | 파일 | 트리거 | 설명 |
+|------------|------|--------|------|
+| Backend CI | `backend-ci.yml` | Push, PR | Python 테스트, 린팅, 커버리지 |
+| Frontend CI | `frontend-ci.yml` | Push, PR | TypeScript 체크, 테스트, 빌드 |
+| AWS 배포 | `deploy-aws.yml` | master push | ECR 빌드, EC2 배포 |
+| 보안 스캔 | `security-scan.yml` | Push, 매일 | Trivy, CodeQL, TruffleHog |
+| 통합 테스트 | `integration-tests.yml` | Push, PR | Docker 서비스 연동 테스트 |
+
+### AWS 배포 플로우
+
+```mermaid
+flowchart TD
+    A[master 브랜치 Push] --> B{Security Scan}
+    B -->|CRITICAL 취약점| X[배포 중단]
+    B -->|통과| C[Build Docker Images]
+    C --> D[Push to ECR]
+    D --> E[Deploy to EC2]
+    E --> F[docker-compose pull]
+    F --> G[docker-compose up -d]
+    G --> H{Smoke Tests}
+    H -->|성공| I[배포 완료]
+    H -->|실패| J[Auto Rollback]
+    J --> K[latest 태그로 복원]
+```
+
+### 수동 배포
+
+```bash
+# GitHub Actions UI에서 workflow_dispatch 트리거
+# 또는 EC2에서 직접 실행
+
+ssh -i sgcc-key.pem ec2-user@<EC2_IP>
+cd /opt/sgcc
+source .deploy-env
+./deploy.sh
+```
+
+---
+
+## 운영 및 관리
+
+### 서비스 상태 확인
+
+```bash
+# EC2 접속
+ssh -i sgcc-key.pem ec2-user@<EC2_IP>
+
+# 컨테이너 상태 확인
+docker compose -f docker-compose.aws.yml ps
+
+# 서비스 로그 확인
+docker compose -f docker-compose.aws.yml logs -f backend
+docker compose -f docker-compose.aws.yml logs -f frontend
+docker compose -f docker-compose.aws.yml logs -f nginx
+
+# 헬스 체크
 curl http://localhost:8000/health
-
-# API 문서 확인
-open http://localhost:8000/docs
-
-# Redis 연결 테스트
-docker-compose exec redis redis-cli ping
-# 응답: PONG
-
-# Kafka 토픽 확인
-docker-compose exec kafka kafka-topics --list --bootstrap-server localhost:9092
-
-# 모든 서비스 상태 확인
-docker-compose ps
-
-# 네트워크 연결 확인
-docker-compose exec backend ping postgres
-docker-compose exec backend ping redis
-docker-compose exec backend ping kafka
-# 네트워크 연결 확인
-docker-compose exec backend ping postgres
-docker-compose exec backend ping redis
-docker-compose exec backend ping kafka
+curl http://localhost:3000
 ```
 
-## 문제 해결 (Troubleshooting)
+### 서비스 재시작
 
-### 배포 실패: GITHUB_REPOSITORY 미설정
-배포 시 `invalid reference format` 에러가 발생하면 `.env` 파일을 확인하세요:
-1. `GITHUB_REPOSITORY` 변수가 설정되어 있어야 합니다.
-2. 값은 **반드시 소문자**여야 합니다 (예: `sogang-computer-club/sogangcomputerclub.org`).
-
-### 포트 충돌 (Bind failed)
-`Bind for 0.0.0.0:6379 failed` 등의 에러는 이전 컨테이너가 포트를 점유 중이기 때문입니다.
-다음 명령어로 정리할 수 있습니다 (주의: 모든 컨테이너 중단):
 ```bash
+# 전체 재시작
+docker compose -f docker-compose.aws.yml restart
+
+# 개별 서비스 재시작
+docker compose -f docker-compose.aws.yml restart backend
+docker compose -f docker-compose.aws.yml restart frontend
+
+# 완전 재배포 (이미지 다시 pull)
+docker compose -f docker-compose.aws.yml pull
+docker compose -f docker-compose.aws.yml up -d
+```
+
+### 로그 관리
+
+```bash
+# 최근 100줄 로그
+docker compose -f docker-compose.aws.yml logs --tail 100 backend
+
+# 실시간 로그 (Ctrl+C로 종료)
+docker compose -f docker-compose.aws.yml logs -f backend
+
+# CloudWatch Logs (AWS Console에서 확인)
+# 로그 그룹: /aws/ec2/sgcc
+```
+
+### 데이터베이스 관리
+
+```bash
+# RDS 접속 (EC2에서만 가능)
+psql -h <RDS_ENDPOINT> -U sgcc_admin -d sgcc_db
+
+# 백업 생성 (AWS Console 또는 CLI)
+aws rds create-db-snapshot \
+  --db-instance-identifier sgcc-db \
+  --db-snapshot-identifier sgcc-db-backup-$(date +%Y%m%d)
+
+# 스냅샷 목록 확인
+aws rds describe-db-snapshots --db-instance-identifier sgcc-db
+```
+
+### Secrets Manager 업데이트
+
+```bash
+# 현재 비밀 확인
+aws secretsmanager get-secret-value \
+  --secret-id sgcc/app-secrets \
+  --query 'SecretString' \
+  --output text | jq
+
+# 비밀 업데이트
+aws secretsmanager update-secret \
+  --secret-id sgcc/app-secrets \
+  --secret-string '{"SECRET_KEY":"new_value",...}'
+
+# EC2에서 비밀 새로고침
+ssh ec2-user@<EC2_IP>
+cd /opt/sgcc
+./fetch-secrets.sh "$SECRET_ARN" "$AWS_REGION" .env
+docker compose -f docker-compose.aws.yml restart
+```
+
+### SSL 인증서 갱신
+
+Certbot이 자동으로 갱신하지만, 수동으로 확인하려면:
+
+```bash
+# 인증서 상태 확인
+sudo certbot certificates
+
+# 수동 갱신 (테스트)
+sudo certbot renew --dry-run
+
+# 실제 갱신
+sudo certbot renew
+```
+
+### 모니터링
+
+- CloudWatch Alarms: AWS Console에서 확인
+  - EC2 CPU 사용률 > 80%
+  - RDS CPU 사용률 > 80%
+  - RDS 스토리지 < 5GB
+  - SQS DLQ 메시지 > 0
+
+- Grafana (로컬 개발 환경): http://localhost:3001
+- Prometheus (로컬 개발 환경): http://localhost:9090
+
+### 인프라 변경
+
+```bash
+cd infrastructure
+
+# 변경 사항 확인
+terraform plan
+
+# 변경 적용
+terraform apply
+
+# 특정 리소스만 재생성
+terraform taint aws_instance.main
+terraform apply
+```
+
+### 인프라 삭제 (주의)
+
+```bash
+# RDS deletion_protection 비활성화 필요
+# AWS Console에서 RDS > Modify > Deletion protection 해제
+
+cd infrastructure
+terraform destroy
+```
+
+---
+
+## 문제 해결
+
+### 포트 충돌
+
+```bash
+# 기존 컨테이너 확인
+docker ps -a
+
+# SGCC 관련 컨테이너 정리
 docker ps -aq --filter name=sgcc | xargs -r docker rm -f
 docker ps -aq --filter name=sogangcomputercluborg | xargs -r docker rm -f
 ```
 
-### SSL 인증서 발급 실패 (Error 521)
-Certbot 로그에 `Invalid response ... 521` 에러가 보이면:
-- Cloudflare 등 외부 프록시/DNS 설정 문제입니다.
-- 원본 서버(Origin)가 다운되었거나 방화벽이 80번 포트를 차단하지 않는지 확인하세요.
-- 인증서 발급을 위해서는 80번 포트(HTTP) 접근이 가능해야 합니다.
+### SSH 접속 불가
 
-## CI/CD
+1. Security Group 확인: `allowed_ssh_cidrs`에 본인 IP가 포함되어 있는지 확인
+2. 미설정 시 SSH 규칙이 생성되지 않음 (보안 목적)
+3. AWS Console > EC2 > Security Groups에서 인바운드 규칙 확인
 
-### GitHub Actions 워크플로우
+### RDS 연결 불가
 
-프로젝트는 GitHub Actions를 통해 자동화된 CI/CD 파이프라인을 제공합니다.
+1. RDS는 Private Subnet에 있어 EC2를 통해서만 접근 가능
+2. Security Group에서 5432 포트가 EC2 Security Group에서만 허용되는지 확인
+3. RDS 엔드포인트 확인: `terraform output rds_endpoint`
 
-#### 1. Backend CI (`.github/workflows/backend-ci.yml`)
-
-##### Trigger
-
-- `main`, `master`, `develop`, `feature/backend-*` 브랜치에 push
-- app/, tests/, pyproject.toml, uv.lock 파일 변경 시
-- Pull Request 생성 시
-
-##### Jobs
-
-- Python 3.13 환경에서 단위 테스트 실행
-- 코드 커버리지 측정 및 Codecov 업로드
-- 코드 린팅 (Ruff)
-
-#### 2. Frontend CI (`.github/workflows/frontend-ci.yml`)
-
-##### Trigger
-
-- `main`, `master`, `develop`, `feature/frontend-*` 브랜치에 push
-- frontend/ 디렉토리 변경 시
-- Pull Request 생성 시
-
-##### Jobs
-
-- Node.js 20.x 환경에서 테스트 실행
-- TypeScript 타입 체크 (svelte-check)
-- 컴포넌트 및 유틸리티 단위 테스트 (Vitest)
-- 프로덕션 빌드 검증
-- 빌드 아티팩트 업로드
-
-#### 3. Docker Build (`.github/workflows/docker-build.yml`)
-
-##### Trigger
-
-- `main`, `master` 브랜치에 push
-- 버전 태그 (`v*.*.*`) 생성 시
-
-##### Jobs
-
-- Backend 및 Frontend Docker 이미지 빌드
-- GitHub Container Registry (ghcr.io)에 자동 푸시
-- 이미지 태깅 전략:
-  - 브랜치명 태그
-  - 시맨틱 버전 태그 (`v1.0.0`, `v1.0`)
-  - Git SHA 태그
-
-#### Docker 이미지 사용
+### 배포 실패
 
 ```bash
-# Backend 이미지 pull
-docker pull ghcr.io/your-org/sogangcomputerclub.org/backend:latest
+# EC2에서 디버깅
+ssh ec2-user@<EC2_IP>
+cd /opt/sgcc
 
-# Frontend 이미지 pull
-docker pull ghcr.io/your-org/sogangcomputerclub.org/frontend:latest
+# 컨테이너 상태 확인
+docker compose -f docker-compose.aws.yml ps
+
+# 로그 확인
+docker compose -f docker-compose.aws.yml logs --tail 100 backend
+
+# 환경변수 확인
+cat .env
+
+# 수동 재배포
+./deploy.sh
 ```
 
-#### 4. Integration Tests (`.github/workflows/integration-tests.yml`)
+### SSL 인증서 발급 실패
 
-##### Trigger
-
-- `main`, `master`, `develop`, `feature/backend-*` 브랜치에 push
-- Pull Request 생성 시
-- 매일 새벽 2시 (UTC) 자동 실행
-
-##### Jobs
-
-- PostgreSQL, Redis 서비스 컨테이너 시작
-- 데이터베이스 스키마 초기화 (scripts/init_test_db.py)
-- 데이터베이스 연결 테스트
-- Redis 캐시 작업 테스트
-- 테스트 결과 아티팩트 업로드
-
-
-#### 환경 설정 (Configuration)
-
-이 프로젝트는 환경 설정을 위해 **Local 환경에서는 `.env` 파일**, **Production 환경에서는 GitHub Secrets**를 사용합니다.
-
-### 1. Local Development (`.env`)
-로컬 개발 시에는 `.env` 파일이 필수입니다. `.env.example` 파일을 복사하여 생성하세요.
+1. DNS A 레코드가 EC2 IP를 가리키는지 확인
+2. 80번 포트가 열려 있는지 확인
+3. Nginx가 실행 중인지 확인
 
 ```bash
-cp .env.example .env
+# Nginx 상태 확인
+docker compose -f docker-compose.aws.yml ps nginx
+
+# 임시로 Nginx 중지 후 인증서 발급
+docker compose -f docker-compose.aws.yml stop nginx
+sudo certbot certonly --standalone -d sogangcomputerclub.org
+docker compose -f docker-compose.aws.yml start nginx
 ```
 
-`.env` 파일은 `.gitignore`에 등록되어 있어 git에 커밋되지 않습니다.
+---
 
-### 2. Database Migrations (Alembic)
-데이터베이스 스키마 변경 시에는 Alembic을 사용하여 마이그레이션을 관리합니다.
-
-#### 마이그레이션 생성 (스키마 변경 시)
-```bash
-# 로컬 개발 환경 (uv 사용)
-uv run alembic revision --autogenerate -m "설명"
-```
-
-#### 마이그레이션 적용 (DB 업데이트)
-```bash
-# 로컬 개발 환경
-uv run alembic upgrade head
-```
-
-#### 마이그레이션 취소 (롤백)
-```bash
-# 직전 버전으로 롤백
-uv run alembic downgrade -1
-```
-
-### 3. Production (`GitHub Secrets`)
-프로덕션 배포 시에는 `.env` 파일을 사용하지 **않습니다**. 대신 GitHub Repository Settings > Secrets and variables > Actions에 다음 Secret들을 등록해야 합니다.
-
-| Secret Name | 설명 |
-|---|---|
-| `POSTGRES_USER` | DB 사용자 이름 |
-| `POSTGRES_PASSWORD` | DB 비밀번호 |
-| `POSTGRES_DB` | DB 이름 |
-| `DATABASE_URL` | `postgresql+asyncpg://USER:PASSWORD@sgcc-postgres:5432/DB_NAME` |
-| `GRAFANA_ADMIN_PASSWORD` | Grafana 관리자 비밀번호 |
-| `PROD_HOST` | 배포 서버 IP/도메인 |
-| `PROD_USERNAME` | 배포 서버 SSH 사용자 |
-| `PROD_SSH_KEY` | 배포 서버 SSH Private Key |
-
-#### 5. Production Deployment (`.github/workflows/deploy-production.yml`)
-
-##### Trigger
-
-- `master` 브랜치에 push (자동 배포)
-- 버전 태그 (`v*.*.*`) 생성 시
-- 수동 트리거 (GitHub Actions UI)
-
-##### Jobs
-
-- **Security Scan**: Trivy로 CRITICAL 취약점 스캔 (블로킹)
-- **Build & Push**: Docker 이미지 빌드, SBOM/Provenance 생성 및 GHCR 푸시
-- **Image Scan**: 빌드된 이미지 보안 스캔
-  - 현재 배포 상태 저장 (롤백용)
-  - 이미지 태그 업데이트
-  - 이미지 pull secret 생성
-  - 배포 롤아웃 대기
-- **Health Check**: 헬스 체크 및 스모크 테스트
-- **Stability Monitor**: 60초 안정성 모니터링
-- **Auto-Rollback**: 실패 시 이전 버전으로 자동 롤백
-- **Notify**: 배포 결과 알림
-
-#### 6. Security Scanning (`.github/workflows/security-scan.yml`)
-
-##### Trigger
-
-- `master`, `develop`, `staging` 브랜치에 push
-- Pull Request 생성 시
-- 매일 새벽 2시 (UTC) 자동 스캔
-- 수동 트리거
-
-##### Security Tools
-
-- **Trivy**: Filesystem, Config, Image 스캔
-- **CodeQL**: Python/JavaScript 코드 분석
-- **TruffleHog**: Secret 스캔
-- **Dependency Review**: 의존성 취약점 검사
-
-##### 배포 설정
-
-자동 배포를 위한 설정 가이드는 [docs/deployment-guide.md](docs/deployment-guide.md)를 참조하세요.
-
-### 로컬에서 Docker 이미지 빌드
-
-```bash
-# Backend 이미지
-docker build -t sogangcomputerclub/backend:latest .
-
-# Frontend 이미지
-docker build -t sogangcomputerclub/frontend:latest ./frontend
-```
-
-### 수동 이미지 푸시 (레지스트리 사용시)
-
-```bash
-docker push sogangcomputerclub/backend:latest
-docker push sogangcomputerclub/frontend:latest
-```
-
-### SSL 인증서 발급 (Let's Encrypt - Auto)
-
-`docker-compose.prod.yml`에 포함된 `certbot` 서비스가 자동으로 SSL 인증서를 관리합니다:
-
-1. 컨테이너 시작 시: 인증서가 없으면 자동으로 발급 요청
-2. 실행 중: 12시간마다 갱신 필요 여부 확인 및 자동 갱신
-3. `manage-certs.sh` 스크립트가 이 과정을 수행합니다.
-
-`nginx`는 공유 볼륨 `certbot_www`를 통해 ACME 챌린지를 처리하고, `./certs` 호스트 디렉토리를 통해 갱신된 인증서를 공유받습니다.
-
-수동으로 갱신을 트리거하려면:
-```bash
-docker-compose restart certbot
-```
-
-인증서 갱신 후 Nginx 리로드 (필요한 경우):
-```bash
-docker-compose exec nginx nginx -s reload
-```
-
-## 보안
-
-### Git 보안
-
-`.gitignore`에 다음 파일들이 포함되어 있어 환경 변수 등 중요한 정보는 커밋되지 않습니다:
-
-```text
-.env
-.env.*
-!.env.example
-!.env.template
-```
-
-### CI/CD 환경 변수
-
-GitHub Actions에서는 테스트용 임시 비밀번호가 사용됩니다. 프로덕션 배포 시에는:
-
-1. GitHub Secrets를 사용하여 민감 정보 관리
-2. Kubernetes Secrets를 사용하여 클러스터에 배포
-3. 환경별로 다른 비밀번호 사용
-
-자세한 내용은 [SECURITY.md](SECURITY.md)를 참조하세요.
-
-## 프로젝트에 기여하기
-
-당신의 기여를 언제나 환영합니다!
+## 기여하기
 
 1. Fork the repository
 2. Create a feature branch (`git checkout -b feature/amazing-feature`)
@@ -807,25 +745,31 @@ GitHub Actions에서는 테스트용 임시 비밀번호가 사용됩니다. 프
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
-행동 강령은 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)를 참조하세요.
+코드 스타일:
+- Backend: Ruff 린터 사용 (`uv run ruff check app/`)
+- Frontend: Prettier, ESLint 사용 (`npm run check`)
+- 커밋 메시지: Conventional Commits 형식 권장
+
+자세한 내용은 [CONTRIBUTING.md](CONTRIBUTING.md) 및 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md)를 참조하세요.
+
+---
 
 ## 라이선스
 
-이 프로젝트는 MIT 라이선스를 따릅니다. 자세한 내용은 [LICENSE](LICENSE) 파일을 참조하세요.
+MIT License - [LICENSE](LICENSE) 참조
+
+---
 
 ## 개발팀
 
 ### Infra/Database
-
 - 조준희 (19 중국문화학과)
 
 ### Backend
-
 - 김대원 (23 경제학과)
 - 조준희 (19 중국문화학과)
 
 ### Frontend
-
 - 김대원 (23 경제학과)
 - 김주희 (24 미디어 엔터테인먼트)
 - 정주원 (24 물리학과)
@@ -834,4 +778,4 @@ GitHub Actions에서는 테스트용 임시 비밀번호가 사용됩니다. 프
 
 ---
 
-> Made by SGCC
+Made by SGCC

@@ -1,7 +1,8 @@
-# Variables for AWS Infrastructure
+# Terraform 변수 정의
+# terraform.tfvars 또는 환경 변수로 값 설정
 
 variable "aws_region" {
-  description = "AWS region"
+  description = "AWS 리전 (서울)"
   type        = string
   default     = "ap-northeast-2"
 }
@@ -18,16 +19,16 @@ variable "project_name" {
   default     = "sgcc"
 }
 
-# VPC Configuration
+# VPC 네트워크 설정
 variable "vpc_cidr" {
-  description = "VPC CIDR block"
+  description = "VPC CIDR 블록 (/16 = 65,536 IP)"
   type        = string
   default     = "10.0.0.0/16"
 }
 
-# EC2 Configuration
+# EC2 인스턴스 설정
 variable "ec2_instance_type" {
-  description = "EC2 instance type"
+  description = "EC2 인스턴스 타입 (t3.small: 2vCPU, 2GB RAM, ~$15/월)"
   type        = string
   default     = "t3.small"
 }
@@ -43,9 +44,9 @@ variable "ec2_volume_size" {
   default     = 30
 }
 
-# RDS Configuration
+# RDS 데이터베이스 설정
 variable "db_instance_class" {
-  description = "RDS instance class"
+  description = "RDS 인스턴스 클래스 (db.t4g.micro: 2vCPU, 1GB RAM, ~$13/월)"
   type        = string
   default     = "db.t4g.micro"
 }
@@ -82,16 +83,20 @@ variable "domain_name" {
   default     = "sogangcomputerclub.org"
 }
 
-# Allowed IPs for SSH access
+# SSH 접근 허용 IP (보안)
+# 비어있으면 SSH 규칙이 생성되지 않음 (SSH 접근 불가)
+# 본인 IP 확인: curl ifconfig.me
 variable "allowed_ssh_cidrs" {
-  description = "CIDR blocks allowed for SSH access"
+  description = "SSH 접근 허용 CIDR 목록 (예: [\"1.2.3.4/32\"])"
   type        = list(string)
-  default     = []  # Add your IP addresses for SSH access
+  default     = []
 }
 
-# VPC Endpoints (cost optimization)
+# VPC 엔드포인트 (비용 vs 보안 트레이드오프)
+# true: AWS 내부망으로 서비스 호출 (~$36/월 추가, 보안 강화)
+# false: 인터넷 경유 (기본값, 비용 절감)
 variable "enable_vpc_endpoints" {
-  description = "Enable VPC Interface Endpoints (adds ~$22/month but improves security)"
+  description = "VPC 인터페이스 엔드포인트 활성화 여부"
   type        = bool
-  default     = false  # Disabled by default to save costs; EC2 in public subnet can use internet
+  default     = false
 }
