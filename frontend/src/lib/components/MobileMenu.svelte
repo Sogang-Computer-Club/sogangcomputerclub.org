@@ -1,10 +1,18 @@
 <script lang="ts">
-    import { toggleMobileMenu } from "$lib/Header.js";
+    import { getContext } from 'svelte';
+    import { UI_CONTEXT_KEY, type UIStore } from '$lib/stores';
 
-    let openSubMenu: string | null = null;
+    const ui = getContext<UIStore>(UI_CONTEXT_KEY);
+
+    let openSubMenu = $state<string | null>(null);
 
     function toggleSubMenu(menuName: string): void {
         openSubMenu = openSubMenu === menuName ? null : menuName;
+    }
+
+    function handleNavigate(): void {
+        ui.close();
+        openSubMenu = null;
     }
 
     const navItems = [
@@ -57,7 +65,7 @@
             <div class="relative">
                 <!-- Menu Elements -->
                 <button
-                    on:click|preventDefault={() => toggleSubMenu(item.name)}
+                    onclick={(e) => { e.preventDefault(); toggleSubMenu(item.name); }}
                     class="flex relative w-full h-19.5 items-center text-white font-sogang hover:text-gray-200 transition-colors duration-300
                     after:content-[''] after:absolute after:right-0 after:translate-x-1/2 after:h-0 after:w-1.25 after:bg-[#AE1F1F] after:transition-all after:duration-200
                     hover:cursor-pointer {openSubMenu === item.name
@@ -82,10 +90,7 @@
                                             <li>
                                                 <a
                                                     href={subItem.path}
-                                                    on:click={() => {
-                                                        toggleMobileMenu();
-                                                        openSubMenu = null;
-                                                    }}
+                                                    onclick={handleNavigate}
                                                     class="flex h-full items-center transition-colors hover:text-red-600"
                                                     >{subItem.name}</a
                                                 >
@@ -109,10 +114,7 @@
                                             <li>
                                                 <a
                                                     href={subItem.path}
-                                                    on:click={() => {
-                                                        toggleMobileMenu();
-                                                        openSubMenu = null;
-                                                    }}
+                                                    onclick={handleNavigate}
                                                     class="flex h-full items-center transition-colors hover:text-red-600"
                                                     >{subItem.name}</a
                                                 >
@@ -129,20 +131,14 @@
         <div class="flex flex-col text-white mt-auto -translate-y-18">
             <a
                 href="/login"
-                on:click={() => {
-                    toggleMobileMenu();
-                    openSubMenu = null;
-                }}
+                onclick={handleNavigate}
                 class="min-w-[60px] h-12 mt-auto text-[20px]"
             >
                 Login
             </a>
             <a
                 href="/sign-up"
-                on:click={() => {
-                    toggleMobileMenu();
-                    openSubMenu = null;
-                }}
+                onclick={handleNavigate}
                 class="min-w-[60px] h-12 mt-auto text-[20px]"
             >
                 Sign Up

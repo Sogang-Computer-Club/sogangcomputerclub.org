@@ -1,10 +1,10 @@
-<script>
-    import { page } from '$app/stores';
+<script lang="ts">
+    import { page } from '$app/state';
     import { dev } from '$app/environment';
 
-    // 에러 정보 가져오기
-    $: errorCode = $page.status;
-    $: errorMessage = $page.error?.message;
+    // Derived state from page state
+    let errorCode = $derived(page.status);
+    let errorMessage = $derived(page.error?.message);
 </script>
 
 <svelte:head>
@@ -15,7 +15,7 @@
     <div class="max-w-md w-full text-center">
         <!-- 에러 코드 -->
         <h1 class="text-9xl font-bold text-gray-300 mb-4">{errorCode}</h1>
-        
+
         <!-- 에러 메시지 -->
         <h2 class="text-2xl font-semibold text-gray-800 mb-4">
             {#if errorCode === 404}
@@ -26,7 +26,7 @@
                 오류가 발생했습니다
             {/if}
         </h2>
-        
+
         <p class="text-gray-600 mb-8">
             {#if errorCode === 404}
                 요청하신 페이지가 존재하지 않거나 이동되었을 수 있습니다.
@@ -44,14 +44,15 @@
 
         <!-- 액션 버튼들 -->
         <div class="space-y-4">
-            <a href="/" 
+            <a href="/"
                class="inline-block bg-black text-white px-6 py-3 rounded-lg hover:bg-gray-800 transition-colors">
                 홈으로 돌아가기
             </a>
-            
+
             <div class="space-x-4">
-                <button 
-                        class="text-gray-600 hover:text-gray-800 underline">
+                <button
+                    onclick={() => history.back()}
+                    class="text-gray-600 hover:text-gray-800 underline">
                     이전 페이지
                 </button>
                 <a href="/contact" class="text-gray-600 hover:text-gray-800 underline">

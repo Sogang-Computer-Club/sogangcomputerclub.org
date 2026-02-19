@@ -82,35 +82,42 @@ docker-compose exec redis redis-cli
 ## Architecture
 
 ### Backend Structure (`app/`)
-- `main.py` - FastAPI app with lifespan management (DB, Redis, Kafka initialization)
-- `config.py` - Settings via pydantic-settings
-- `database.py` - SQLAlchemy async engine and session factory
-- `auth.py` - JWT authentication (PBKDF2-HMAC-SHA256 password hashing)
-- `rate_limit.py` - Rate limiting config (slowapi)
-- `metrics.py` - Prometheus metrics definitions
-- `dependencies.py` - FastAPI dependency injection
-- `models/` - SQLAlchemy ORM models
-- `schemas/` - Pydantic request/response schemas
-- `routers/` - API route handlers (`health.py`, `memos.py`)
-- `services/` - External service integrations (Kafka)
-- `middleware.py` - Custom middleware (Prometheus metrics)
+Domain-driven architecture organized by business domain:
+
+- `main.py` - Entry point, assembles routers and middleware
+- `core/` - Shared infrastructure (config, database, security, base repository, dependencies)
+- `common/` - Cross-cutting concerns (middleware, metrics, rate_limit)
+- `events/` - Event publishing abstraction (AbstractEventPublisher, Kafka, Null for tests)
+- `memos/` - Memo domain (router, service, repository, models, schemas, dependencies)
+- `users/` - User/Auth domain (router, service, repository, models, schemas, dependencies)
+- `health/` - Health check domain (router)
+- `models/`, `schemas/`, `routers/` - Re-export packages for backward compatibility
 
 ### Frontend Structure (`frontend/src/`)
 - `routes/` - SvelteKit file-based routing
   - `routes/api/calendar/` - Server-side Google Calendar proxy (keeps API key server-side)
 - `lib/components/` - Reusable Svelte components with co-located `.test.ts` files
+- `lib/stores/` - Reactive Class stores (UIStore, AuthStore) with Context API
 - `lib/utils/` - Utility functions
 - `lib/api.ts` - Backend API client
 - `lib/types/` - TypeScript type definitions
 
 ### Key Patterns
 - Backend uses async/await throughout (asyncpg, aiokafka, redis.asyncio)
+- Repository Pattern: All repositories extend `AbstractRepository` for testability
+- Service Layer: Business logic in `{domain}/service.py`, thin routers delegate to services
+- Dependency Injection: `router → service → repository → db` chain via `Depends()`
 - Frontend uses Svelte 5 with TypeScript
+- **Svelte 5 Runes**: Use `$state`, `$derived`, `$effect` instead of `let`/`$:`/reactive statements
+- **Reactive Class + Context API**: State in `lib/stores/*.svelte.ts` as classes with `$state` fields, provided via `setContext()` in `+layout.svelte`, consumed via `getContext()` in components
+- **Event handlers**: Use `onclick` instead of `on:click`, callback props instead of `createEventDispatcher`
 - Frontend tests: components have co-located `.test.ts` files, route tests are in `src/__tests__/routes/`
 - Backend tests separated into `tests/`, `tests/integration/`, `tests/load/`
 
 ## Gotchas
 
+- **Rate limiting in tests**: Tests disable rate limiting via `app.state.limiter.enabled = False` in conftest.py. Auth endpoints have strict 10/min limits that cause test failures otherwise.
+- **Testing components with Context**: When testing Svelte components that use `getContext()`, provide context via `render(Component, { context: new Map([[KEY, store]]) })`
 - **API proxy rewrite**: Frontend dev server proxies `/api/*` to `http://localhost:8000` and strips the `/api` prefix. A call to `/api/v1/memos` becomes `/v1/memos` on the backend.
 - **API versioning**: All endpoints except `/health` and `/metrics` are versioned under `/v1` prefix.
 - **CI test exclusions**: Backend CI only runs unit tests, excluding `tests/integration/` and `tests/load/` (require running Docker services).

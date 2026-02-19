@@ -1,9 +1,15 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/svelte';
 import Header from './Header.svelte';
+import { UIStore, UI_CONTEXT_KEY } from '$lib/stores';
 
 describe('Header', () => {
+	let uiStore: UIStore;
+
 	beforeEach(() => {
+		// Create fresh UIStore for each test
+		uiStore = new UIStore();
+
 		// Mock window.innerWidth
 		Object.defineProperty(window, 'innerWidth', {
 			writable: true,
@@ -12,8 +18,14 @@ describe('Header', () => {
 		});
 	});
 
+	const renderWithContext = () => {
+		return render(Header, {
+			context: new Map([[UI_CONTEXT_KEY, uiStore]])
+		});
+	};
+
 	it('should render the header with logo and title', () => {
-		render(Header);
+		renderWithContext();
 
 		// Check if SGCC title is rendered
 		expect(screen.getByText('SGCC')).toBeInTheDocument();
@@ -26,7 +38,7 @@ describe('Header', () => {
 	});
 
 	it('should have correct navigation structure', () => {
-		render(Header);
+		renderWithContext();
 
 		// Check header element exists
 		const header = document.querySelector('header');
@@ -45,7 +57,7 @@ describe('Header', () => {
 			value: 768
 		});
 
-		render(Header);
+		renderWithContext();
 
 		// Find the open menu button
 		const openMenuButton = screen.getByRole('button', { name: /open menu/i });
@@ -70,7 +82,7 @@ describe('Header', () => {
 		// Trigger resize event
 		window.dispatchEvent(new Event('resize'));
 
-		render(Header);
+		renderWithContext();
 
 		// Mobile menu button should be visible - check if it exists in DOM
 		// In jsdom, desktop:hidden class should make it visible on mobile
@@ -92,7 +104,7 @@ describe('Header', () => {
 
 		window.dispatchEvent(new Event('resize'));
 
-		render(Header);
+		renderWithContext();
 
 		// Check aria-label attributes exist on buttons
 		const buttons = document.querySelectorAll('button[aria-label]');
@@ -100,5 +112,25 @@ describe('Header', () => {
 			btn.hasAttribute('aria-label')
 		);
 		expect(hasAccessibleButton).toBe(true);
+	});
+
+	it('should verify UIStore integration', async () => {
+		// Start with menu closed
+		expect(uiStore.isMobileMenuOpen).toBe(false);
+
+		Object.defineProperty(window, 'innerWidth', {
+			writable: true,
+			configurable: true,
+			value: 768
+		});
+
+		renderWithContext();
+
+		// Click to open menu
+		const openMenuButton = screen.getByRole('button', { name: /open menu/i });
+		await fireEvent.click(openMenuButton);
+
+		// Verify store state changed
+		expect(uiStore.isMobileMenuOpen).toBe(true);
 	});
 });

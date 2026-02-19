@@ -1,12 +1,15 @@
 <script lang="ts">
-    import { createEventDispatcher, onMount } from 'svelte';
+    import { onMount } from 'svelte';
     import { marked } from 'marked';
     import DOMPurify from 'dompurify';
     import hljs from 'highlight.js';
 
-    const dispatch = createEventDispatcher();
+    interface Props {
+        content?: string;
+        onUpdate?: (content: string) => void;
+    }
 
-    let { content: initialContent = '' }: { content?: string } = $props();
+    let { content: initialContent = '', onUpdate }: Props = $props();
 
     let textarea: HTMLTextAreaElement;
     let content = $state(initialContent);
@@ -45,7 +48,7 @@
     function handleInput(event: Event) {
         const target = event.target as HTMLTextAreaElement;
         content = target.value;
-        dispatch('update', content);
+        onUpdate?.(content);
         updatePreview();
     }
 
@@ -64,7 +67,7 @@
                 target.selectionStart = target.selectionEnd = start + 2;
             }, 0);
 
-            dispatch('update', content);
+            onUpdate?.(content);
             updatePreview();
         }
     }
