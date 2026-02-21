@@ -26,8 +26,8 @@ app/
 │   ├── middleware.py      # 미들웨어
 │   ├── metrics.py         # Prometheus 메트릭
 │   └── rate_limit.py      # 요청 속도 제한
-├── events/                 # 이벤트 발행
-│   ├── publisher.py       # 이벤트 퍼블리셔
+├── events/                 # 이벤트 발행 (선택적, 기본 비활성화)
+│   ├── publisher.py       # 이벤트 퍼블리셔 (NullEventPublisher 기본)
 │   └── dependencies.py
 ├── memos/                  # 메모 도메인
 │   ├── models.py
@@ -147,6 +147,10 @@ class PostRepository(AbstractPostRepository):
 
 ### 4. 서비스 구현
 
+> **Note**: 이벤트 발행은 기본 비활성화됨 (`EVENT_BACKEND=null`).
+> `NullEventPublisher`가 기본값이므로 이벤트 코드는 있어도 실제 발행되지 않습니다.
+> Kafka 또는 SQS 활성화 시 해당 의존성 설치 필요.
+
 ```python
 # app/posts/service.py
 from typing import List
@@ -174,7 +178,7 @@ class PostService:
         }
         created = await self.repository.create(entity)
 
-        # 이벤트 발행
+        # 이벤트 발행 (EVENT_BACKEND=null이면 무시됨)
         await self.event_publisher.publish(
             "post-created",
             {"id": created["id"], "title": post.title}

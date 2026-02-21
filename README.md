@@ -37,18 +37,16 @@ flowchart TB
                         Nginx["Nginx :80/443"]
                         Backend["Backend FastAPI :8000"]
                         Frontend["Frontend SvelteKit :3000"]
-                        Redis["Redis :6379"]
                     end
                 end
             end
 
             subgraph PrivateSubnet["Private Subnet"]
-                RDS[("RDS PostgreSQL Multi-AZ")]
+                RDS[("RDS PostgreSQL")]
             end
         end
 
         ECR["ECR (Container Images)"]
-        SQS["SQS (Event Queue)"]
         Secrets["Secrets Manager"]
         CloudWatch["CloudWatch (Monitoring)"]
     end
@@ -56,9 +54,7 @@ flowchart TB
     Users -->|HTTPS| Nginx
     Nginx --> Backend
     Nginx --> Frontend
-    Backend --> Redis
     Backend --> RDS
-    Backend --> SQS
     Backend -.-> Secrets
     EC2 -.-> ECR
 ```
@@ -67,7 +63,7 @@ flowchart TB
 
 ```mermaid
 flowchart TB
-    subgraph DockerCompose["docker-compose"]
+    subgraph DockerCompose["docker-compose up (기본)"]
         subgraph Services["Application Services"]
             Nginx["Nginx :80"]
             Backend["Backend :8000"]
@@ -76,15 +72,16 @@ flowchart TB
 
         subgraph DataStores["Data Stores"]
             Postgres[("PostgreSQL :5433")]
-            Redis["Redis :6381"]
         end
+    end
 
-        subgraph Messaging["Messaging"]
-            Kafka["Kafka :9092"]
+    subgraph Optional["선택적 서비스 (--profile)"]
+        subgraph Kafka["--profile kafka"]
+            KafkaBroker["Kafka :9092"]
             Zookeeper["Zookeeper :2181"]
         end
 
-        subgraph Monitoring["Monitoring"]
+        subgraph Monitoring["--profile monitoring"]
             Prometheus["Prometheus :9090"]
             Grafana["Grafana :3001"]
         end
@@ -93,11 +90,9 @@ flowchart TB
     Nginx --> Backend
     Nginx --> Frontend
     Backend --> Postgres
-    Backend --> Redis
-    Backend --> Kafka
-    Kafka --> Zookeeper
-    Prometheus --> Backend
-    Grafana --> Prometheus
+    Backend -.-> KafkaBroker
+    Prometheus -.-> Backend
+    Grafana -.-> Prometheus
 ```
 
 ---
@@ -107,13 +102,13 @@ flowchart TB
 | 카테고리 | 기술 |
 |----------|------|
 | Backend | FastAPI, SQLAlchemy 2.0, Pydantic, Uvicorn |
-| Frontend | SvelteKit 2.0, Svelte 5, TypeScript, Tailwind CSS |
-| Database | PostgreSQL 15 (AWS RDS Multi-AZ) |
-| Cache | Redis 7 |
-| Messaging | AWS SQS (프로덕션) / Apache Kafka (로컬) |
+| Frontend | SvelteKit 5, Svelte 5, TypeScript, Tailwind CSS v4 |
+| Database | PostgreSQL 15 (AWS RDS) |
 | Infrastructure | Terraform, Docker, Nginx |
 | CI/CD | GitHub Actions, Amazon ECR |
-| Monitoring | Prometheus, Grafana, AWS CloudWatch |
+| Monitoring | Prometheus, Grafana (선택적), AWS CloudWatch |
+
+> **Note**: 동아리 규모에서 Redis, Kafka/SQS 이벤트 시스템은 불필요하여 기본 비활성화됨.
 
 ---
 
@@ -148,12 +143,9 @@ POSTGRES_PASSWORD=your_secure_password    # 반드시 변경
 POSTGRES_DB=memo_app
 DATABASE_URL=postgresql+asyncpg://memo_user:your_secure_password@postgres:5432/memo_app
 
-# Redis Configuration
-REDIS_URL=redis://redis:6379
-
-# Event Backend (kafka, sqs, null 중 선택)
-EVENT_BACKEND=kafka
-KAFKA_BOOTSTRAP_SERVERS=kafka:9093
+# Event Backend (기본: null - 이벤트 시스템 비활성화)
+# 'kafka' 또는 'sqs' 사용 시 해당 의존성 설치 필요
+EVENT_BACKEND=null
 
 # Security
 SECRET_KEY=your_secret_key_here           # 반드시 변경
@@ -183,18 +175,21 @@ cd ..
 
 ### 방법 1: Docker Compose (권장)
 
-모든 서비스를 한 번에 실행합니다.
-
 ```bash
-# 전체 서비스 시작
+# 기본 실행 (핵심 서비스만: backend, postgres, frontend, nginx)
 docker-compose up -d
 
-# 로그 확인
-docker-compose logs -f
+# Kafka 이벤트 시스템 포함
+docker-compose --profile kafka up -d
 
-# 특정 서비스 로그
+# 모니터링 스택 포함 (Prometheus + Grafana)
+docker-compose --profile monitoring up -d
+
+# 전체 서비스 (Kafka + 모니터링)
+docker-compose --profile kafka --profile monitoring up -d
+
+# 로그 확인
 docker-compose logs -f backend
-docker-compose logs -f frontend
 
 # 서비스 중지
 docker-compose down
@@ -207,8 +202,8 @@ docker-compose down -v
 - Frontend: http://localhost:3000
 - Backend API: http://localhost:8000
 - API 문서 (Swagger): http://localhost:8000/docs
-- Grafana: http://localhost:3001 (admin/admin)
-- Prometheus: http://localhost:9090
+- Grafana: http://localhost:3001 (--profile monitoring 시)
+- Prometheus: http://localhost:9090 (--profile monitoring 시)
 
 ### 방법 2: Backend 단독 실행
 
@@ -481,14 +476,13 @@ GitHub Repository Settings > Secrets and variables > Actions에 추가:
 |--------|------|---------------|
 | EC2 | t3.small (2vCPU, 2GB) | ~15 |
 | EBS | 30GB gp3 | ~3 |
-| RDS PostgreSQL | db.t4g.micro, Multi-AZ | ~30 |
+| RDS PostgreSQL | db.t4g.micro, Single-AZ | ~13 |
 | Elastic IP | 1개 | ~4 |
-| SQS | 저용량 | ~1 |
 | ECR | 이미지 저장 | ~1 |
 | Secrets Manager | 1개 비밀 | ~2 |
-| 총계 | | ~56 |
+| **총계** | | **~38** |
 
-VPC 엔드포인트 활성화 시 약 $36/월 추가됩니다.
+> **Note**: Multi-AZ는 동아리 규모에서 불필요하여 비활성화됨 (비용 절감 ~$17/월).
 
 ---
 
@@ -503,6 +497,9 @@ VPC 엔드포인트 활성화 시 약 $36/월 추가됩니다.
 | AWS 배포 | `deploy-aws.yml` | master push | ECR 빌드, EC2 배포 |
 | 보안 스캔 | `security-scan.yml` | Push, 매일 | Trivy, CodeQL, TruffleHog |
 | 통합 테스트 | `integration-tests.yml` | Push, PR | Docker 서비스 연동 테스트 |
+| Docker 빌드 | `docker-build.yml` | Push, PR | Docker 이미지 빌드 테스트 |
+| PR 검증 | `pr-validation.yml` | PR | PR 형식 및 내용 검증 |
+| 릴리스 | `release.yml` | tag push | 버전 릴리스 자동화 |
 
 ### AWS 배포 플로우
 

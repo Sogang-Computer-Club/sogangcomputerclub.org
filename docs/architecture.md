@@ -24,11 +24,6 @@ flowchart TB
 
     subgraph Data["데이터 레이어"]
         PostgreSQL[(PostgreSQL)]
-        Redis[(Redis)]
-    end
-
-    subgraph Messaging["메시징"]
-        SQS[AWS SQS]
     end
 
     Browser --> SSR
@@ -36,8 +31,6 @@ flowchart TB
     Router --> Service
     Service --> Repository
     Repository --> PostgreSQL
-    Service --> Redis
-    Service --> SQS
 ```
 
 ## 설계 원칙
@@ -172,14 +165,17 @@ export class AuthStore {
 export const AUTH_CONTEXT_KEY = Symbol('auth');
 ```
 
-## 이벤트 기반 아키텍처
+## 이벤트 기반 아키텍처 (선택적)
+
+> **Note**: 동아리 규모에서 이벤트 시스템은 불필요하여 기본 비활성화됨 (`EVENT_BACKEND=null`).
+> 필요 시 Kafka 또는 SQS를 활성화할 수 있습니다.
 
 비즈니스 이벤트를 메시지 큐로 발행하여 서비스 간 결합도를 낮춥니다:
 
 ```mermaid
 flowchart LR
     Service[MemoService] --> Publisher[EventPublisher]
-    Publisher --> Queue[SQS/Kafka]
+    Publisher --> Queue[Kafka/SQS]
     Queue --> Consumer[이벤트 소비자]
 ```
 
@@ -192,9 +188,9 @@ class AbstractEventPublisher(ABC):
     async def publish(self, topic: str, message: dict) -> None: ...
 
 # 구현체 선택 (환경변수로)
-# EVENT_BACKEND=sqs  → SQSEventPublisher
-# EVENT_BACKEND=kafka → KafkaEventPublisher
-# EVENT_BACKEND=null  → NullEventPublisher (테스트용)
+# EVENT_BACKEND=null  → NullEventPublisher (기본값, 이벤트 비활성화)
+# EVENT_BACKEND=kafka → KafkaEventPublisher (aiokafka 설치 필요)
+# EVENT_BACKEND=sqs   → SQSEventPublisher (boto3, aioboto3 설치 필요)
 ```
 
 ## 보안 아키텍처

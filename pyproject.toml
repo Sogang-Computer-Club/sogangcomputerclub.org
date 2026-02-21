@@ -16,13 +16,9 @@ dependencies = [
     "asyncpg>=0.29.0",
     "greenlet>=3.0.0",
     
-    # Cache & Messaging
-    "redis==5.1.0",
-    "aiokafka==0.11.0",
-
-    # AWS SDK (for SQS event publishing)
-    "boto3>=1.34.0",
-    "aioboto3>=13.0.0",
+    # Note: Redis/Kafka/SQS 제거됨 (동아리 규모에서 불필요)
+    # Rate limiting은 in-memory storage 사용
+    # 필요 시 redis, aiokafka, boto3, aioboto3 추가
     
     # Monitoring & Logging
     "prometheus-client>=0.21.0",

@@ -3,20 +3,17 @@ FastAPI Memo Application - Main Entry Point
 
 This is the main application module that wires together all components:
 - Database connections
-- Redis cache
-- Kafka messaging
 - API routers
 - Prometheus metrics
 
-The original monolithic code has been refactored into modular components.
-See the original at main.py.backup if needed.
+Note: Redis와 Kafka/SQS 이벤트 시스템은 동아리 규모에서 불필요하여 제거됨.
+Rate limiting은 in-memory storage를 사용함.
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
 import asyncio
-import redis.asyncio as redis
 import sqlalchemy
 
 from slowapi.errors import RateLimitExceeded
@@ -64,10 +61,8 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: 데이터베이스 리소스가 app.state에 저장되었습니다.")
 
     # Verify database connection and migration status
-    # Note: Tables should be created via Alembic migrations, not auto-created here
     try:
         async with engine.connect() as conn:
-            # Check if migrations have been applied
             result = await conn.execute(sqlalchemy.text(
                 "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')"
             ))
@@ -81,25 +76,15 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Lifespan: Database connection check failed - {e}")
 
-    # Initialize Redis
-    try:
-        redis_client = redis.from_url(settings.redis_url, decode_responses=True)
-        await redis_client.ping()
-        app.state.redis = redis_client
-        logger.info("Lifespan: Redis 연결 성공")
-    except Exception as e:
-        logger.warning(f"Lifespan: Redis 연결 실패 - {e}")
-        app.state.redis = None
-
-    # Initialize Event Publisher (Kafka, SQS, or Null based on config)
+    # Initialize Event Publisher (defaults to NullEventPublisher)
     event_publisher = create_event_publisher()
     try:
         await event_publisher.start()
-        app.state.kafka = event_publisher  # Keep same state name for compatibility
-        logger.info(f"Lifespan: Event Publisher 연결 성공 (backend: {settings.event_backend})")
+        app.state.event_publisher = event_publisher
+        logger.info(f"Lifespan: Event Publisher 초기화 완료 (backend: {settings.event_backend})")
     except Exception as e:
-        logger.warning(f"Lifespan: Event Publisher 연결 실패 - {e}")
-        app.state.kafka = None
+        logger.warning(f"Lifespan: Event Publisher 초기화 실패 - {e}")
+        app.state.event_publisher = None
 
     logger.info("Lifespan: 모든 서비스가 성공적으로 시작되었습니다.")
 
@@ -121,13 +106,9 @@ async def lifespan(app: FastAPI):
     # Shutdown
     logger.info("Lifespan: 애플리케이션 종료 중...")
 
-    if app.state.kafka:
-        await app.state.kafka.stop()
+    if app.state.event_publisher:
+        await app.state.event_publisher.stop()
         logger.info("Lifespan: Event Publisher 종료 완료")
-
-    if app.state.redis:
-        await app.state.redis.aclose()
-        logger.info("Lifespan: Redis 연결 종료 완료")
 
     monitoring_task.cancel()
     try:
@@ -143,7 +124,7 @@ async def lifespan(app: FastAPI):
 # --- FastAPI Application ---
 app = FastAPI(
     title="Memo API",
-    description="FastAPI, SQLAlchemy 2.0, Redis, Kafka를 사용한 비동기 메모 애플리케이션",
+    description="FastAPI, SQLAlchemy 2.0을 사용한 비동기 메모 애플리케이션",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -158,7 +139,6 @@ app.add_middleware(PrometheusMiddleware)
 # CORS configuration with explicit origins (not wildcard)
 allowed_origins = settings.cors_origins_list
 if settings.debug:
-    # In debug mode, also allow common development origins
     allowed_origins = list(set(allowed_origins + [
         "http://localhost:3000",
         "http://localhost:5173",

@@ -38,11 +38,13 @@ flowchart TB
 |--------|------|---------|
 | EC2 | t3.small (2vCPU, 2GB) | ~$15 |
 | RDS | db.t4g.micro (2vCPU, 1GB) | ~$13 |
-| RDS Multi-AZ | 대기 인스턴스 | ~$13 |
 | EBS | gp3 30GB | ~$3 |
 | NAT Gateway | 시간 + 데이터 | ~$5-10 |
-| SQS | 요청 기반 | ~$5 |
-| **합계** | | **~$55-60/월** |
+| **합계** | | **~$35-40/월** |
+
+> **Note**: 동아리 규모에서 불필요한 항목은 제외됨:
+> - RDS Multi-AZ (+$13/월) - 고가용성 불필요
+> - SQS (+$5/월) - 이벤트 시스템 비활성화 (EVENT_BACKEND=null)
 
 ## 프로젝트 구조
 
@@ -122,7 +124,7 @@ db_instance_class = "db.t4g.micro"
 db_name           = "sgcc_db"
 db_username       = "sgcc_admin"
 db_password       = "your-secure-password-here"  # 반드시 변경
-db_multi_az       = true
+db_multi_az       = false  # 동아리 규모에서 불필요 (비용 절감)
 
 # SSH 접근 (본인 IP만 허용)
 # curl ifconfig.me 로 확인
@@ -202,12 +204,17 @@ flowchart LR
 ### RDS PostgreSQL
 
 - **엔진**: PostgreSQL 15
-- **Multi-AZ**: 활성화 (고가용성)
+- **Multi-AZ**: 기본 비활성화 (동아리 규모에서 불필요, 비용 2배)
 - **백업**: 7일 자동 백업
 - **암호화**: AES-256 (저장 데이터)
 - **접근**: VPC 내부에서만 (Private Subnet)
 
-### SQS 대기열
+### SQS 대기열 (선택적)
+
+> **Note**: 이벤트 시스템은 기본 비활성화됨 (`EVENT_BACKEND=null`).
+> 동아리 규모에서 이벤트 큐는 불필요합니다.
+
+`EVENT_BACKEND=sqs` 설정 시 사용:
 
 ```
 이벤트 큐 구성:
@@ -216,10 +223,6 @@ flowchart LR
 - 재시도: 3회 실패 시 DLQ 이동
 - 보존: 4일 (DLQ: 14일)
 ```
-
-Kafka 대비 장점:
-- 관리형 서비스 (운영 부담 없음)
-- 비용 절감 (~$180/월 → ~$5/월)
 
 ## 팀 협업 (S3 Backend)
 

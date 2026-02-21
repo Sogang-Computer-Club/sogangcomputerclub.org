@@ -36,7 +36,6 @@ def _check_internal_access(request: Request) -> bool:
         client_ip = ip_address(client_ip_str)
         return any(client_ip in network for network in PRIVATE_NETWORKS)
     except ValueError:
-        # Invalid IP address format
         logger.warning(f"Invalid IP address format: {client_ip_str}")
         return False
 
@@ -48,7 +47,6 @@ async def health_check(request: Request) -> Dict[str, Any]:
     Returns simple status for external requests, detailed info for internal requests.
     """
     is_internal = _check_internal_access(request)
-    is_healthy = True
 
     # Check Database
     db_healthy = False
@@ -57,41 +55,21 @@ async def health_check(request: Request) -> Dict[str, Any]:
             await session.execute(sqlalchemy.text("SELECT 1"))
         db_healthy = True
     except Exception as e:
-        is_healthy = False
         logger.error(f"Database health check failed: {e}")
-
-    # Check Redis
-    redis_healthy = False
-    if request.app.state.redis:
-        try:
-            await request.app.state.redis.ping()
-            redis_healthy = True
-        except Exception as e:
-            is_healthy = False
-            logger.error(f"Redis health check failed: {e}")
-    else:
-        is_healthy = False
-
-    # Check Kafka
-    kafka_healthy = request.app.state.kafka and request.app.state.kafka.is_connected
-    if not kafka_healthy:
-        is_healthy = False
 
     # Simple response for external requests
     if not is_internal:
         return {
-            "status": "healthy" if is_healthy else "degraded",
+            "status": "healthy" if db_healthy else "degraded",
             "timestamp": datetime.now(UTC).isoformat()
         }
 
     # Detailed response for internal requests
     return {
-        "status": "healthy" if is_healthy else "degraded",
+        "status": "healthy" if db_healthy else "degraded",
         "timestamp": datetime.now(UTC).isoformat(),
         "services": {
             "database": "healthy" if db_healthy else "unhealthy",
-            "redis": "healthy" if redis_healthy else "unhealthy",
-            "kafka": "healthy" if kafka_healthy else "unhealthy"
         }
     }
 

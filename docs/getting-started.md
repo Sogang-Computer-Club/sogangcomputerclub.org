@@ -30,17 +30,13 @@ POSTGRES_USER=memo_user
 POSTGRES_PASSWORD=your_secure_password    # 반드시 변경
 POSTGRES_DB=memo_app
 
-# Redis
-REDIS_URL=redis://redis:6379
-
-# Kafka (로컬 개발용)
-KAFKA_BOOTSTRAP_SERVERS=kafka:9093
-EVENT_BACKEND=kafka
+# 이벤트 백엔드 (기본: null - 비활성화)
+EVENT_BACKEND=null
 
 # 보안
 SECRET_KEY=your_secret_key_here           # 반드시 변경
 
-# Grafana (선택)
+# Grafana (--profile monitoring 사용 시)
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=admin
 ```
@@ -73,26 +69,39 @@ cd ..
 
 ### 방법 1: Docker Compose (권장)
 
-모든 서비스를 한 번에 실행합니다.
+핵심 서비스만 실행합니다 (backend, postgres, frontend, nginx).
 
 ```bash
+# 기본 실행 (핵심 서비스만)
 docker-compose up -d
+
+# Kafka 포함 (이벤트 시스템 테스트 시)
+docker-compose --profile kafka up -d
+
+# 모니터링 포함 (Prometheus + Grafana)
+docker-compose --profile monitoring up -d
+
+# 전체 실행
+docker-compose --profile kafka --profile monitoring up -d
 ```
 
 접속 주소:
-- Frontend: http://localhost:3000
-- Backend API: http://localhost:8000
-- API 문서 (Swagger): http://localhost:8000/docs
-- Grafana: http://localhost:3001 (admin/admin)
-- Prometheus: http://localhost:9090
+
+- Frontend: <http://localhost:3000>
+- Backend API: <http://localhost:8000>
+- API 문서 (Swagger): <http://localhost:8000/docs>
+- Grafana: <http://localhost:3001> (admin/admin, `--profile monitoring` 필요)
+- Prometheus: <http://localhost:9090> (`--profile monitoring` 필요)
 
 로그 확인:
+
 ```bash
 docker-compose logs -f backend
 docker-compose logs -f frontend
 ```
 
 서비스 중지:
+
 ```bash
 docker-compose down
 
@@ -102,16 +111,14 @@ docker-compose down -v
 
 ### 방법 2: 개별 실행
 
-데이터베이스와 Redis만 Docker로 실행하고 앱은 직접 실행합니다.
+데이터베이스만 Docker로 실행하고 앱은 직접 실행합니다.
 
 ```bash
 # 인프라 서비스만 실행
-docker-compose up -d postgres redis kafka zookeeper
+docker-compose up -d postgres
 
 # 백엔드 실행 (새 터미널)
 DATABASE_URL=postgresql+asyncpg://memo_user:your_password@localhost:5433/memo_app \
-REDIS_URL=redis://localhost:6381 \
-KAFKA_BOOTSTRAP_SERVERS=localhost:9092 \
 uv run uvicorn app.main:app --reload --port 8000
 
 # 프론트엔드 실행 (새 터미널)

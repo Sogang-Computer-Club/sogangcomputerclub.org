@@ -71,9 +71,9 @@ variable "db_password" {
 }
 
 variable "db_multi_az" {
-  description = "Enable Multi-AZ for RDS"
+  description = "Enable Multi-AZ for RDS (동아리 규모에서는 불필요, 비용 2배)"
   type        = bool
-  default     = true
+  default     = false
 }
 
 # Domain Configuration

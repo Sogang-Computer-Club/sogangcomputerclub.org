@@ -67,7 +67,6 @@ jobs:
   integration:
     services:
       postgres: ...
-      redis: ...
     steps:
       - docker-compose up
       - API 엔드포인트 테스트
@@ -251,8 +250,7 @@ curl https://sogangcomputerclub.org/api/v1/health
 # 예상 응답
 {
   "status": "healthy",
-  "database": "connected",
-  "redis": "connected"
+  "database": "connected"
 }
 ```
 
