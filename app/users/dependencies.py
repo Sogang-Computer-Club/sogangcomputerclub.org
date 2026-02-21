@@ -5,6 +5,7 @@
 - get_current_user: 선택적 인증 (비로그인 사용자도 허용)
 - require_auth: 필수 인증 (미인증 시 401 반환)
 """
+
 from typing import Optional
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -20,21 +21,21 @@ security = HTTPBearer(auto_error=False)
 
 
 async def get_user_repository(
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ) -> AbstractUserRepository:
     """Dependency that provides the user repository."""
     return UserRepository(db)
 
 
 async def get_user_service(
-    repository: AbstractUserRepository = Depends(get_user_repository)
+    repository: AbstractUserRepository = Depends(get_user_repository),
 ) -> UserService:
     """Dependency that provides the user service."""
     return UserService(repository)
 
 
 async def get_current_user(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> Optional[dict]:
     """
     선택적 인증 - 토큰이 없어도 None 반환하고 계속 진행.
@@ -49,7 +50,7 @@ async def get_current_user(
 
 
 async def require_auth(
-    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ) -> dict:
     """
     필수 인증 - 유효한 토큰이 없으면 401 에러 발생.

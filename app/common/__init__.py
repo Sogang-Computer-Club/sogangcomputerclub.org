@@ -1,4 +1,5 @@
 """Common utilities module."""
+
 from .middleware import PrometheusMiddleware
 from .metrics import REQUEST_COUNT, REQUEST_DURATION, MEMO_COUNT, ACTIVE_CONNECTIONS
 from .rate_limit import (

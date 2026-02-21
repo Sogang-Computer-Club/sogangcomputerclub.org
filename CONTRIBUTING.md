@@ -71,31 +71,73 @@ git checkout -b feature/your-feature-name
 - `test/` - 테스트 추가 또는 변경
 - `chore/` - 유지보수 작업
 
+### 2.5 Pre-commit Hooks 설치 (권장)
+
+커밋 전에 자동으로 코드 스타일을 검사하고 수정합니다:
+
+```bash
+uv run pre-commit install
+uv run pre-commit install --hook-type commit-msg
+```
+
+설치 후 `git commit` 시 자동으로:
+- 백엔드: Ruff 린트 + 포맷팅
+- 프론트엔드: Prettier 포맷팅 + svelte-check
+- 커밋 메시지: Conventional Commits 형식 검증
+
+수동으로 전체 파일 검사:
+```bash
+uv run pre-commit run --all-files
+```
+
 ### 3. 개발 및 테스트
 
-변경사항을 작성했다면 우선 로컬에서 테스트해주세요.
+#### 로컬 검증 스크립트 (권장)
+
+CI와 동일한 검사를 로컬에서 한 번에 실행합니다:
+
+```bash
+./scripts/check.sh           # 전체 검사
+./scripts/check.sh backend   # 백엔드만
+./scripts/check.sh frontend  # 프론트엔드만
+```
+
+PR을 올리기 전에 이 스크립트로 미리 검증하면 CI 실패를 방지할 수 있습니다.
+
+#### 개별 실행
 
 ```bash
 # Backend (Python/FastAPI)
-cd /path/to/project
-uv sync
-uv run pytest tests/
+uv run pytest tests/ -v --ignore=tests/integration --ignore=tests/load
+uv run ruff check app/
 
 # Frontend (SvelteKit)
 cd frontend
-npm install
+npm run check
 npm run test
 npm run build
 ```
 
 ### 4. 변경사항 커밋
 
-커밋을 할 때는 커밋 메시지를 적어주세요. 커밋 메시지는 항상 명확하고 간결하게 작성해주세요.
+커밋 메시지는 [Conventional Commits](https://www.conventionalcommits.org/) 형식을 따릅니다.
+
+#### 방법 1: 대화형 커밋 (권장)
+
+```bash
+cd frontend && npm run cz
+```
+
+대화형으로 커밋 유형, 범위, 메시지를 입력할 수 있습니다.
+
+#### 방법 2: 직접 작성
 
 ```bash
 git add .
 git commit -m "feat: add user authentication feature"
 ```
+
+pre-commit hook이 커밋 메시지 형식을 자동으로 검증합니다.
 
 #### 커밋 메시지 형식
 

@@ -10,8 +10,8 @@ async def test_kafka_producer_connection():
     """Test connection to Kafka producer"""
     try:
         producer = AIOKafkaProducer(
-            bootstrap_servers='localhost:9092',
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            bootstrap_servers="localhost:9092",
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
 
         await producer.start()
@@ -31,19 +31,19 @@ async def test_kafka_send_and_receive_message():
     try:
         # Create producer
         producer = AIOKafkaProducer(
-            bootstrap_servers='localhost:9092',
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            bootstrap_servers="localhost:9092",
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
         await producer.start()
 
         # Create consumer
         consumer = AIOKafkaConsumer(
             topic_name,
-            bootstrap_servers='localhost:9092',
-            auto_offset_reset='earliest',
+            bootstrap_servers="localhost:9092",
+            auto_offset_reset="earliest",
             enable_auto_commit=True,
-            group_id='test-group',
-            value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+            group_id="test-group",
+            value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         )
         await consumer.start()
 
@@ -51,13 +51,14 @@ async def test_kafka_send_and_receive_message():
         test_message = {
             "id": 1,
             "action": "test",
-            "message": "Integration test message"
+            "message": "Integration test message",
         }
 
         await producer.send_and_wait(topic_name, test_message)
 
         # Receive the message (with timeout)
         received = False
+
         async def consume_messages():
             nonlocal received
             async for msg in consumer:
@@ -88,16 +89,13 @@ async def test_kafka_multiple_messages():
 
     try:
         producer = AIOKafkaProducer(
-            bootstrap_servers='localhost:9092',
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            bootstrap_servers="localhost:9092",
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
         await producer.start()
 
         # Send multiple messages
-        messages = [
-            {"id": i, "message": f"Test message {i}"}
-            for i in range(5)
-        ]
+        messages = [{"id": i, "message": f"Test message {i}"} for i in range(5)]
 
         for msg in messages:
             await producer.send_and_wait(topic_name, msg)
@@ -112,9 +110,7 @@ async def test_kafka_multiple_messages():
 async def test_kafka_admin_client():
     """Test Kafka admin client connection"""
     try:
-        admin_client = AIOKafkaAdminClient(
-            bootstrap_servers='localhost:9092'
-        )
+        admin_client = AIOKafkaAdminClient(bootstrap_servers="localhost:9092")
 
         await admin_client.start()
         assert admin_client is not None
@@ -131,18 +127,12 @@ async def test_kafka_topic_creation():
     topic_name = "test-creation-topic"
 
     try:
-        admin_client = AIOKafkaAdminClient(
-            bootstrap_servers='localhost:9092'
-        )
+        admin_client = AIOKafkaAdminClient(bootstrap_servers="localhost:9092")
 
         await admin_client.start()
 
         # Create a new topic
-        topic = NewTopic(
-            name=topic_name,
-            num_partitions=1,
-            replication_factor=1
-        )
+        topic = NewTopic(name=topic_name, num_partitions=1, replication_factor=1)
 
         try:
             await admin_client.create_topics([topic])
@@ -176,8 +166,8 @@ async def test_kafka_consumer_group():
     try:
         # Create producer
         producer = AIOKafkaProducer(
-            bootstrap_servers='localhost:9092',
-            value_serializer=lambda v: json.dumps(v).encode('utf-8')
+            bootstrap_servers="localhost:9092",
+            value_serializer=lambda v: json.dumps(v).encode("utf-8"),
         )
         await producer.start()
 
@@ -188,15 +178,16 @@ async def test_kafka_consumer_group():
         # Create consumer with specific group
         consumer = AIOKafkaConsumer(
             topic_name,
-            bootstrap_servers='localhost:9092',
+            bootstrap_servers="localhost:9092",
             group_id=group_id,
-            auto_offset_reset='earliest',
-            value_deserializer=lambda m: json.loads(m.decode('utf-8'))
+            auto_offset_reset="earliest",
+            value_deserializer=lambda m: json.loads(m.decode("utf-8")),
         )
         await consumer.start()
 
         # Verify consumer can read the message
         received = False
+
         async def consume_messages():
             nonlocal received
             async for msg in consumer:

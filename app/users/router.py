@@ -6,6 +6,7 @@
 - 에러 메시지: 공격자에게 힌트를 주지 않도록 일반적인 메시지 사용 (예: "이메일 또는 비밀번호가 잘못됨")
 - WWW-Authenticate 헤더: 401 응답 시 RFC 6750 표준 준수
 """
+
 from fastapi import APIRouter, HTTPException, Depends, status, Request
 import logging
 
@@ -31,7 +32,7 @@ logger = logging.getLogger(__name__)
 async def register(
     request: Request,
     user_data: UserCreate,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
 ):
     """Register a new user account."""
     try:
@@ -45,7 +46,7 @@ async def register(
         logger.error(f"Registration error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Registration failed"
+            detail="Registration failed",
         )
 
 
@@ -54,7 +55,7 @@ async def register(
 async def login(
     request: Request,
     credentials: UserLogin,
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
 ):
     """Authenticate user and return JWT token."""
     try:
@@ -73,8 +74,7 @@ async def login(
     except Exception as e:
         logger.error(f"Login error: {e}")
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Login failed"
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Login failed"
         )
 
 
@@ -83,7 +83,7 @@ async def login(
 async def refresh_token(
     request: Request,
     current_user: dict = Depends(require_auth),
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
 ):
     """Refresh JWT token for authenticated user."""
     try:
@@ -99,7 +99,7 @@ async def refresh_token(
         logger.error(f"Token refresh error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Token refresh failed"
+            detail="Token refresh failed",
         )
 
 
@@ -108,7 +108,7 @@ async def refresh_token(
 async def get_current_user_info(
     request: Request,
     current_user: dict = Depends(require_auth),
-    service: UserService = Depends(get_user_service)
+    service: UserService = Depends(get_user_service),
 ):
     """Get current authenticated user's information."""
     try:
@@ -120,5 +120,5 @@ async def get_current_user_info(
         logger.error(f"Get user info error: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to get user info"
+            detail="Failed to get user info",
         )

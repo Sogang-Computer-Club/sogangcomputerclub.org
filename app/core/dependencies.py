@@ -1,6 +1,7 @@
 """
 FastAPI 의존성 주입 함수.
 """
+
 from fastapi import Request
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import AsyncGenerator

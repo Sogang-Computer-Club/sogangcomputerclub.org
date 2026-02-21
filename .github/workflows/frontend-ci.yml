@@ -6,7 +6,6 @@ name: Frontend CI
 on:
   push:
     branches: [main, master, "feature/frontend-*", "feature/CI-CD"]
-    # paths 필터: 프론트엔드 파일 변경 시에만 CI 실행
     paths:
       - "frontend/**"
       - ".github/workflows/frontend-ci.yml"
@@ -18,7 +17,6 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
-    # 모든 명령어의 기본 작업 디렉토리 설정
     defaults:
       run:
         working-directory: ./frontend
@@ -38,26 +36,89 @@ jobs:
           cache: "npm"
           cache-dependency-path: frontend/package-lock.json
 
-      # npm ci: package-lock.json 기준으로 정확한 버전 설치 (재현 가능한 빌드)
       - name: Install dependencies
         run: npm ci
 
-      # svelte-check: Svelte 컴포넌트 + TypeScript 타입 검사
       - name: Run type checking
-        run: npm run check
+        id: typecheck
+        run: |
+          npm run check 2>&1 | tee typecheck_output.txt
+          exit ${PIPESTATUS[0]}
+        continue-on-error: true
 
-      # Vitest: 컴포넌트 단위 테스트
       - name: Run tests
-        run: npm run test
+        id: test
+        run: |
+          npm run test 2>&1 | tee test_output.txt
+          exit ${PIPESTATUS[0]}
+        continue-on-error: true
 
-      # 프로덕션 빌드: SSR/정적 어댑터로 최적화된 번들 생성
       - name: Build project
+        id: build
         run: npm run build
+        continue-on-error: true
 
-      # 빌드 아티팩트 업로드: 배포 job에서 재사용 가능
+      - name: Comment on PR if typecheck failed
+        if: steps.typecheck.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('frontend/typecheck_output.txt', 'utf8');
+            const body = `[실패] 프론트엔드 타입 체크 실패
+
+\`\`\`
+${output.slice(0, 3000)}
+\`\`\`
+
+**해결 방법:**
+\`\`\`bash
+cd frontend && npm run check
+\`\`\`
+
+에러 메시지를 확인하고 타입 오류를 수정하세요.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Comment on PR if test failed
+        if: steps.test.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('frontend/test_output.txt', 'utf8');
+            const body = `[실패] 프론트엔드 테스트 실패
+
+\`\`\`
+${output.slice(0, 3000)}
+\`\`\`
+
+**해결 방법:**
+\`\`\`bash
+cd frontend && npm run test
+\`\`\`
+
+실패한 테스트를 확인하고 수정하세요.`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail if any step failed
+        if: steps.typecheck.outcome == 'failure' || steps.test.outcome == 'failure' || steps.build.outcome == 'failure'
+        run: exit 1
+
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success()
+        if: steps.build.outcome == 'success'
         with:
           name: frontend-build
           path: frontend/build/

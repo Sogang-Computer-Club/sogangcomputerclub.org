@@ -14,9 +14,9 @@ EVENT_BACKEND 환경변수로 구현체 선택:
 Note: 동아리 프로젝트 규모에서 Kafka/SQS는 과도하여 기본 비활성화됨.
 필요 시 pyproject.toml에 의존성 추가 후 활성화 가능.
 """
+
 from abc import ABC, abstractmethod
 from ..core.config import get_settings
-import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -94,19 +94,25 @@ def create_event_publisher() -> AbstractEventPublisher:
     if backend == "sqs":
         try:
             from .publisher_sqs import SQSEventPublisher
+
             logger.info("Using SQS event publisher")
             return SQSEventPublisher()
         except ImportError:
-            logger.warning("SQS backend requested but aioboto3 not installed. Falling back to NullEventPublisher.")
+            logger.warning(
+                "SQS backend requested but aioboto3 not installed. Falling back to NullEventPublisher."
+            )
             return NullEventPublisher()
 
     elif backend == "kafka":
         try:
             from .publisher_kafka import KafkaEventPublisher
+
             logger.info("Using Kafka event publisher")
             return KafkaEventPublisher()
         except ImportError:
-            logger.warning("Kafka backend requested but aiokafka not installed. Falling back to NullEventPublisher.")
+            logger.warning(
+                "Kafka backend requested but aiokafka not installed. Falling back to NullEventPublisher."
+            )
             return NullEventPublisher()
 
     else:

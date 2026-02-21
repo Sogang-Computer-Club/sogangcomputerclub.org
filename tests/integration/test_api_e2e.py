@@ -23,7 +23,9 @@ def wait_for_api():
         if i < max_retries - 1:
             time.sleep(retry_interval)
 
-    pytest.skip("API is not accessible. Make sure services are running with 'docker-compose up -d'")
+    pytest.skip(
+        "API is not accessible. Make sure services are running with 'docker-compose up -d'"
+    )
 
 
 class TestAPIEndToEnd:
@@ -47,7 +49,7 @@ class TestAPIEndToEnd:
             "content": "This is an end-to-end test memo",
             "tags": ["e2e", "integration"],
             "priority": 3,
-            "category": "testing"
+            "category": "testing",
         }
 
         response = requests.post(f"{BASE_URL}/memos/", json=memo_data)
@@ -58,8 +60,6 @@ class TestAPIEndToEnd:
         assert data["title"] == memo_data["title"]
         assert data["content"] == memo_data["content"]
         assert "id" in data
-
-
 
     def test_get_memos_e2e(self, wait_for_api):
         """Test retrieving all memos"""
@@ -77,7 +77,7 @@ class TestAPIEndToEnd:
         create_data = {
             "title": "Lifecycle Test Memo",
             "content": "Testing full CRUD lifecycle",
-            "priority": 2
+            "priority": 2,
         }
 
         create_response = requests.post(f"{BASE_URL}/memos/", json=create_data)
@@ -98,7 +98,7 @@ class TestAPIEndToEnd:
         update_data = {
             "title": "Updated Lifecycle Test",
             "priority": 4,
-            "is_favorite": True
+            "is_favorite": True,
         }
 
         update_response = requests.put(f"{BASE_URL}/memos/{memo_id}", json=update_data)
@@ -140,7 +140,9 @@ class TestAPIEndToEnd:
         assert len(results) >= 1
 
         # Verify search result contains "Python"
-        found = any("Python" in memo["title"] or "Python" in memo["content"] for memo in results)
+        found = any(
+            "Python" in memo["title"] or "Python" in memo["content"] for memo in results
+        )
         assert found
 
         # Clean up - delete created memos
@@ -151,9 +153,7 @@ class TestAPIEndToEnd:
         """Test API validation errors"""
 
         # Missing required field
-        invalid_data = {
-            "title": "No content"
-        }
+        invalid_data = {"title": "No content"}
 
         response = requests.post(f"{BASE_URL}/memos/", json=invalid_data)
         assert response.status_code == 422
@@ -162,7 +162,7 @@ class TestAPIEndToEnd:
         invalid_priority = {
             "title": "Invalid Priority",
             "content": "Testing",
-            "priority": 10  # Should be 1-4
+            "priority": 10,  # Should be 1-4
         }
 
         response = requests.post(f"{BASE_URL}/memos/", json=invalid_priority)
@@ -189,10 +189,7 @@ class TestAPIEndToEnd:
         # Create multiple memos
         created_ids = []
         for i in range(5):
-            memo_data = {
-                "title": f"Pagination Test {i}",
-                "content": f"Content {i}"
-            }
+            memo_data = {"title": f"Pagination Test {i}", "content": f"Content {i}"}
             response = requests.post(f"{BASE_URL}/memos/", json=memo_data)
             if response.status_code == 201:
                 created_ids.append(response.json()["id"])
@@ -219,15 +216,20 @@ class TestAPIEndToEnd:
         def create_memo(index):
             memo_data = {
                 "title": f"Concurrent Test {index}",
-                "content": f"Testing concurrency {index}"
+                "content": f"Testing concurrency {index}",
             }
             response = requests.post(f"{BASE_URL}/memos/", json=memo_data)
-            return response.status_code, response.json() if response.status_code == 201 else None
+            return (
+                response.status_code,
+                response.json() if response.status_code == 201 else None,
+            )
 
         # Create 10 memos concurrently
         with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             futures = [executor.submit(create_memo, i) for i in range(10)]
-            results = [future.result() for future in concurrent.futures.as_completed(futures)]
+            results = [
+                future.result() for future in concurrent.futures.as_completed(futures)
+            ]
 
         # Verify all requests succeeded
         successful = [r for r in results if r[0] == 201]

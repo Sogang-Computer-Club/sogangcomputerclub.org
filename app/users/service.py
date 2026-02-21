@@ -1,6 +1,7 @@
 """
 User/Auth service containing business logic.
 """
+
 import logging
 
 from .repository import AbstractUserRepository
@@ -12,26 +13,31 @@ logger = logging.getLogger(__name__)
 
 class EmailAlreadyExistsError(Exception):
     """Raised when email is already registered."""
+
     pass
 
 
 class StudentIdAlreadyExistsError(Exception):
     """Raised when student ID is already registered."""
+
     pass
 
 
 class InvalidCredentialsError(Exception):
     """Raised when credentials are invalid."""
+
     pass
 
 
 class AccountDeactivatedError(Exception):
     """Raised when account is deactivated."""
+
     pass
 
 
 class UserNotFoundError(Exception):
     """Raised when user is not found."""
+
     pass
 
 

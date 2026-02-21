@@ -2,6 +2,7 @@
 Memo repository for data access.
 Implements the repository pattern to abstract database operations.
 """
+
 from abc import abstractmethod
 from typing import Optional, List
 import re
@@ -70,15 +71,21 @@ class MemoRepository(AbstractMemoRepository):
         """제목 또는 내용에서 키워드 검색."""
         # LIKE 패턴 특수문자(%, _, \) 이스케이프하여 패턴 인젝션 방지
         # 예: 사용자가 "100%"를 검색하면 "%100\%%" 로 변환되어 정확히 매칭
-        escaped_q = re.sub(r'([%_\\])', r'\\\1', query)
+        escaped_q = re.sub(r"([%_\\])", r"\\\1", query)
         search_pattern = f"%{escaped_q}%"
 
-        search_query = memos.select().where(
-            sqlalchemy.or_(
-                memos.c.title.like(search_pattern),
-                memos.c.content.like(search_pattern)
+        search_query = (
+            memos.select()
+            .where(
+                sqlalchemy.or_(
+                    memos.c.title.like(search_pattern),
+                    memos.c.content.like(search_pattern),
+                )
             )
-        ).order_by(memos.c.id.desc()).offset(skip).limit(limit)
+            .order_by(memos.c.id.desc())
+            .offset(skip)
+            .limit(limit)
+        )
 
         result = await self.session.execute(search_query)
         return [dict(row) for row in result.mappings().all()]

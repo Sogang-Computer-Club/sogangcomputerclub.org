@@ -5,6 +5,7 @@ SQS event publisher (선택적).
     "boto3>=1.34.0",
     "aioboto3>=13.0.0",
 """
+
 from .publisher import AbstractEventPublisher
 from ..core.config import get_settings
 import json
@@ -41,8 +42,7 @@ class SQSEventPublisher(AbstractEventPublisher):
         try:
             self._session = aioboto3.Session()
             self._client_context = self._session.client(
-                'sqs',
-                region_name=settings.aws_region
+                "sqs", region_name=settings.aws_region
             )
             self._client = await self._client_context.__aenter__()
             logger.info(f"SQS publisher initialized for queue: {self._queue_url}")
@@ -74,22 +74,23 @@ class SQSEventPublisher(AbstractEventPublisher):
                     QueueUrl=self._queue_url,
                     MessageBody=json.dumps(message),
                     MessageAttributes={
-                        'topic': {
-                            'DataType': 'String',
-                            'StringValue': topic
-                        }
-                    }
+                        "topic": {"DataType": "String", "StringValue": topic}
+                    },
                 )
                 logger.debug(f"Published message to SQS topic={topic}")
                 return
             except Exception as e:
                 last_error = e
                 if attempt < max_retries - 1:
-                    wait_time = 0.5 * (2 ** attempt)
-                    logger.warning(f"SQS publish failed (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s: {e}")
+                    wait_time = 0.5 * (2**attempt)
+                    logger.warning(
+                        f"SQS publish failed (attempt {attempt + 1}/{max_retries}), retrying in {wait_time}s: {e}"
+                    )
                     await asyncio.sleep(wait_time)
 
-        logger.error(f"Failed to publish to SQS after {max_retries} attempts: {last_error}")
+        logger.error(
+            f"Failed to publish to SQS after {max_retries} attempts: {last_error}"
+        )
 
     @property
     def is_connected(self) -> bool:

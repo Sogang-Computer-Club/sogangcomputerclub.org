@@ -6,20 +6,20 @@
  */
 
 export class UIStore {
-    isMobileMenuOpen = $state(false);
+  isMobileMenuOpen = $state(false);
 
-    toggle() {
-        this.isMobileMenuOpen = !this.isMobileMenuOpen;
-    }
+  toggle() {
+    this.isMobileMenuOpen = !this.isMobileMenuOpen;
+  }
 
-    open() {
-        this.isMobileMenuOpen = true;
-    }
+  open() {
+    this.isMobileMenuOpen = true;
+  }
 
-    close() {
-        this.isMobileMenuOpen = false;
-    }
+  close() {
+    this.isMobileMenuOpen = false;
+  }
 }
 
 // Context key for type-safe context access
-export const UI_CONTEXT_KEY = Symbol('ui');
+export const UI_CONTEXT_KEY = Symbol("ui");

@@ -4,6 +4,7 @@ Kafka event publisher (선택적).
 사용하려면 pyproject.toml에 aiokafka 추가 필요:
     "aiokafka==0.11.0",
 """
+
 from aiokafka import AIOKafkaProducer
 from .publisher import AbstractEventPublisher
 from ..core.config import get_settings
@@ -25,7 +26,7 @@ class KafkaEventPublisher(AbstractEventPublisher):
         try:
             self.producer = AIOKafkaProducer(
                 bootstrap_servers=settings.kafka_bootstrap_servers,
-                value_serializer=lambda v: json.dumps(v).encode('utf-8')
+                value_serializer=lambda v: json.dumps(v).encode("utf-8"),
             )
             await self.producer.start()
             logger.info("Kafka producer started successfully")

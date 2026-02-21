@@ -44,6 +44,7 @@ dev = [
     "locust>=2.32.0",
     "aiosqlite>=0.20.0",  # For SQLite test database
     "ruff>=0.4.0",  # Code linting and formatting
+    "pre-commit>=3.6.0",  # Git hooks for code quality
 ]
 
 [tool.uv]

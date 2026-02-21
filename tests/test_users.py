@@ -2,11 +2,13 @@
 User/Auth domain tests.
 Tests for registration, login, token refresh, and user info endpoints.
 """
+
 import pytest
 from httpx import AsyncClient
 
 
 # --- Registration Tests ---
+
 
 @pytest.mark.asyncio
 async def test_register_user(client: AsyncClient):
@@ -15,7 +17,7 @@ async def test_register_user(client: AsyncClient):
         "email": "newuser@example.com",
         "password": "securepassword123",
         "name": "New User",
-        "student_id": "20230001"
+        "student_id": "20230001",
     }
 
     response = await client.post("/v1/auth/register", json=user_data)
@@ -42,7 +44,7 @@ async def test_register_user_minimal(client: AsyncClient):
     user_data = {
         "email": "minimal@example.com",
         "password": "securepassword123",
-        "name": "Minimal User"
+        "name": "Minimal User",
         # student_id is optional
     }
 
@@ -62,7 +64,7 @@ async def test_register_duplicate_email(client: AsyncClient):
     user_data = {
         "email": "duplicate@example.com",
         "password": "securepassword123",
-        "name": "First User"
+        "name": "First User",
     }
 
     # Register first user
@@ -85,7 +87,7 @@ async def test_register_duplicate_student_id(client: AsyncClient):
         "email": "first@example.com",
         "password": "securepassword123",
         "name": "First User",
-        "student_id": "20230001"
+        "student_id": "20230001",
     }
     response = await client.post("/v1/auth/register", json=user_data1)
     assert response.status_code == 201
@@ -95,7 +97,7 @@ async def test_register_duplicate_student_id(client: AsyncClient):
         "email": "second@example.com",
         "password": "securepassword123",
         "name": "Second User",
-        "student_id": "20230001"
+        "student_id": "20230001",
     }
     response = await client.post("/v1/auth/register", json=user_data2)
 
@@ -107,9 +109,7 @@ async def test_register_duplicate_student_id(client: AsyncClient):
 async def test_register_validation_error(client: AsyncClient):
     """Test registration with invalid data"""
     # Missing required fields
-    user_data = {
-        "email": "incomplete@example.com"
-    }
+    user_data = {"email": "incomplete@example.com"}
     response = await client.post("/v1/auth/register", json=user_data)
     assert response.status_code == 422
 
@@ -117,22 +117,19 @@ async def test_register_validation_error(client: AsyncClient):
     user_data = {
         "email": "not-an-email",
         "password": "securepassword123",
-        "name": "Test User"
+        "name": "Test User",
     }
     response = await client.post("/v1/auth/register", json=user_data)
     assert response.status_code == 422
 
     # Password too short
-    user_data = {
-        "email": "test@example.com",
-        "password": "short",
-        "name": "Test User"
-    }
+    user_data = {"email": "test@example.com", "password": "short", "name": "Test User"}
     response = await client.post("/v1/auth/register", json=user_data)
     assert response.status_code == 422
 
 
 # --- Login Tests ---
+
 
 @pytest.mark.asyncio
 async def test_login_success(client: AsyncClient):
@@ -141,15 +138,12 @@ async def test_login_success(client: AsyncClient):
     user_data = {
         "email": "loginuser@example.com",
         "password": "securepassword123",
-        "name": "Login User"
+        "name": "Login User",
     }
     await client.post("/v1/auth/register", json=user_data)
 
     # Login
-    login_data = {
-        "email": "loginuser@example.com",
-        "password": "securepassword123"
-    }
+    login_data = {"email": "loginuser@example.com", "password": "securepassword123"}
     response = await client.post("/v1/auth/login", json=login_data)
 
     assert response.status_code == 200
@@ -164,10 +158,7 @@ async def test_login_success(client: AsyncClient):
 @pytest.mark.asyncio
 async def test_login_invalid_email(client: AsyncClient):
     """Test login with non-existent email"""
-    login_data = {
-        "email": "nonexistent@example.com",
-        "password": "securepassword123"
-    }
+    login_data = {"email": "nonexistent@example.com", "password": "securepassword123"}
     response = await client.post("/v1/auth/login", json=login_data)
 
     assert response.status_code == 401
@@ -181,15 +172,12 @@ async def test_login_invalid_password(client: AsyncClient):
     user_data = {
         "email": "wrongpass@example.com",
         "password": "correctpassword123",
-        "name": "Test User"
+        "name": "Test User",
     }
     await client.post("/v1/auth/register", json=user_data)
 
     # Try to login with wrong password
-    login_data = {
-        "email": "wrongpass@example.com",
-        "password": "wrongpassword123"
-    }
+    login_data = {"email": "wrongpass@example.com", "password": "wrongpassword123"}
     response = await client.post("/v1/auth/login", json=login_data)
 
     assert response.status_code == 401
@@ -200,22 +188,18 @@ async def test_login_invalid_password(client: AsyncClient):
 async def test_login_validation_error(client: AsyncClient):
     """Test login with invalid data"""
     # Missing password
-    login_data = {
-        "email": "test@example.com"
-    }
+    login_data = {"email": "test@example.com"}
     response = await client.post("/v1/auth/login", json=login_data)
     assert response.status_code == 422
 
     # Invalid email format
-    login_data = {
-        "email": "not-an-email",
-        "password": "securepassword123"
-    }
+    login_data = {"email": "not-an-email", "password": "securepassword123"}
     response = await client.post("/v1/auth/login", json=login_data)
     assert response.status_code == 422
 
 
 # --- Token Refresh Tests ---
+
 
 @pytest.mark.asyncio
 async def test_refresh_token_success(client: AsyncClient):
@@ -224,20 +208,19 @@ async def test_refresh_token_success(client: AsyncClient):
     user_data = {
         "email": "refresh@example.com",
         "password": "securepassword123",
-        "name": "Refresh User"
+        "name": "Refresh User",
     }
     await client.post("/v1/auth/register", json=user_data)
 
-    login_response = await client.post("/v1/auth/login", json={
-        "email": "refresh@example.com",
-        "password": "securepassword123"
-    })
+    login_response = await client.post(
+        "/v1/auth/login",
+        json={"email": "refresh@example.com", "password": "securepassword123"},
+    )
     token = login_response.json()["access_token"]
 
     # Refresh token
     response = await client.post(
-        "/v1/auth/refresh",
-        headers={"Authorization": f"Bearer {token}"}
+        "/v1/auth/refresh", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -261,14 +244,14 @@ async def test_refresh_token_unauthorized(client: AsyncClient):
 async def test_refresh_token_invalid(client: AsyncClient):
     """Test token refresh with invalid token"""
     response = await client.post(
-        "/v1/auth/refresh",
-        headers={"Authorization": "Bearer invalid-token"}
+        "/v1/auth/refresh", headers={"Authorization": "Bearer invalid-token"}
     )
 
     assert response.status_code == 401
 
 
 # --- Get Current User Tests ---
+
 
 @pytest.mark.asyncio
 async def test_get_current_user_success(client: AsyncClient):
@@ -278,20 +261,19 @@ async def test_get_current_user_success(client: AsyncClient):
         "email": "getme@example.com",
         "password": "securepassword123",
         "name": "Get Me User",
-        "student_id": "20230099"
+        "student_id": "20230099",
     }
     await client.post("/v1/auth/register", json=user_data)
 
-    login_response = await client.post("/v1/auth/login", json={
-        "email": "getme@example.com",
-        "password": "securepassword123"
-    })
+    login_response = await client.post(
+        "/v1/auth/login",
+        json={"email": "getme@example.com", "password": "securepassword123"},
+    )
     token = login_response.json()["access_token"]
 
     # Get current user
     response = await client.get(
-        "/v1/auth/me",
-        headers={"Authorization": f"Bearer {token}"}
+        "/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 200
@@ -319,14 +301,14 @@ async def test_get_current_user_unauthorized(client: AsyncClient):
 async def test_get_current_user_invalid_token(client: AsyncClient):
     """Test getting current user with invalid token"""
     response = await client.get(
-        "/v1/auth/me",
-        headers={"Authorization": "Bearer invalid-token"}
+        "/v1/auth/me", headers={"Authorization": "Bearer invalid-token"}
     )
 
     assert response.status_code == 401
 
 
 # --- Integration Tests ---
+
 
 @pytest.mark.asyncio
 async def test_full_auth_flow(client: AsyncClient):
@@ -335,40 +317,37 @@ async def test_full_auth_flow(client: AsyncClient):
     user_data = {
         "email": "fullflow@example.com",
         "password": "securepassword123",
-        "name": "Full Flow User"
+        "name": "Full Flow User",
     }
     register_response = await client.post("/v1/auth/register", json=user_data)
     assert register_response.status_code == 201
     user_id = register_response.json()["id"]
 
     # 2. Login
-    login_response = await client.post("/v1/auth/login", json={
-        "email": user_data["email"],
-        "password": user_data["password"]
-    })
+    login_response = await client.post(
+        "/v1/auth/login",
+        json={"email": user_data["email"], "password": user_data["password"]},
+    )
     assert login_response.status_code == 200
     token = login_response.json()["access_token"]
 
     # 3. Get current user
     me_response = await client.get(
-        "/v1/auth/me",
-        headers={"Authorization": f"Bearer {token}"}
+        "/v1/auth/me", headers={"Authorization": f"Bearer {token}"}
     )
     assert me_response.status_code == 200
     assert me_response.json()["id"] == user_id
 
     # 4. Refresh token
     refresh_response = await client.post(
-        "/v1/auth/refresh",
-        headers={"Authorization": f"Bearer {token}"}
+        "/v1/auth/refresh", headers={"Authorization": f"Bearer {token}"}
     )
     assert refresh_response.status_code == 200
     new_token = refresh_response.json()["access_token"]
 
     # 5. Use new token to get user
     me_response2 = await client.get(
-        "/v1/auth/me",
-        headers={"Authorization": f"Bearer {new_token}"}
+        "/v1/auth/me", headers={"Authorization": f"Bearer {new_token}"}
     )
     assert me_response2.status_code == 200
     assert me_response2.json()["id"] == user_id
@@ -381,25 +360,20 @@ async def test_registered_user_can_create_memo(client: AsyncClient):
     user_data = {
         "email": "memouser@example.com",
         "password": "securepassword123",
-        "name": "Memo User"
+        "name": "Memo User",
     }
     await client.post("/v1/auth/register", json=user_data)
 
-    login_response = await client.post("/v1/auth/login", json={
-        "email": user_data["email"],
-        "password": user_data["password"]
-    })
+    login_response = await client.post(
+        "/v1/auth/login",
+        json={"email": user_data["email"], "password": user_data["password"]},
+    )
     token = login_response.json()["access_token"]
 
     # Create a memo
-    memo_data = {
-        "title": "User's Memo",
-        "content": "Created by registered user"
-    }
+    memo_data = {"title": "User's Memo", "content": "Created by registered user"}
     response = await client.post(
-        "/v1/memos/",
-        json=memo_data,
-        headers={"Authorization": f"Bearer {token}"}
+        "/v1/memos/", json=memo_data, headers={"Authorization": f"Bearer {token}"}
     )
 
     assert response.status_code == 201

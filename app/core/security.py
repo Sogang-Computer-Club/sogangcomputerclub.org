@@ -5,6 +5,7 @@
 - JWT: 수동으로 header.payload.signature 구조 생성 (HS256 알고리즘)
 - 비밀번호: PBKDF2-HMAC-SHA256 해싱 (OWASP 권장 60만 회 반복)
 """
+
 from datetime import datetime, timedelta, UTC
 from typing import Optional
 import hashlib
@@ -25,7 +26,7 @@ def _base64url_encode(data: bytes) -> str:
     Base64url 인코딩 (패딩 제거).
     JWT 표준에서는 URL-safe Base64를 사용하며 '=' 패딩을 제거함.
     """
-    return base64.urlsafe_b64encode(data).rstrip(b'=').decode('utf-8')
+    return base64.urlsafe_b64encode(data).rstrip(b"=").decode("utf-8")
 
 
 def _base64url_decode(data: str) -> bytes:
@@ -35,7 +36,7 @@ def _base64url_decode(data: str) -> bytes:
     """
     padding = 4 - len(data) % 4
     if padding != 4:
-        data += '=' * padding
+        data += "=" * padding
     return base64.urlsafe_b64decode(data)
 
 
@@ -51,19 +52,21 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None) -
         Encoded JWT token string
     """
     to_encode = data.copy()
-    expire = datetime.now(UTC) + (expires_delta or timedelta(minutes=settings.access_token_expire_minutes))
+    expire = datetime.now(UTC) + (
+        expires_delta or timedelta(minutes=settings.access_token_expire_minutes)
+    )
     to_encode.update({"exp": int(expire.timestamp())})
 
     # Create JWT manually (header.payload.signature)
     header = {"alg": "HS256", "typ": "JWT"}
-    header_b64 = _base64url_encode(json.dumps(header, separators=(',', ':')).encode())
-    payload_b64 = _base64url_encode(json.dumps(to_encode, separators=(',', ':')).encode())
+    header_b64 = _base64url_encode(json.dumps(header, separators=(",", ":")).encode())
+    payload_b64 = _base64url_encode(
+        json.dumps(to_encode, separators=(",", ":")).encode()
+    )
 
     message = f"{header_b64}.{payload_b64}"
     signature = hmac.new(
-        settings.secret_key.encode(),
-        message.encode(),
-        hashlib.sha256
+        settings.secret_key.encode(), message.encode(), hashlib.sha256
     ).digest()
     signature_b64 = _base64url_encode(signature)
 
@@ -81,7 +84,7 @@ def verify_token(token: str) -> Optional[dict]:
         Decoded payload if valid, None otherwise
     """
     try:
-        parts = token.split('.')
+        parts = token.split(".")
         if len(parts) != 3:
             return None
 
@@ -91,9 +94,7 @@ def verify_token(token: str) -> Optional[dict]:
         # compare_digest를 사용하여 타이밍 공격(timing attack) 방지
         message = f"{header_b64}.{payload_b64}"
         expected_signature = hmac.new(
-            settings.secret_key.encode(),
-            message.encode(),
-            hashlib.sha256
+            settings.secret_key.encode(), message.encode(), hashlib.sha256
         ).digest()
 
         actual_signature = _base64url_decode(signature_b64)
@@ -129,12 +130,7 @@ def hash_password(password: str) -> str:
     - hash: 비밀번호 + salt를 60만 회 반복 해싱한 결과
     """
     salt = os.urandom(32)
-    key = hashlib.pbkdf2_hmac(
-        'sha256',
-        password.encode(),
-        salt,
-        PBKDF2_ITERATIONS
-    )
+    key = hashlib.pbkdf2_hmac("sha256", password.encode(), salt, PBKDF2_ITERATIONS)
     return f"{salt.hex()}${key.hex()}"
 
 
@@ -146,14 +142,11 @@ def verify_password(plain_password: str, hashed_password: str) -> bool:
     compare_digest를 사용하여 타이밍 공격 방지.
     """
     try:
-        salt_hex, key_hex = hashed_password.split('$')
+        salt_hex, key_hex = hashed_password.split("$")
         salt = bytes.fromhex(salt_hex)
         expected_key = bytes.fromhex(key_hex)
         actual_key = hashlib.pbkdf2_hmac(
-            'sha256',
-            plain_password.encode(),
-            salt,
-            PBKDF2_ITERATIONS
+            "sha256", plain_password.encode(), salt, PBKDF2_ITERATIONS
         )
         return hmac.compare_digest(expected_key, actual_key)
     except (ValueError, AttributeError):

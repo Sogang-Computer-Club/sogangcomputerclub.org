@@ -1,4 +1,5 @@
 """Event publishing module."""
+
 from .publisher import (
     AbstractEventPublisher,
     NullEventPublisher,

@@ -9,6 +9,7 @@ This is the main application module that wires together all components:
 Note: Redis와 Kafka/SQS 이벤트 시스템은 동아리 규모에서 불필요하여 제거됨.
 Rate limiting은 in-memory storage를 사용함.
 """
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
@@ -28,8 +29,7 @@ from .common.rate_limit import limiter, rate_limit_exceeded_handler
 
 # --- Logging Configuration ---
 logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
 logger = logging.getLogger(__name__)
 
@@ -41,7 +41,7 @@ async def monitor_database_connections(app: FastAPI):
     """Background task to monitor database connection pool."""
     while True:
         try:
-            if hasattr(app.state, 'db_engine'):
+            if hasattr(app.state, "db_engine"):
                 pool = app.state.db_engine.sync_engine.pool
                 ACTIVE_CONNECTIONS.set(pool.checkedout())
         except Exception as e:
@@ -63,14 +63,20 @@ async def lifespan(app: FastAPI):
     # Verify database connection and migration status
     try:
         async with engine.connect() as conn:
-            result = await conn.execute(sqlalchemy.text(
-                "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')"
-            ))
+            result = await conn.execute(
+                sqlalchemy.text(
+                    "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'alembic_version')"
+                )
+            )
             has_alembic = result.scalar()
             if not has_alembic:
-                logger.warning("Lifespan: Alembic version table not found. Run 'alembic upgrade head' to apply migrations.")
+                logger.warning(
+                    "Lifespan: Alembic version table not found. Run 'alembic upgrade head' to apply migrations."
+                )
             else:
-                result = await conn.execute(sqlalchemy.text("SELECT version_num FROM alembic_version"))
+                result = await conn.execute(
+                    sqlalchemy.text("SELECT version_num FROM alembic_version")
+                )
                 version = result.scalar()
                 logger.info(f"Lifespan: Database migration version: {version}")
     except Exception as e:
@@ -81,7 +87,9 @@ async def lifespan(app: FastAPI):
     try:
         await event_publisher.start()
         app.state.event_publisher = event_publisher
-        logger.info(f"Lifespan: Event Publisher 초기화 완료 (backend: {settings.event_backend})")
+        logger.info(
+            f"Lifespan: Event Publisher 초기화 완료 (backend: {settings.event_backend})"
+        )
     except Exception as e:
         logger.warning(f"Lifespan: Event Publisher 초기화 실패 - {e}")
         app.state.event_publisher = None
@@ -126,7 +134,7 @@ app = FastAPI(
     title="Memo API",
     description="FastAPI, SQLAlchemy 2.0을 사용한 비동기 메모 애플리케이션",
     version="1.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 # --- Rate Limiting ---
@@ -139,12 +147,17 @@ app.add_middleware(PrometheusMiddleware)
 # CORS configuration with explicit origins (not wildcard)
 allowed_origins = settings.cors_origins_list
 if settings.debug:
-    allowed_origins = list(set(allowed_origins + [
-        "http://localhost:3000",
-        "http://localhost:5173",
-        "http://127.0.0.1:3000",
-        "http://127.0.0.1:5173",
-    ]))
+    allowed_origins = list(
+        set(
+            allowed_origins
+            + [
+                "http://localhost:3000",
+                "http://localhost:5173",
+                "http://127.0.0.1:3000",
+                "http://127.0.0.1:5173",
+            ]
+        )
+    )
 
 app.add_middleware(
     CORSMiddleware,
@@ -167,4 +180,5 @@ app.include_router(memos_router, prefix=API_V1_PREFIX)
 # --- Development Server ---
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("app.main:app", host="0.0.0.0", port=8000, reload=True)

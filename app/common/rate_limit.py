@@ -4,6 +4,7 @@
 SlowAPI를 사용하여 API 남용 방지.
 프록시 환경(Nginx, Docker)에서 실제 클라이언트 IP를 정확히 식별해야 함.
 """
+
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from fastapi import Request
@@ -15,11 +16,11 @@ from typing import List, Union
 # 이 대역에서 오는 요청만 X-Forwarded-For 헤더를 신뢰함
 # 외부에서 직접 X-Forwarded-For를 조작하여 IP 스푸핑하는 것을 방지
 TRUSTED_PROXY_NETWORKS: List[Union[IPv4Network, IPv6Network]] = [
-    ip_network("127.0.0.0/8"),      # 로컬호스트
-    ip_network("10.0.0.0/8"),       # Docker 기본 네트워크
-    ip_network("172.16.0.0/12"),    # Docker 브리지 네트워크
-    ip_network("192.168.0.0/16"),   # 프라이빗 네트워크
-    ip_network("::1/128"),          # IPv6 로컬호스트
+    ip_network("127.0.0.0/8"),  # 로컬호스트
+    ip_network("10.0.0.0/8"),  # Docker 기본 네트워크
+    ip_network("172.16.0.0/12"),  # Docker 브리지 네트워크
+    ip_network("192.168.0.0/16"),  # 프라이빗 네트워크
+    ip_network("::1/128"),  # IPv6 로컬호스트
 ]
 
 
@@ -63,25 +64,25 @@ def get_real_client_ip(request: Request) -> str:
 limiter = Limiter(key_func=get_real_client_ip)
 
 
-async def rate_limit_exceeded_handler(_request: Request, exc: Exception) -> JSONResponse:
+async def rate_limit_exceeded_handler(
+    _request: Request, exc: Exception
+) -> JSONResponse:
     """Custom handler for rate limit exceeded errors."""
-    detail = getattr(exc, 'detail', 'Rate limit exceeded')
-    retry_after = getattr(exc, 'retry_after', 60)
+    detail = getattr(exc, "detail", "Rate limit exceeded")
+    retry_after = getattr(exc, "retry_after", 60)
 
     return JSONResponse(
         status_code=429,
         content={
             "detail": "Too many requests. Please try again later.",
-            "retry_after": str(detail)
+            "retry_after": str(detail),
         },
-        headers={
-            "Retry-After": str(retry_after)
-        }
+        headers={"Retry-After": str(retry_after)},
     )
 
 
 # 엔드포인트별 요청 제한 설정
-RATE_LIMIT_DEFAULT = "100/minute"   # 일반 조회 (GET)
-RATE_LIMIT_AUTH = "10/minute"       # 인증 (로그인/회원가입) - 브루트포스 방지
-RATE_LIMIT_WRITE = "30/minute"      # 쓰기 작업 (POST/PUT/DELETE)
-RATE_LIMIT_SEARCH = "60/minute"     # 검색 - DB 부하 고려
+RATE_LIMIT_DEFAULT = "100/minute"  # 일반 조회 (GET)
+RATE_LIMIT_AUTH = "10/minute"  # 인증 (로그인/회원가입) - 브루트포스 방지
+RATE_LIMIT_WRITE = "30/minute"  # 쓰기 작업 (POST/PUT/DELETE)
+RATE_LIMIT_SEARCH = "60/minute"  # 검색 - DB 부하 고려

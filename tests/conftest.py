@@ -26,9 +26,7 @@ def event_loop():
 async def test_engine():
     """Create a test database engine"""
     engine = create_async_engine(
-        TEST_DATABASE_URL,
-        echo=False,
-        connect_args={"check_same_thread": False}
+        TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False}
     )
 
     # Create tables
@@ -48,10 +46,7 @@ async def test_engine():
 async def test_session_factory(test_engine):
     """Create a test session factory"""
     return async_sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=test_engine,
-        class_=AsyncSession
+        autocommit=False, autoflush=False, bind=test_engine, class_=AsyncSession
     )
 
 
@@ -88,8 +83,7 @@ async def client(test_engine, test_session_factory):
     app.state.limiter.enabled = False
 
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
@@ -100,11 +94,13 @@ async def client(test_engine, test_session_factory):
 @pytest.fixture
 def auth_token() -> str:
     """Create a test authentication token"""
-    return create_access_token({
-        "sub": "test@example.com",  # Email used as subject for ownership checks
-        "user_id": 1,
-        "is_admin": False
-    })
+    return create_access_token(
+        {
+            "sub": "test@example.com",  # Email used as subject for ownership checks
+            "user_id": 1,
+            "is_admin": False,
+        }
+    )
 
 
 @pytest.fixture

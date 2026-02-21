@@ -2,6 +2,7 @@
 User repository for data access.
 Implements the repository pattern to abstract database operations.
 """
+
 from abc import abstractmethod
 from typing import Optional, List
 from sqlalchemy import select

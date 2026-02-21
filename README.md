@@ -47,6 +47,7 @@ docker-compose up -d
 | [배포 가이드](docs/deployment.md) | CI/CD, 프로덕션 배포 |
 | [테스트 가이드](docs/testing.md) | 단위/통합/부하 테스트 |
 | [문제 해결](docs/troubleshooting.md) | 일반적인 오류와 해결 |
+| [기여 치트시트](docs/cheatsheet.md) | 브랜치명, 커밋 형식 빠른 참조 |
 
 ## 기여하기
 

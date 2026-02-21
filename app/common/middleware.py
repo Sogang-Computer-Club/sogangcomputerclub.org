@@ -1,6 +1,7 @@
 """
 애플리케이션 미들웨어.
 """
+
 from fastapi import Request
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.routing import Match
@@ -38,14 +39,9 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
         status_code = response.status_code
 
         REQUEST_COUNT.labels(
-            method=method,
-            endpoint=endpoint,
-            status_code=status_code
+            method=method, endpoint=endpoint, status_code=status_code
         ).inc()
 
-        REQUEST_DURATION.labels(
-            method=method,
-            endpoint=endpoint
-        ).observe(duration)
+        REQUEST_DURATION.labels(method=method, endpoint=endpoint).observe(duration)
 
         return response

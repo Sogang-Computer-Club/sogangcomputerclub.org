@@ -1,6 +1,7 @@
 """
 Health check and metrics endpoints.
 """
+
 from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
@@ -15,19 +16,21 @@ logger = logging.getLogger(__name__)
 
 # Private network ranges (IPv4 and IPv6)
 PRIVATE_NETWORKS = [
-    ip_network("127.0.0.0/8"),      # IPv4 loopback
-    ip_network("10.0.0.0/8"),       # Private Class A
-    ip_network("172.16.0.0/12"),    # Private Class B
-    ip_network("192.168.0.0/16"),   # Private Class C
-    ip_network("::1/128"),          # IPv6 loopback
-    ip_network("fc00::/7"),         # IPv6 unique local
-    ip_network("fe80::/10"),        # IPv6 link-local
+    ip_network("127.0.0.0/8"),  # IPv4 loopback
+    ip_network("10.0.0.0/8"),  # Private Class A
+    ip_network("172.16.0.0/12"),  # Private Class B
+    ip_network("192.168.0.0/16"),  # Private Class C
+    ip_network("::1/128"),  # IPv6 loopback
+    ip_network("fc00::/7"),  # IPv6 unique local
+    ip_network("fe80::/10"),  # IPv6 link-local
 ]
 
 
 def _check_internal_access(request: Request) -> bool:
     """Check if request is from internal network using proper CIDR matching."""
-    client_ip_str = request.headers.get("X-Real-IP", request.client.host if request.client else "")
+    client_ip_str = request.headers.get(
+        "X-Real-IP", request.client.host if request.client else ""
+    )
 
     if not client_ip_str:
         return False
@@ -61,7 +64,7 @@ async def health_check(request: Request) -> Dict[str, Any]:
     if not is_internal:
         return {
             "status": "healthy" if db_healthy else "degraded",
-            "timestamp": datetime.now(UTC).isoformat()
+            "timestamp": datetime.now(UTC).isoformat(),
         }
 
     # Detailed response for internal requests
@@ -70,7 +73,7 @@ async def health_check(request: Request) -> Dict[str, Any]:
         "timestamp": datetime.now(UTC).isoformat(),
         "services": {
             "database": "healthy" if db_healthy else "unhealthy",
-        }
+        },
     }
 
 
@@ -83,6 +86,6 @@ async def metrics(request: Request):
     if not _check_internal_access(request):
         raise HTTPException(
             status_code=403,
-            detail="Metrics endpoint is only accessible from internal networks"
+            detail="Metrics endpoint is only accessible from internal networks",
         )
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)

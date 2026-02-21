@@ -1,10 +1,6 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @plugin '@tailwindcss/typography';
-@import 'highlight.js/styles/github-dark.css';
-
-
-
-
+@import "highlight.js/styles/github-dark.css";
 
 /*
 Copyright (c) 2021 Kil Hyung-jin, with Reserved Font Name Pretendard.
@@ -16,29 +12,35 @@ http://scripts.sil.org/OFL
 */
 
 @font-face {
-	font-family: 'Pretendard Variable';
-	font-weight: 45 920;
-	font-style: normal;
-	font-display: swap;
-	src: url('/fonts/PretendardVariable.woff2') format('woff2-variations');
+  font-family: "Pretendard Variable";
+  font-weight: 45 920;
+  font-style: normal;
+  font-display: swap;
+  src: url("/fonts/PretendardVariable.woff2") format("woff2-variations");
 }
 
 @font-face {
-	font-family: 'SogangUniversity';
-	src: url('/fonts/SOGANG_UNIVERSITY_for_windows.ttf') format('truetype');
+  font-family: "SogangUniversity";
+  src: url("/fonts/SOGANG_UNIVERSITY_for_windows.ttf") format("truetype");
 }
 
 @theme {
   /* Font Family 확장 */
-  --font-sogang: "SogangUniversity", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
-  --font-pretendard-variable: 'Pretendard Variable', -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-sogang:
+    "SogangUniversity", -apple-system, BlinkMacSystemFont, system-ui, sans-serif;
+  --font-pretendard-variable:
+    "Pretendard Variable", -apple-system, BlinkMacSystemFont, system-ui,
+    sans-serif;
   --breakpoint-desktop: 896px;
   --breakpoint-tablet: 640px;
 }
 
 @layer base {
-  
-  h1, h2, h3, span, a {
+  h1,
+  h2,
+  h3,
+  span,
+  a {
     font-family: var(--font-sogang);
   }
 
@@ -49,11 +51,11 @@ http://scripts.sil.org/OFL
 
 @layer utilities {
   .hide-scrollbar {
-    -ms-overflow-style: none;  /* IE and Edge */
-    scrollbar-width: none;  /* Firefox */
+    -ms-overflow-style: none; /* IE and Edge */
+    scrollbar-width: none; /* Firefox */
   }
   .hide-scrollbar::-webkit-scrollbar {
-    display: none;  /* Chrome, Safari, Opera*/
+    display: none; /* Chrome, Safari, Opera*/
   }
 
   .neon-text {
@@ -84,22 +86,24 @@ body {
 
 /* Markdown & Code Highlighting Enhancements */
 .markdown-body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
+  font-family:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica,
+    Arial, sans-serif;
 }
 
 .markdown-body pre {
-    position: relative;
+  position: relative;
 }
 
 .markdown-body pre code {
-    display: block;
-    overflow-x: auto;
+  display: block;
+  overflow-x: auto;
 }
 
 /* Syntax highlighting adjustments for dark theme */
 .hljs {
-    background: rgba(0, 0, 0, 0.4) !important;
-    color: #c9d1d9 !important;
+  background: rgba(0, 0, 0, 0.4) !important;
+  color: #c9d1d9 !important;
 }
 
 .hljs-keyword,
@@ -107,84 +111,84 @@ body {
 .hljs-literal,
 .hljs-section,
 .hljs-link {
-    color: #ff7b72 !important;
+  color: #ff7b72 !important;
 }
 
 .hljs-string,
 .hljs-attribute,
 .hljs-selector-attr {
-    color: #a5d6ff !important;
+  color: #a5d6ff !important;
 }
 
 .hljs-number,
 .hljs-built_in,
 .hljs-builtin-name {
-    color: #79c0ff !important;
+  color: #79c0ff !important;
 }
 
 .hljs-title,
 .hljs-function,
 .hljs-class .hljs-title {
-    color: #d2a8ff !important;
+  color: #d2a8ff !important;
 }
 
 .hljs-comment,
 .hljs-quote {
-    color: #8b949e !important;
-    font-style: italic;
+  color: #8b949e !important;
+  font-style: italic;
 }
 
 .hljs-variable,
 .hljs-template-variable,
 .hljs-tag .hljs-attr {
-    color: #ffa657 !important;
+  color: #ffa657 !important;
 }
 
 .hljs-meta {
-    color: #ff7b72 !important;
+  color: #ff7b72 !important;
 }
 
 /* Scrollbar styles for code blocks */
 .markdown-body pre code::-webkit-scrollbar {
-    height: 8px;
+  height: 8px;
 }
 
 .markdown-body pre code::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.05);
-    border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
 }
 
 .markdown-body pre code::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.2);
-    border-radius: 4px;
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
 }
 
 .markdown-body pre code::-webkit-scrollbar-thumb:hover {
-    background: rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.3);
 }
 
 /* Additional markdown enhancements */
 .markdown-body a {
-    transition: color 0.2s;
+  transition: color 0.2s;
 }
 
 .markdown-body a:hover {
-    color: #58a6ff;
+  color: #58a6ff;
 }
 
 .markdown-body img {
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
 }
 
 .markdown-body table {
-    display: block;
-    overflow-x: auto;
+  display: block;
+  overflow-x: auto;
 }
 
 /* Line clamp utility */
 .line-clamp-3 {
-    display: -webkit-box;
-    -webkit-line-clamp: 3;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }

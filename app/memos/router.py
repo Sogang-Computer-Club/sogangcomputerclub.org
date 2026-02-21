@@ -2,6 +2,7 @@
 Memo CRUD API endpoints.
 Thin router that delegates to MemoService.
 """
+
 from fastapi import APIRouter, HTTPException, Depends, status, Request, Query
 from typing import List
 import logging
@@ -10,7 +11,12 @@ from .schemas import MemoCreate, MemoUpdate, MemoInDB
 from .service import MemoService, MemoNotFoundError, MemoForbiddenError
 from .dependencies import get_memo_service
 from ..users.dependencies import require_auth
-from ..common.rate_limit import limiter, RATE_LIMIT_WRITE, RATE_LIMIT_SEARCH, RATE_LIMIT_DEFAULT
+from ..common.rate_limit import (
+    limiter,
+    RATE_LIMIT_WRITE,
+    RATE_LIMIT_SEARCH,
+    RATE_LIMIT_DEFAULT,
+)
 
 router = APIRouter(prefix="/memos", tags=["Memos"])
 logger = logging.getLogger(__name__)
@@ -22,7 +28,7 @@ async def create_memo(
     request: Request,
     memo: MemoCreate,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth)
+    current_user: dict = Depends(require_auth),
 ):
     """Create a new memo. Requires authentication."""
     try:
@@ -32,7 +38,7 @@ async def create_memo(
         logger.error(f"메모 생성 중 오류 발생: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="메모 생성에 실패했습니다."
+            detail="메모 생성에 실패했습니다.",
         )
 
 
@@ -42,7 +48,7 @@ async def read_memos(
     request: Request,
     skip: int = 0,
     limit: int = 100,
-    service: MemoService = Depends(get_memo_service)
+    service: MemoService = Depends(get_memo_service),
 ):
     """Get all memos."""
     try:
@@ -51,7 +57,7 @@ async def read_memos(
         logger.error(f"메모 목록 조회 중 오류 발생: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="메모를 불러오는 데 실패했습니다."
+            detail="메모를 불러오는 데 실패했습니다.",
         )
 
 
@@ -62,7 +68,7 @@ async def search_memos(
     q: str = Query(..., min_length=1, max_length=100, description="검색어"),
     skip: int = Query(default=0, ge=0, description="건너뛸 항목 수"),
     limit: int = Query(default=100, ge=1, le=500, description="최대 반환 항목 수"),
-    service: MemoService = Depends(get_memo_service)
+    service: MemoService = Depends(get_memo_service),
 ):
     """Search memos by keyword with pagination."""
     try:
@@ -71,16 +77,14 @@ async def search_memos(
         logger.error(f"메모 검색 중 오류 발생: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="메모 검색 중 오류가 발생했습니다."
+            detail="메모 검색 중 오류가 발생했습니다.",
         )
 
 
 @router.get("/{memo_id}", response_model=MemoInDB)
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def read_memo(
-    request: Request,
-    memo_id: int,
-    service: MemoService = Depends(get_memo_service)
+    request: Request, memo_id: int, service: MemoService = Depends(get_memo_service)
 ):
     """Get a specific memo by ID."""
     try:
@@ -91,7 +95,7 @@ async def read_memo(
         logger.error(f"메모(ID:{memo_id}) 조회 중 오류 발생: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="메모 조회 중 오류가 발생했습니다."
+            detail="메모 조회 중 오류가 발생했습니다.",
         )
 
 
@@ -102,7 +106,7 @@ async def update_memo(
     memo_id: int,
     memo: MemoUpdate,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth)
+    current_user: dict = Depends(require_auth),
 ):
     """Update a memo. Requires authentication and ownership."""
     try:
@@ -117,7 +121,7 @@ async def update_memo(
         logger.error(f"메모(ID:{memo_id}) 수정 중 오류 발생: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="메모 수정 중 오류가 발생했습니다."
+            detail="메모 수정 중 오류가 발생했습니다.",
         )
 
 
@@ -127,7 +131,7 @@ async def delete_memo(
     request: Request,
     memo_id: int,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth)
+    current_user: dict = Depends(require_auth),
 ):
     """Delete a memo. Requires authentication and ownership."""
     try:
@@ -141,5 +145,5 @@ async def delete_memo(
         logger.error(f"메모(ID:{memo_id}) 삭제 중 오류 발생: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="메모 삭제 중 오류가 발생했습니다."
+            detail="메모 삭제 중 오류가 발생했습니다.",
         )

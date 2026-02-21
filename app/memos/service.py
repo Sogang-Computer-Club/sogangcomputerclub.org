@@ -2,7 +2,8 @@
 Memo service containing business logic.
 Orchestrates repository and event publisher.
 """
-from typing import List, Optional
+
+from typing import List
 import logging
 
 from .repository import AbstractMemoRepository
@@ -15,11 +16,13 @@ logger = logging.getLogger(__name__)
 
 class MemoNotFoundError(Exception):
     """Raised when a memo is not found."""
+
     pass
 
 
 class MemoForbiddenError(Exception):
     """Raised when user is not authorized to modify a memo."""
+
     pass
 
 
@@ -29,7 +32,7 @@ class MemoService:
     def __init__(
         self,
         repository: AbstractMemoRepository,
-        event_publisher: AbstractEventPublisher
+        event_publisher: AbstractEventPublisher,
     ):
         self.repository = repository
         self.event_publisher = event_publisher
@@ -59,7 +62,7 @@ class MemoService:
         # Publish event
         await self.event_publisher.publish(
             "memo-created",
-            {"id": created_memo["id"], "title": memo.title, "action": "created"}
+            {"id": created_memo["id"], "title": memo.title, "action": "created"},
         )
 
         MEMO_COUNT.inc()
@@ -76,15 +79,14 @@ class MemoService:
             raise MemoNotFoundError(f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
         return memo
 
-    async def search_memos(self, query: str, skip: int = 0, limit: int = 100) -> List[dict]:
+    async def search_memos(
+        self, query: str, skip: int = 0, limit: int = 100
+    ) -> List[dict]:
         """Search memos by keyword."""
         return await self.repository.search(query, skip, limit)
 
     async def update_memo(
-        self,
-        memo_id: int,
-        memo_update: MemoUpdate,
-        current_user: dict
+        self, memo_id: int, memo_update: MemoUpdate, current_user: dict
     ) -> dict:
         """Update a memo."""
         existing_memo = await self.repository.get_by_id(memo_id)
@@ -102,8 +104,7 @@ class MemoService:
 
         # Publish event
         await self.event_publisher.publish(
-            "memo-updated",
-            {"id": memo_id, "action": "updated"}
+            "memo-updated", {"id": memo_id, "action": "updated"}
         )
 
         return updated_memo  # type: ignore
@@ -121,8 +122,7 @@ class MemoService:
 
         # Publish event
         await self.event_publisher.publish(
-            "memo-deleted",
-            {"id": memo_id, "action": "deleted"}
+            "memo-deleted", {"id": memo_id, "action": "deleted"}
         )
 
         MEMO_COUNT.dec()

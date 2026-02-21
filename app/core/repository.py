@@ -11,11 +11,12 @@
 - Service 계층에서는 항상 추상 인터페이스(AbstractRepository)에 의존
 - 구체 구현체(MemoRepository)는 의존성 주입으로 제공
 """
+
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar, Optional, List
 
-T = TypeVar('T')  # 엔티티 타입 (예: dict, Pydantic 모델)
-ID = TypeVar('ID')  # 식별자 타입 (예: int, UUID)
+T = TypeVar("T")  # 엔티티 타입 (예: dict, Pydantic 모델)
+ID = TypeVar("ID")  # 식별자 타입 (예: int, UUID)
 
 
 class AbstractRepository(ABC, Generic[T, ID]):

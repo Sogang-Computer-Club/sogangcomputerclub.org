@@ -1,5 +1,4 @@
 import pytest
-import asyncio
 import asyncpg
 import os
 
@@ -13,7 +12,7 @@ async def test_postgres_connection():
             port=int(os.getenv("POSTGRES_PORT", "5433")),
             user=os.getenv("POSTGRES_USER", "memo_user"),
             password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
-            database=os.getenv("POSTGRES_DB", "memo_app")
+            database=os.getenv("POSTGRES_DB", "memo_app"),
         )
 
         assert connection is not None
@@ -36,10 +35,12 @@ async def test_postgres_database_exists():
             port=int(os.getenv("POSTGRES_PORT", "5433")),
             user=os.getenv("POSTGRES_USER", "memo_user"),
             password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
-            database="postgres"
+            database="postgres",
         )
 
-        result = await connection.fetchval(f"SELECT datname FROM pg_database WHERE datname = '{os.getenv('POSTGRES_DB', 'memo_app')}'")
+        result = await connection.fetchval(
+            f"SELECT datname FROM pg_database WHERE datname = '{os.getenv('POSTGRES_DB', 'memo_app')}'"
+        )
         assert result == os.getenv("POSTGRES_DB", "memo_app")
 
         await connection.close()
@@ -57,13 +58,11 @@ async def test_postgres_memos_table_exists():
             port=int(os.getenv("POSTGRES_PORT", "5433")),
             user=os.getenv("POSTGRES_USER", "memo_user"),
             password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
-            database=os.getenv("POSTGRES_DB", "memo_app")
+            database=os.getenv("POSTGRES_DB", "memo_app"),
         )
 
-        result = await connection.fetchval(
-            "SELECT to_regclass('public.memos')"
-        )
-        assert result == 'memos'
+        result = await connection.fetchval("SELECT to_regclass('public.memos')")
+        assert result == "memos"
 
         await connection.close()
 
@@ -80,23 +79,33 @@ async def test_postgres_memos_table_structure():
             port=int(os.getenv("POSTGRES_PORT", "5433")),
             user=os.getenv("POSTGRES_USER", "memo_user"),
             password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
-            database=os.getenv("POSTGRES_DB", "memo_app")
+            database=os.getenv("POSTGRES_DB", "memo_app"),
         )
 
         rows = await connection.fetch(
             "SELECT column_name FROM information_schema.columns WHERE table_name = 'memos'"
         )
 
-        column_names = [row['column_name'] for row in rows]
+        column_names = [row["column_name"] for row in rows]
 
         expected_columns = [
-            'id', 'title', 'content', 'tags', 'priority',
-            'category', 'is_archived', 'is_favorite', 'author',
-            'created_at', 'updated_at'
+            "id",
+            "title",
+            "content",
+            "tags",
+            "priority",
+            "category",
+            "is_archived",
+            "is_favorite",
+            "author",
+            "created_at",
+            "updated_at",
         ]
 
         for expected_col in expected_columns:
-            assert expected_col in column_names, f"Column {expected_col} not found in memos table"
+            assert (
+                expected_col in column_names
+            ), f"Column {expected_col} not found in memos table"
 
         await connection.close()
 
@@ -113,7 +122,7 @@ async def test_postgres_insert_and_retrieve():
             port=int(os.getenv("POSTGRES_PORT", "5433")),
             user=os.getenv("POSTGRES_USER", "memo_user"),
             password=os.getenv("POSTGRES_PASSWORD", "phoenix"),
-            database=os.getenv("POSTGRES_DB", "memo_app")
+            database=os.getenv("POSTGRES_DB", "memo_app"),
         )
 
         # Insert test data
@@ -122,7 +131,9 @@ async def test_postgres_insert_and_retrieve():
             INSERT INTO memos (title, content, priority)
             VALUES ($1, $2, $3)
             """,
-            "Integration Test Memo", "This is a test memo for integration testing", 2
+            "Integration Test Memo",
+            "This is a test memo for integration testing",
+            2,
         )
 
         # Retrieve the inserted data
@@ -132,18 +143,17 @@ async def test_postgres_insert_and_retrieve():
             FROM memos
             WHERE title = $1
             """,
-            "Integration Test Memo"
+            "Integration Test Memo",
         )
 
         assert row is not None
-        assert row['title'] == "Integration Test Memo"
-        assert row['content'] == "This is a test memo for integration testing"
-        assert row['priority'] == 2
+        assert row["title"] == "Integration Test Memo"
+        assert row["content"] == "This is a test memo for integration testing"
+        assert row["priority"] == 2
 
         # Clean up - delete the test data
         await connection.execute(
-            "DELETE FROM memos WHERE title = $1",
-            "Integration Test Memo"
+            "DELETE FROM memos WHERE title = $1", "Integration Test Memo"
         )
 
         await connection.close()
