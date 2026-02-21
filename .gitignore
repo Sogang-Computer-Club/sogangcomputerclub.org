@@ -116,6 +116,8 @@ Thumbs.db
 *.sublime-workspace
 .claude/
 .agent/
+CLAUDE.md
+docs/plans/
 
 # =============================================================================
 # Environment
