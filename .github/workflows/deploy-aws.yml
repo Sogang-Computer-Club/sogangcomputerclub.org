@@ -18,6 +18,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
+  ECR_REGISTRY: 567886497655.dkr.ecr.ap-northeast-2.amazonaws.com
 
 jobs:
   security-scan:
@@ -172,6 +173,45 @@ jobs:
             echo "::error::The following secrets are missing: $missing_secrets"
             exit 1
           fi
+
+      - name: Copy deployment files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: "docker-compose.aws.yml,scripts/fetch-secrets.sh"
+          target: "/opt/sgcc"
+          strip_components: 0
+
+      - name: Setup EC2 environment
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+          SECRET_ARN: ${{ secrets.SECRET_ARN }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          envs: ECR_REGISTRY,SECRET_ARN
+          script: |
+            set -e
+            cd /opt/sgcc
+
+            # Move fetch-secrets.sh to correct location
+            mv scripts/fetch-secrets.sh . 2>/dev/null || true
+            rmdir scripts 2>/dev/null || true
+            chmod +x fetch-secrets.sh
+
+            # Create .deploy-env
+            cat > .deploy-env << EOF
+            export AWS_REGION=ap-northeast-2
+            export ECR_REGISTRY=$ECR_REGISTRY
+            export PROJECT_NAME=sgcc
+            export SECRET_ARN=$SECRET_ARN
+            EOF
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
