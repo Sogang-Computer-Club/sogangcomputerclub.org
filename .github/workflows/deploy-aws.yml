@@ -206,12 +206,14 @@ jobs:
             chmod +x fetch-secrets.sh
 
             # Create self-signed certs for initial deployment (replace with Let's Encrypt later)
-            mkdir -p certs
+            sudo mkdir -p certs
+            sudo chown $USER:$USER certs
             if [ ! -f certs/fullchain.pem ]; then
               openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
                 -keyout certs/privkey.pem \
                 -out certs/fullchain.pem \
                 -subj "/CN=sogangcomputerclub.org"
+              chmod 644 certs/fullchain.pem certs/privkey.pem
             fi
 
             # Create .deploy-env
