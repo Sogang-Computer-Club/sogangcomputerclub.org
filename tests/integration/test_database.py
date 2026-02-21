@@ -103,9 +103,9 @@ async def test_postgres_memos_table_structure():
         ]
 
         for expected_col in expected_columns:
-            assert (
-                expected_col in column_names
-            ), f"Column {expected_col} not found in memos table"
+            assert expected_col in column_names, (
+                f"Column {expected_col} not found in memos table"
+            )
 
         await connection.close()
 
