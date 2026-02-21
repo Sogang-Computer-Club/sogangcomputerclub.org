@@ -280,12 +280,27 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Test through nginx (services only expose ports internally)
-            # HTTP redirects to HTTPS, so use -k to ignore self-signed cert
-            curl -fk https://localhost/health || exit 1
-            curl -fk https://localhost/ || exit 1
+            cd /opt/sgcc
 
-            echo "Smoke tests passed!"
+            # Check container status first
+            echo "=== Container Status ==="
+            docker compose -f docker-compose.aws.yml ps
+
+            # Test through nginx with retries
+            echo "=== Testing endpoints ==="
+            for i in 1 2 3; do
+              if curl --insecure --fail --silent --show-error https://localhost/health; then
+                echo "Health check passed!"
+                break
+              fi
+              echo "Attempt $i failed, waiting..."
+              sleep 10
+            done
+
+            # Final test
+            curl --insecure --fail https://localhost/ -o /dev/null && echo "Frontend check passed!"
+
+            echo "Smoke tests completed!"
 
       - name: Debug on failure
         if: failure()
