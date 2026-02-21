@@ -112,8 +112,7 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.backend-tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_BACKEND_REPO }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true  # Force fresh build to pick up dependency updates
           provenance: false  # ECR doesn't support attestations yet
 
       - name: Build and push Frontend Docker image
@@ -125,8 +124,7 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.frontend-tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_FRONTEND_REPO }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true  # Force fresh build to pick up dependency updates
           provenance: false
 
       - name: Scan Backend image with Trivy
