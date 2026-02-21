@@ -1,12 +1,14 @@
 import { json } from "@sveltejs/kit";
 import type { RequestHandler } from "./$types";
-import { GOOGLE_API_KEY, CALENDAR_ID } from "$env/static/private";
+import { env } from "$env/dynamic/private";
 
 /**
  * Server-side proxy for Google Calendar API.
  * Keeps the API key secure on the server.
  */
 export const GET: RequestHandler = async ({ fetch }) => {
+  const { GOOGLE_API_KEY, CALENDAR_ID } = env;
+
   if (!GOOGLE_API_KEY || !CALENDAR_ID) {
     return json({ error: "Calendar configuration missing" }, { status: 500 });
   }
