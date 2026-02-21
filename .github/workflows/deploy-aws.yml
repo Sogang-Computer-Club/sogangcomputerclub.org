@@ -280,14 +280,10 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Test backend health endpoint
-            curl -f http://localhost:8000/health || exit 1
-
-            # Test frontend
-            curl -f http://localhost:3000 || exit 1
-
-            # Test HTTPS (if SSL is configured)
-            curl -fk https://localhost/health || echo "HTTPS not yet configured"
+            # Test through nginx (services only expose ports internally)
+            # HTTP redirects to HTTPS, so use -k to ignore self-signed cert
+            curl -fk https://localhost/health || exit 1
+            curl -fk https://localhost/ || exit 1
 
             echo "Smoke tests passed!"
 
