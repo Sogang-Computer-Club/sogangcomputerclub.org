@@ -24,9 +24,10 @@
     </p>
 
     <div class="flex flex-col items-center justify-center tablet:flex-row px-auto w-full">
-      <a 
-        href="https://www.instagram.com/sgcc_sogang" 
+      <a
+        href="https://www.instagram.com/sgcc_sogang"
         target="_blank"
+        rel="noopener noreferrer"
         class="
           block w-75 h-50 max-w-full font-sans text-black no-underline
           rounded-lg bg-zinc-50 p-5 mx-auto my-auto
@@ -58,6 +59,7 @@
       <a
         href="https://github.com/Sogang-Computer-Club"
         target="_blank"
+        rel="noopener noreferrer"
         class="
           block w-75 max-w-full font-sans no-underline
           rounded-xl bg-slate-800 p-6 shadow-lg mx-auto my-6

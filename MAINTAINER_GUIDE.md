@@ -200,7 +200,7 @@ git push origin v1.2.3-alpha.1
 | `backend-ci.yml` | Push/PR | 백엔드 테스트 실행 |
 | `frontend-ci.yml` | Push/PR | 프론트엔드 테스트 실행 |
 | `integration-tests.yml` | Push/PR | 통합 테스트 실행 |
-| `security-scan.yml` | Push/PR | 보안 스캔 |
+| `security-scan.yml` | Push/PR | 보안 스캔 (Docker 스캔은 non-blocking) |
 | `codeql.yml` | Push/PR/Schedule | GitHub CodeQL 보안 분석 |
 | `docker-build.yml` | Push (main) | Docker 이미지 빌드 및 푸시 |
 
@@ -372,6 +372,21 @@ git push origin v1.2.3
 # 또는 gh 사용
 gh release create v1.2.3 --generate-notes
 ```
+
+---
+
+## AWS 관리자 권한
+
+새로운 메인테이너에게 AWS 접근 권한을 부여하려면:
+
+1. AWS Console → IAM → Users → Create user
+2. 사용자 생성 후 `sgcc-admins` 그룹에 추가
+3. Access Key 발급 (CLI 사용 시)
+
+`sgcc-admins` 그룹에 포함된 권한:
+- EC2, RDS, ECR, SQS, VPC: FullAccess
+- Secrets Manager, CloudWatch: FullAccess
+- IAM: ReadOnly (보안상 수정 권한 제외)
 
 ---
 

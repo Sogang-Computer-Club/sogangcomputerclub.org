@@ -2,7 +2,7 @@
     import type { MediaSummary } from '$lib';
     import { slugify } from '$lib';
 
-    export let data: MediaSummary;
+    let { data }: { data: MediaSummary } = $props();
 </script>
 
 <a href="./media/{slugify(data.title, data.id)}" class="w-80 rounded-xl overflow-hidden bg-black">

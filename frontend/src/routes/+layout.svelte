@@ -1,14 +1,26 @@
-<script>
-    let { children } = $props();
+<script lang="ts">
+    import { setContext, onMount } from 'svelte';
+    import { UIStore, UI_CONTEXT_KEY, AuthStore, AUTH_CONTEXT_KEY } from '$lib/stores';
     import "../app.css";
-    import { page } from '$app/state'; 
+    import { page } from '$app/state';
 
     import Header from "../lib/components/Header.svelte"
     import Footer from "../lib/components/Footer.svelte"
-  
-    import { isMobileMenuOpen } from '$lib/Header.js';
- 
- </script>
+
+    let { children } = $props();
+
+    // Provide stores via Context API
+    const uiStore = new UIStore();
+    const authStore = new AuthStore();
+
+    setContext(UI_CONTEXT_KEY, uiStore);
+    setContext(AUTH_CONTEXT_KEY, authStore);
+
+    // Initialize auth state (validate token, load user)
+    onMount(() => {
+        authStore.initialize();
+    });
+</script>
 
 
 <div class="font-[Pretendard_Variable]">

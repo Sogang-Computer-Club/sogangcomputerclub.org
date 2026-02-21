@@ -14,7 +14,9 @@ import httpx
 BASE_URL = "http://localhost:8000"
 
 
-async def measure_endpoint_performance(endpoint: str, method: str = "GET", json_data=None, iterations: int = 100):
+async def measure_endpoint_performance(
+    endpoint: str, method: str = "GET", json_data=None, iterations: int = 100
+):
     """엔드포인트 성능 측정"""
     response_times = []
 
@@ -41,7 +43,9 @@ async def measure_endpoint_performance(endpoint: str, method: str = "GET", json_
             "min_ms": round(min(response_times), 2),
             "max_ms": round(max(response_times), 2),
             "median_ms": round(statistics.median(response_times), 2),
-            "stdev_ms": round(statistics.stdev(response_times), 2) if len(response_times) > 1 else 0
+            "stdev_ms": round(statistics.stdev(response_times), 2)
+            if len(response_times) > 1
+            else 0,
         }
 
     return None
@@ -57,7 +61,11 @@ async def measure_concurrent_requests(endpoint: str, concurrent_users: int = 10)
 
         end_time = time.time()
 
-        successful = sum(1 for r in responses if isinstance(r, httpx.Response) and r.status_code == 200)
+        successful = sum(
+            1
+            for r in responses
+            if isinstance(r, httpx.Response) and r.status_code == 200
+        )
 
         return {
             "endpoint": endpoint,
@@ -65,7 +73,7 @@ async def measure_concurrent_requests(endpoint: str, concurrent_users: int = 10)
             "total_time_ms": round((end_time - start_time) * 1000, 2),
             "successful_requests": successful,
             "failed_requests": concurrent_users - successful,
-            "requests_per_second": round(concurrent_users / (end_time - start_time), 2)
+            "requests_per_second": round(concurrent_users / (end_time - start_time), 2),
         }
 
 
@@ -83,7 +91,11 @@ async def main():
     endpoints = [
         ("/health", "GET", None),
         ("/memos/", "GET", None),
-        ("/memos/", "POST", {"title": "Performance Test", "content": "Testing performance"}),
+        (
+            "/memos/",
+            "POST",
+            {"title": "Performance Test", "content": "Testing performance"},
+        ),
     ]
 
     for endpoint, method, json_data in endpoints:

@@ -3,7 +3,10 @@ import pytest_asyncio
 import asyncio
 from httpx import AsyncClient, ASGITransport
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
-from app.main import app, get_db, metadata
+from app.main import app
+from app.core.dependencies import get_db
+from app.core.database import metadata
+from app.core.security import create_access_token
 from typing import AsyncGenerator
 
 
@@ -23,9 +26,7 @@ def event_loop():
 async def test_engine():
     """Create a test database engine"""
     engine = create_async_engine(
-        TEST_DATABASE_URL,
-        echo=False,
-        connect_args={"check_same_thread": False}
+        TEST_DATABASE_URL, echo=False, connect_args={"check_same_thread": False}
     )
 
     # Create tables
@@ -45,10 +46,7 @@ async def test_engine():
 async def test_session_factory(test_engine):
     """Create a test session factory"""
     return async_sessionmaker(
-        autocommit=False,
-        autoflush=False,
-        bind=test_engine,
-        class_=AsyncSession
+        autocommit=False, autoflush=False, bind=test_engine, class_=AsyncSession
     )
 
 
@@ -79,14 +77,33 @@ async def client(test_engine, test_session_factory):
     # Override app state for testing
     app.state.db_engine = test_engine
     app.state.db_session_factory = test_session_factory
-    app.state.redis = None  # Disable Redis for tests
     app.state.kafka = None  # Disable Kafka for tests
 
+    # Disable rate limiting for tests
+    app.state.limiter.enabled = False
+
     async with AsyncClient(
-        transport=ASGITransport(app=app),
-        base_url="http://test"
+        transport=ASGITransport(app=app), base_url="http://test"
     ) as ac:
         yield ac
 
     # Clear overrides
     app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def auth_token() -> str:
+    """Create a test authentication token"""
+    return create_access_token(
+        {
+            "sub": "test@example.com",  # Email used as subject for ownership checks
+            "user_id": 1,
+            "is_admin": False,
+        }
+    )
+
+
+@pytest.fixture
+def auth_headers(auth_token: str) -> dict:
+    """Create authorization headers with test token"""
+    return {"Authorization": f"Bearer {auth_token}"}

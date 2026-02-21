@@ -1,0 +1,39 @@
+# Pre-commit hooks 설정
+# 설치: uv sync && pre-commit install && pre-commit install --hook-type commit-msg
+# 수동 실행: pre-commit run --all-files
+
+repos:
+  # 백엔드: Ruff 린트 + 포맷팅
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.8.0
+    hooks:
+      - id: ruff
+        args: [--fix]
+        files: ^(app|tests)/
+      - id: ruff-format
+        files: ^(app|tests)/
+
+  # 프론트엔드: Prettier + svelte-check
+  - repo: local
+    hooks:
+      - id: prettier
+        name: prettier (frontend)
+        entry: bash -c 'cd frontend && npx prettier --write --ignore-unknown --ignore-path .gitignore .'
+        language: system
+        files: ^frontend/.*\.(ts|js|svelte|css|json|html)$
+        pass_filenames: false
+
+      - id: svelte-check
+        name: svelte-check (frontend)
+        entry: bash -c 'cd frontend && npm run check'
+        language: system
+        files: ^frontend/.*\.(ts|svelte)$
+        pass_filenames: false
+
+  # 커밋 메시지 검증 (Conventional Commits)
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v3.6.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]
+        args: [feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert]

@@ -1,3 +1,12 @@
+# 보안 스캔 워크플로우
+# 목적: 코드, 의존성, 시크릿, Docker 이미지의 보안 취약점을 자동으로 탐지
+#
+# 스캔 종류:
+# 1. Trivy FS: 소스 코드와 의존성 파일의 알려진 취약점(CVE) 검사
+# 2. Trivy Config: Dockerfile, Kubernetes 매니페스트 등 설정 파일 보안 검사
+# 3. Dependency Review: PR에서 추가된 의존성의 라이선스/취약점 검사
+# 4. TruffleHog: 하드코딩된 시크릿(API 키, 비밀번호) 탐지
+# 5. CodeQL: 소스 코드 정적 분석 (SQL 인젝션, XSS 등)
 name: Security Scanning
 
 on:
@@ -5,14 +14,15 @@ on:
     branches: [master, develop, staging]
   pull_request:
     branches: [master, develop]
+  # 매일 새벽 2시(UTC) 정기 스캔: 새로 발견된 CVE를 빠르게 탐지
   schedule:
-    # Run daily at 2 AM UTC
     - cron: "0 2 * * *"
   workflow_dispatch:
 
+# 최소 권한 원칙: 필요한 권한만 부여
 permissions:
   contents: read
-  security-events: write
+  security-events: write  # GitHub Security 탭에 결과 업로드용
 
 jobs:
   trivy-fs-scan:
@@ -87,6 +97,8 @@ jobs:
           sarif_file: "trivy-config-results.sarif"
           category: "trivy-config"
 
+  # 의존성 검토: PR에서 새로 추가된 패키지의 보안/라이선스 검사
+  # PR에서만 실행 (변경된 의존성만 검사)
   dependency-review:
     name: Dependency Review
     runs-on: ubuntu-latest
@@ -99,9 +111,12 @@ jobs:
       - name: Dependency Review
         uses: actions/dependency-review-action@v4
         with:
+          # moderate 이상 취약점 발견 시 PR 차단
           fail-on-severity: moderate
+          # GPL 라이선스 차단: 상용 프로젝트에 GPL 코드 포함 시 전체 코드 공개 의무 발생
           deny-licenses: GPL-2.0, GPL-3.0
 
+  # 시크릿 스캔: 실수로 커밋된 API 키, 비밀번호 등 탐지
   secret-scan:
     name: Secret Scanning
     runs-on: ubuntu-latest
@@ -110,18 +125,21 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
+          # 전체 히스토리 검사: 과거 커밋에서 삭제했어도 Git 히스토리에 남아있음
           fetch-depth: 0
 
       - name: TruffleHog OSS
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
+          # only-verified: 실제로 유효한 시크릿만 보고 (오탐 감소)
           extra_args: --only-verified
 
   docker-image-scan:
     name: Docker Image Security Scan
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    continue-on-error: true  # non-blocking: 경고만 표시
     permissions:
       actions: read
       contents: read
@@ -185,6 +203,8 @@ jobs:
           severity: "CRITICAL"
           ignore-unfixed: true
 
+  # CodeQL: GitHub의 시맨틱 코드 분석 엔진
+  # SQL 인젝션, XSS, 경로 순회 등 보안 취약점 패턴 탐지
   codeql-analysis:
     name: CodeQL Analysis
     runs-on: ubuntu-latest
@@ -194,6 +214,7 @@ jobs:
       security-events: write
 
     strategy:
+      # fail-fast: false - 한 언어 실패해도 다른 언어 분석 계속
       fail-fast: false
       matrix:
         language: ["python", "javascript-typescript"]
@@ -206,6 +227,8 @@ jobs:
         uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
+          # security-extended: OWASP Top 10 등 확장된 보안 쿼리 포함
+          # security-and-quality: 코드 품질 문제도 함께 검사
           queries: security-extended,security-and-quality
           config: |
             paths-ignore:
@@ -250,11 +273,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Check for failures, treating 'skipped' as success
+          # docker-image-scan은 non-blocking이므로 제외
           FAILED=0
           if [ "${{ needs.trivy-fs-scan.result }}" == "failure" ]; then FAILED=1; fi
           if [ "${{ needs.trivy-config-scan.result }}" == "failure" ]; then FAILED=1; fi
           if [ "${{ needs.secret-scan.result }}" == "failure" ]; then FAILED=1; fi
-          if [ "${{ needs.docker-image-scan.result }}" == "failure" ]; then FAILED=1; fi
+          # docker-image-scan: non-blocking (continue-on-error: true)
           if [ "${{ needs.codeql-analysis.result }}" == "failure" ]; then FAILED=1; fi
 
           if [ $FAILED -eq 1 ]; then

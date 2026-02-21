@@ -80,9 +80,6 @@ POSTGRES_PASSWORD=CHANGE_ME_USER_PASSWORD
 POSTGRES_DB=memo_app
 DATABASE_URL=postgresql+asyncpg://memo_user:CHANGE_ME_USER_PASSWORD@postgres:5432/memo_app
 
-# Redis Configuration
-REDIS_URL=redis://redis:6379
-
 # Kafka Configuration
 KAFKA_BOOTSTRAP_SERVERS=kafka:9093
 

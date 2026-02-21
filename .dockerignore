@@ -1,0 +1,102 @@
+# Git
+.git
+.github
+.gitignore
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+*.md
+!README.md
+docs/
+
+# Node modules
+node_modules
+frontend/node_modules
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+.pytest_cache
+.coverage
+htmlcov
+.tox
+.venv
+venv/
+env/
+
+# Tests
+tests/
+frontend/__tests__/
+frontend/src/__tests__/
+
+# Build artifacts
+dist/
+build/
+*.tar.gz
+*.zip
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Backups
+backups/
+*.bak
+*.backup
+*.old
+*.orig
+
+# Kubernetes
+k8s/
+*.yaml
+*.yml
+!docker-compose.yml
+
+# CI/CD
+.github/
+
+# Temporary files
+*.tmp
+*.temp
+.cache
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# SSL Certificates
+*.pem
+*.key
+*.crt
+*.csr
+
+# Scripts (not needed in container)
+*.sh
+!docker-entrypoint.sh
+!start.sh
+
+# Lock files (keep only what's needed)
+# Keep uv.lock for Python
+# Keep package-lock.json for Node

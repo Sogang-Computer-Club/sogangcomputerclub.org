@@ -1,3 +1,6 @@
+# 프론트엔드 CI 파이프라인
+# 목적: PR 병합 전 타입 체크, 테스트, 빌드 성공 여부 검증
+# 트리거: frontend/ 디렉토리 변경 시에만 실행
 name: Frontend CI
 
 on:
@@ -37,17 +40,65 @@ jobs:
         run: npm ci
 
       - name: Run type checking
-        run: npm run check
+        id: typecheck
+        run: |
+          npm run check 2>&1 | tee typecheck_output.txt
+          exit ${PIPESTATUS[0]}
+        continue-on-error: true
 
       - name: Run tests
-        run: npm run test
+        id: test
+        run: |
+          npm run test 2>&1 | tee test_output.txt
+          exit ${PIPESTATUS[0]}
+        continue-on-error: true
 
       - name: Build project
+        id: build
         run: npm run build
+        continue-on-error: true
+
+      - name: Comment on PR if typecheck failed
+        if: steps.typecheck.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('frontend/typecheck_output.txt', 'utf8').slice(0, 3000);
+            const body = '[실패] 프론트엔드 타입 체크 실패\n\n```\n' + output + '\n```\n\n' +
+              '**해결 방법:**\n```bash\ncd frontend && npm run check\n```\n\n' +
+              '에러 메시지를 확인하고 타입 오류를 수정하세요.';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Comment on PR if test failed
+        if: steps.test.outcome == 'failure' && github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const output = fs.readFileSync('frontend/test_output.txt', 'utf8').slice(0, 3000);
+            const body = '[실패] 프론트엔드 테스트 실패\n\n```\n' + output + '\n```\n\n' +
+              '**해결 방법:**\n```bash\ncd frontend && npm run test\n```\n\n' +
+              '실패한 테스트를 확인하고 수정하세요.';
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });
+
+      - name: Fail if any step failed
+        if: steps.typecheck.outcome == 'failure' || steps.test.outcome == 'failure' || steps.build.outcome == 'failure'
+        run: exit 1
 
       - name: Upload build artifacts
         uses: actions/upload-artifact@v4
-        if: success()
+        if: steps.build.outcome == 'success'
         with:
           name: frontend-build
           path: frontend/build/

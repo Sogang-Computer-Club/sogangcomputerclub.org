@@ -1,0 +1,310 @@
+name: Deploy to AWS (EC2 + RDS)
+
+on:
+  push:
+    branches: [master]
+    tags:
+      - "v*.*.*"
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'production'
+        type: choice
+        options:
+          - production
+          - staging
+
+env:
+  AWS_REGION: ap-northeast-2
+
+jobs:
+  security-scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "sarif"
+          output: "trivy-results.sarif"
+          severity: "CRITICAL,HIGH"
+
+      - name: Upload Trivy results to GitHub Security
+        uses: github/codeql-action/upload-sarif@v4
+        if: always()
+        with:
+          sarif_file: "trivy-results.sarif"
+
+      - name: Block deployment on critical vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: "fs"
+          scan-ref: "."
+          format: "table"
+          exit-code: "1"
+          severity: "CRITICAL"
+          ignore-unfixed: true
+
+  build-and-push:
+    needs: security-scan
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write  # Required for OIDC authentication with AWS
+
+    outputs:
+      backend-tag: ${{ steps.meta.outputs.backend-tag }}
+      frontend-tag: ${{ steps.meta.outputs.frontend-tag }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502  # v4.0.2
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+          # Alternative: Use access keys instead of OIDC
+          # aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          # aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@062b18b96a7aff071d4dc91bc00c4c1a7945b076  # v2.0.1
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@f95db51fddba0c2d1ec667646a06c2ce06100226  # v3.0.0
+
+      - name: Extract metadata and define tags
+        id: meta
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          ECR_BACKEND_REPO: ${{ secrets.ECR_BACKEND_REPO }}
+          ECR_FRONTEND_REPO: ${{ secrets.ECR_FRONTEND_REPO }}
+          COMMIT_SHA: ${{ github.sha }}
+        run: |
+          BACKEND_TAG="${ECR_REGISTRY}/${ECR_BACKEND_REPO}:${COMMIT_SHA}"
+          FRONTEND_TAG="${ECR_REGISTRY}/${ECR_FRONTEND_REPO}:${COMMIT_SHA}"
+          echo "backend-tag=$BACKEND_TAG" >> $GITHUB_OUTPUT
+          echo "frontend-tag=$FRONTEND_TAG" >> $GITHUB_OUTPUT
+          echo "ecr-registry=$ECR_REGISTRY" >> $GITHUB_OUTPUT
+          echo "Backend tag: $BACKEND_TAG"
+          echo "Frontend tag: $FRONTEND_TAG"
+
+      - name: Build and push Backend Docker image
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56  # v5.1.0
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.backend-tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_BACKEND_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false  # ECR doesn't support attestations yet
+
+      - name: Build and push Frontend Docker image
+        uses: docker/build-push-action@4a13e500e55cf31b7a5d59a38ab2040ab0f42f56  # v5.1.0
+        with:
+          context: ./frontend
+          file: ./frontend/Dockerfile
+          push: true
+          tags: |
+            ${{ steps.meta.outputs.frontend-tag }}
+            ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_FRONTEND_REPO }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          provenance: false
+
+      - name: Scan Backend image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.meta.outputs.backend-tag }}
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"
+
+      - name: Scan Frontend image with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ steps.meta.outputs.frontend-tag }}
+          format: "table"
+          exit-code: "0"
+          severity: "CRITICAL,HIGH"
+
+  deploy-to-ec2:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    environment:
+      name: production
+      url: https://sogangcomputerclub.org
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
+
+      - name: Check for required secrets
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USERNAME: ${{ secrets.EC2_USERNAME }}
+          EC2_SSH_KEY: ${{ secrets.EC2_SSH_KEY }}
+          AWS_ROLE_ARN: ${{ secrets.AWS_ROLE_ARN }}
+        run: |
+          missing_secrets=""
+          if [ -z "$EC2_HOST" ]; then missing_secrets+="EC2_HOST "; fi
+          if [ -z "$EC2_USERNAME" ]; then missing_secrets+="EC2_USERNAME "; fi
+          if [ -z "$EC2_SSH_KEY" ]; then missing_secrets+="EC2_SSH_KEY "; fi
+          if [ -z "$AWS_ROLE_ARN" ]; then missing_secrets+="AWS_ROLE_ARN "; fi
+
+          if [ -n "$missing_secrets" ]; then
+            echo "::error::The following secrets are missing: $missing_secrets"
+            exit 1
+          fi
+
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        env:
+          COMMIT_SHA: ${{ github.sha }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script_stop: true
+          envs: COMMIT_SHA
+          script: |
+            set -e
+            cd /opt/sgcc
+
+            # Source deployment environment
+            source .deploy-env
+
+            # Update IMAGE_TAG
+            export IMAGE_TAG="$COMMIT_SHA"
+
+            # Login to ECR
+            aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --password-stdin $ECR_REGISTRY
+
+            # Fetch latest secrets from AWS Secrets Manager
+            ./fetch-secrets.sh "$SECRET_ARN" "$AWS_REGION" .env
+
+            # Add ECR and image tag to .env
+            echo "ECR_REGISTRY=$ECR_REGISTRY" >> .env
+            echo "PROJECT_NAME=$PROJECT_NAME" >> .env
+            echo "IMAGE_TAG=$IMAGE_TAG" >> .env
+
+            # Pull latest images
+            docker compose -f docker-compose.aws.yml pull
+
+            # Deploy with zero-downtime rolling update
+            docker compose -f docker-compose.aws.yml up -d --remove-orphans
+
+            # Cleanup old images
+            docker image prune -f
+
+            # Wait for services to be healthy
+            echo "Waiting for services to become healthy..."
+            sleep 30
+
+            # Check service status
+            docker compose -f docker-compose.aws.yml ps
+
+      - name: Run smoke tests
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            # Test backend health endpoint
+            curl -f http://localhost:8000/health || exit 1
+
+            # Test frontend
+            curl -f http://localhost:3000 || exit 1
+
+            # Test HTTPS (if SSL is configured)
+            curl -fk https://localhost/health || echo "HTTPS not yet configured"
+
+            echo "Smoke tests passed!"
+
+      - name: Debug on failure
+        if: failure()
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            echo "=== DOCKER COMPOSE STATUS ==="
+            cd /opt/sgcc
+            docker compose -f docker-compose.aws.yml ps
+
+            echo "=== BACKEND LOGS ==="
+            docker compose -f docker-compose.aws.yml logs --tail 100 backend
+
+            echo "=== FRONTEND LOGS ==="
+            docker compose -f docker-compose.aws.yml logs --tail 50 frontend
+
+            echo "===================="
+
+      - name: Rollback on failure
+        if: failure()
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          script: |
+            echo "Deployment failed, rolling back to previous version..."
+            cd /opt/sgcc
+            source .deploy-env
+
+            # Use latest tag (previous deployment)
+            export IMAGE_TAG=latest
+
+            # Re-deploy with latest tag
+            docker compose -f docker-compose.aws.yml up -d --force-recreate
+
+            echo "Rollback completed"
+
+  notify:
+    needs: deploy-to-ec2
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+      - name: Deployment notification
+        env:
+          DEPLOY_RESULT: ${{ needs.deploy-to-ec2.result }}
+          COMMIT_SHA: ${{ github.sha }}
+          ACTOR: ${{ github.actor }}
+        run: |
+          if [ "$DEPLOY_RESULT" == "success" ]; then
+            echo "Production deployment successful!"
+            echo "Application is live at https://sogangcomputerclub.org"
+            echo "Commit: $COMMIT_SHA"
+            echo "Deployed by: $ACTOR"
+            echo "Security scans: Passed"
+            echo "Health checks: Passed"
+          else
+            echo "Production deployment failed!"
+            echo "Automatic rollback has been initiated"
+            echo "Failed commit: $COMMIT_SHA"
+            echo "Please check the logs for details"
+            echo "::error::Production deployment failed - rollback completed"
+          fi

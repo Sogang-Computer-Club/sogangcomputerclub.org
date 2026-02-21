@@ -1,3 +1,13 @@
+# 로컬 개발용 Docker Compose
+# 모든 서비스가 컨테이너로 실행됨 (AWS 서비스 없음)
+#
+# 기본 실행: docker-compose up
+#   - 핵심 서비스만 실행 (backend, postgres, frontend, nginx)
+#
+# Kafka 포함: docker-compose --profile kafka up
+# 모니터링 포함: docker-compose --profile monitoring up
+# 전체 실행: docker-compose --profile kafka --profile monitoring up
+
 services:
   backend:
     build: .
@@ -5,14 +15,12 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - REDIS_URL=${REDIS_URL}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS}
+      - EVENT_BACKEND=${EVENT_BACKEND:-null}  # 기본: null (이벤트 시스템 비활성화)
+      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9093}
     depends_on:
       - postgres
-      - redis
-      - kafka
     volumes:
-      - ./app:/code/app
+      - ./app:/code/app  # 핫 리로드: 코드 변경 시 자동 반영
     networks:
       - app-network
 
@@ -29,30 +37,28 @@ services:
     networks:
       - app-network
 
-  redis:
-    image: redis:7-alpine
-    ports:
-      - "6381:6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - app-network
-
+  # Zookeeper - Kafka 클러스터 관리 (Kafka 의존성)
+  # 사용: docker-compose --profile kafka up
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
+    profiles: [kafka]
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
     networks:
       - app-network
 
+  # Kafka - 로컬 개발용 이벤트 브로커
+  # 프로덕션에서는 SQS 사용 (EVENT_BACKEND=sqs)
+  # 사용: docker-compose --profile kafka up
   kafka:
     image: confluentinc/cp-kafka:7.4.0
+    profiles: [kafka]
     depends_on:
       - zookeeper
     ports:
-      - "9092:9092"
-      - "9093:9093"
+      - "9092:9092"   # 호스트에서 접근용 (EXTERNAL)
+      - "9093:9093"   # 컨테이너 간 통신용 (INTERNAL)
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
@@ -111,19 +117,12 @@ services:
     links:
       - nginx
 
-  redis-exporter:
-    image: oliver006/redis_exporter
-    ports:
-      - "9121:9121"
-    environment:
-      - REDIS_ADDR=redis:6379
-    networks:
-      - app-network
-    depends_on:
-      - redis
+  # ===== 모니터링 스택 (Prometheus + Grafana) =====
+  # 사용: docker-compose --profile monitoring up
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
+    profiles: [monitoring]
     ports:
       - "9187:9187"
     environment:
@@ -135,6 +134,7 @@ services:
 
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
+    profiles: [monitoring]
     ports:
       - "9113:9113"
     environment:
@@ -146,6 +146,7 @@ services:
 
   prometheus:
     image: prom/prometheus:latest
+    profiles: [monitoring]
     ports:
       - "9090:9090"
     volumes:
@@ -164,6 +165,7 @@ services:
 
   grafana:
     image: grafana/grafana:latest
+    profiles: [monitoring]
     ports:
       - "3001:3000"
     environment:
@@ -177,9 +179,9 @@ services:
       - app-network
     depends_on:
       - prometheus
+
 volumes:
   postgres_data:
-  redis_data:
   certbot_certs:
   prometheus_data:
   grafana_data:

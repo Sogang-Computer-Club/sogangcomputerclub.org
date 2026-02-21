@@ -1,30 +1,34 @@
 <script lang="ts">
+    import { getContext, onMount } from 'svelte';
+    import { UI_CONTEXT_KEY, type UIStore } from '$lib/stores';
+
     import NavigationBar from '$lib/components/NavigationBar.svelte';
     import MobileMenu from '$lib/components/MobileMenu.svelte'
     import SogangLogo from '$lib/assets/images/sogang-logo.png'
 
-    import { isMobileMenuOpen, toggleMobileMenu } from '$lib/Header.js';
+    const ui = getContext<UIStore>(UI_CONTEXT_KEY);
 
-    let innerWidth: number = 0;
+    let innerWidth = $state(0);
 
-    const updateWidth = () => {
-        innerWidth = window.innerWidth;
-    }
+    // Close mobile menu when screen becomes desktop size
+    $effect(() => {
+        if (innerWidth >= 896) {
+            ui.close();
+        }
+    });
 
-    $: if(innerWidth >= 896){
-        isMobileMenuOpen.set(false);
-    }
-    
-    import { onMount } from 'svelte';
     onMount(() => {
-        updateWidth();
-        window.addEventListener('resize', updateWidth);
+        innerWidth = window.innerWidth;
+
+        const handleResize = () => {
+            innerWidth = window.innerWidth;
+        };
+
+        window.addEventListener('resize', handleResize);
         return () => {
-            window.removeEventListener('resize', updateWidth);
+            window.removeEventListener('resize', handleResize);
         };
     });
-    
-
 </script>
 
 <header>
@@ -38,13 +42,13 @@
                 <span class="text-[8px] font-light text-white">Sogang computer club</span>
             </a>
         </div>
-        
+
         <NavigationBar/>
-        
+
         <!-- Mobile Menu Icon -->
-        {#if $isMobileMenuOpen}
+        {#if ui.isMobileMenuOpen}
             <div class="ml-auto desktop:hidden">
-                <button on:click={toggleMobileMenu} aria-label="Close Menu" class="rounded-md p-1 text-white focus:outline-none rotate-180">
+                <button onclick={() => ui.toggle()} aria-label="Close Menu" class="rounded-md p-1 text-white focus:outline-none rotate-180">
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-10">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
                     </svg>
@@ -52,8 +56,8 @@
             </div>
         {:else}
             <div class="ml-auto desktop:hidden">
-                <button on:click={toggleMobileMenu} aria-label="Open Menu" class="rounded-md p-1 text-white focus:outline-none">
-                    
+                <button onclick={() => ui.toggle()} aria-label="Open Menu" class="rounded-md p-1 text-white focus:outline-none">
+
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-10">
                     <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
@@ -64,12 +68,12 @@
     </nav>
 
     <!-- Cover display when open mobile menu -->
-    {#if $isMobileMenuOpen}
+    {#if ui.isMobileMenuOpen}
     <button
         class="fixed inset-0 z-40 mt-[70px] bg-black/50"
-        class:pointer-events-auto={$isMobileMenuOpen}
-        class:pointer-events-none={!$isMobileMenuOpen}
-        on:click={toggleMobileMenu}
+        class:pointer-events-auto={ui.isMobileMenuOpen}
+        class:pointer-events-none={!ui.isMobileMenuOpen}
+        onclick={() => ui.toggle()}
         aria-label="Close menu">
     </button>
     {/if}
@@ -77,8 +81,8 @@
     <!-- Open Mobile Menu -->
     <aside
         class="fixed right-0 top-0 z-50 mt-[70px] h-full w-screen max-w-101 transform transition-transform duration-300 ease-out xl:hidden"
-        class:translate-x-full={!$isMobileMenuOpen}
-        class:translate-x-0={$isMobileMenuOpen}>
+        class:translate-x-full={!ui.isMobileMenuOpen}
+        class:translate-x-0={ui.isMobileMenuOpen}>
         <MobileMenu/>
     </aside>
 </header>

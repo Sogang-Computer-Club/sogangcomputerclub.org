@@ -1,17 +1,16 @@
 <script lang="ts">
     import { onMount } from 'svelte';
     import { startOfDay } from 'date-fns';
-    import { 
-        calculateCalendarDays, 
-        calculateProcessedEvents, 
-        type Event, 
+    import {
+        calculateCalendarDays,
+        calculateProcessedEvents,
+        type Event,
         type ProcessedEvent,
         type CalendarDay
     } from '$lib';
 
-    const API_KEY = import.meta.env.VITE_GOOGLE_API_KEY;
-    const CALENDAR_ID = import.meta.env.VITE_CALENDAR_ID;
-    const url = `https://www.googleapis.com/calendar/v3/calendars/${CALENDAR_ID}/events?key=${API_KEY}&singleEvents=true&orderBy=startTime`;
+    // Use server-side API route to keep API key secure
+    const url = '/api/calendar';
     
     let width = $state(window.innerWidth);
     let isMobile = $derived(width < 640);
@@ -45,7 +44,7 @@
                 };
             });
 
-            console.log('Fetched events:', events);
+            // Events loaded successfully
         } catch (error) {
             console.error('Error fetching calendar data:', error);
         }

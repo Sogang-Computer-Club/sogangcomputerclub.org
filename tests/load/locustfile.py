@@ -38,7 +38,7 @@ class MemoAPIUser(HttpUser):
         memo_data = {
             "title": f"Load Test Memo {random.randint(1, 10000)}",
             "content": f"This is a load test memo created at {random.randint(1, 10000)}",
-            "priority": random.randint(1, 4)
+            "priority": random.randint(1, 4),
         }
 
         response = self.client.post("/memos/", json=memo_data)
