@@ -28,16 +28,6 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6380:6379
-        options: >-
-          --health-cmd="redis-cli ping"
-          --health-interval=10s
-          --health-timeout=5s
-          --health-retries=5
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,7 +46,7 @@ jobs:
         run: |
           uv sync
 
-      - name: Wait for services to be ready
+      - name: Wait for PostgreSQL
         run: |
           echo "Waiting for PostgreSQL..."
           for i in {1..30}; do
@@ -65,16 +55,6 @@ jobs:
               break
             fi
             echo "Waiting for PostgreSQL... ($i/30)"
-            sleep 1
-          done
-
-          echo "Waiting for Redis..."
-          for i in {1..30}; do
-            if redis-cli -h 127.0.0.1 -p 6380 ping > /dev/null 2>&1; then
-              echo "Redis is ready"
-              break
-            fi
-            echo "Waiting for Redis... ($i/30)"
             sleep 1
           done
 
@@ -93,10 +73,6 @@ jobs:
           POSTGRES_DB: memo_app
         run: |
           uv run pytest tests/integration/test_database.py -v
-
-      - name: Run Redis integration tests
-        run: |
-          uv run pytest tests/integration/test_redis.py -v
 
       - name: Upload test results
         uses: actions/upload-artifact@v4

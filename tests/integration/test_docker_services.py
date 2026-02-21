@@ -2,7 +2,6 @@ import pytest
 import subprocess
 import time
 import requests
-import redis
 from aiokafka.admin import AIOKafkaAdminClient
 import asyncio
 
@@ -25,7 +24,7 @@ def docker_services():
     returncode, stdout, stderr = run_docker_command("docker-compose ps --services --filter status=running")
 
     running_services = stdout.strip().split('\n') if stdout.strip() else []
-    required_services = {'backend', 'postgres', 'redis', 'kafka', 'zookeeper'}
+    required_services = {'backend', 'postgres', 'kafka', 'zookeeper'}
 
     if not required_services.issubset(set(running_services)):
         pytest.skip("Docker services are not running. Start them with 'docker-compose up -d'")
@@ -48,7 +47,7 @@ class TestDockerServices:
         assert returncode == 0, f"Failed to get docker services: {stderr}"
 
         running_services = stdout.strip().split('\n')
-        required_services = ['backend', 'postgres', 'redis', 'kafka', 'zookeeper']
+        required_services = ['backend', 'postgres', 'kafka', 'zookeeper']
 
         for service in required_services:
             assert service in running_services, f"Service {service} is not running"
@@ -63,13 +62,6 @@ class TestDockerServices:
     def test_postgres_container_healthy(self, docker_services):
         """Test that PostgreSQL container is healthy"""
         returncode, stdout, stderr = run_docker_command("docker-compose ps postgres")
-
-        assert returncode == 0
-        assert "Up" in stdout or "running" in stdout.lower()
-
-    def test_redis_container_healthy(self, docker_services):
-        """Test that Redis container is healthy"""
-        returncode, stdout, stderr = run_docker_command("docker-compose ps redis")
 
         assert returncode == 0
         assert "Up" in stdout or "running" in stdout.lower()

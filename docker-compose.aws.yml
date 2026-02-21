@@ -1,6 +1,6 @@
 # AWS 프로덕션 배포용 Docker Compose
 # 외부 서비스: RDS (PostgreSQL), SQS (이벤트)
-# 컨테이너 서비스: Backend, Frontend, Redis, Nginx
+# 컨테이너 서비스: Backend, Frontend, Nginx
 
 services:
   backend:
@@ -11,8 +11,6 @@ services:
     environment:
       # 데이터베이스 - AWS Secrets Manager에서 .env로 주입
       - DATABASE_URL=${DATABASE_URL}
-      # Redis - 로컬 컨테이너 (캐시용)
-      - REDIS_URL=redis://redis:6379
       # SQS - Kafka 대체 (비용 절감)
       - SQS_QUEUE_URL=${SQS_QUEUE_URL}
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
@@ -21,9 +19,6 @@ services:
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=false
       - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}
-    depends_on:
-      redis:
-        condition: service_healthy  # Redis 준비 완료 후 시작
     networks:
       - sgcc-network
     healthcheck:
@@ -65,22 +60,6 @@ services:
         awslogs-group: /aws/ec2/sgcc
         awslogs-stream: frontend
         awslogs-create-group: "true"
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    expose:
-      - "6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - sgcc-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    command: redis-server --appendonly yes
 
   nginx:
     image: nginx:alpine
@@ -144,7 +123,6 @@ services:
       - monitoring
 
 volumes:
-  redis_data:
   certbot_www:
   prometheus_data:
   grafana_data:

@@ -25,7 +25,6 @@ services:
       - "8000"
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
-      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
       - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9093}
       - SECRET_KEY=${SECRET_KEY}
       - DEBUG=false
@@ -127,35 +126,6 @@ services:
       - ./scripts/manage-certs.sh:/usr/local/bin/manage-certs.sh
     entrypoint: "/bin/sh -c 'trap exit TERM; while :; do /usr/local/bin/manage-certs.sh; sleep 12h & wait $${!}; done;'"
 
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    # No external port exposure in production
-    expose:
-      - "6379"
-    volumes:
-      - redis_data:/data
-    networks:
-      - backend_sgcc-network
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis-exporter:
-    image: oliver006/redis_exporter:latest
-    restart: unless-stopped
-    # Internal only - scraped by Prometheus
-    expose:
-      - "9121"
-    environment:
-      - REDIS_ADDR=redis://redis:6379
-    networks:
-      - backend_sgcc-network
-    depends_on:
-      - redis
-
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
     restart: unless-stopped
@@ -250,7 +220,6 @@ volumes:
   postgres_data:
   prometheus_data:
   grafana_data:
-  redis_data:
   certbot_www:
 
 networks:

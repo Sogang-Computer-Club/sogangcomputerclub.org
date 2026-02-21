@@ -290,7 +290,6 @@ GET /health
 {
   "status": "healthy",
   "database": "connected",
-  "redis": "connected",
   "timestamp": "2024-01-15T12:00:00Z"
 }
 ```

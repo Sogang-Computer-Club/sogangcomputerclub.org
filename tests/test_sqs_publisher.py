@@ -2,10 +2,24 @@
 Unit tests for SQSEventPublisher.
 
 Tests the SQS event publisher with mocked aioboto3 to avoid AWS dependencies.
+Note: SQS/Kafka publishers require optional dependencies (aioboto3, aiokafka).
 """
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 import json
+
+# Check if optional dependencies are available
+try:
+    import aioboto3
+    HAS_AIOBOTO3 = True
+except ImportError:
+    HAS_AIOBOTO3 = False
+
+try:
+    import aiokafka
+    HAS_AIOKAFKA = True
+except ImportError:
+    HAS_AIOKAFKA = False
 
 
 class TestSQSEventPublisher:
@@ -14,7 +28,7 @@ class TestSQSEventPublisher:
     @pytest.fixture
     def mock_settings(self):
         """Mock settings with SQS configuration."""
-        with patch('app.events.publisher.settings') as mock:
+        with patch('app.events.publisher_sqs.settings') as mock:
             mock.sqs_queue_url = "https://sqs.ap-northeast-2.amazonaws.com/123456789/test-queue"
             mock.aws_region = "ap-northeast-2"
             mock.event_backend = "sqs"
@@ -24,7 +38,7 @@ class TestSQSEventPublisher:
     @pytest.fixture
     def mock_aioboto3(self):
         """Mock aioboto3 session and client."""
-        with patch('app.events.publisher.SQSEventPublisher._create_session') as mock_create:
+        with patch('app.events.publisher_sqs.SQSEventPublisher._create_session') as mock_create:
             mock_session = MagicMock()
             mock_client = AsyncMock()
             mock_client_context = MagicMock()
@@ -39,9 +53,10 @@ class TestSQSEventPublisher:
             }
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not HAS_AIOBOTO3, reason="aioboto3 not installed")
     async def test_sqs_publisher_init(self, mock_settings):
         """Test SQSEventPublisher initialization."""
-        from app.events.publisher import SQSEventPublisher
+        from app.events.publisher_sqs import SQSEventPublisher
 
         publisher = SQSEventPublisher()
         assert publisher._queue_url == mock_settings.sqs_queue_url
@@ -49,22 +64,24 @@ class TestSQSEventPublisher:
         assert publisher._session is None
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not HAS_AIOBOTO3, reason="aioboto3 not installed")
     async def test_sqs_publisher_start_without_queue_url(self):
         """Test that publisher is disabled when queue URL is not set."""
-        with patch('app.events.publisher.settings') as mock_settings:
+        with patch('app.events.publisher_sqs.settings') as mock_settings:
             mock_settings.sqs_queue_url = None
             mock_settings.aws_region = "ap-northeast-2"
 
-            from app.events.publisher import SQSEventPublisher
+            from app.events.publisher_sqs import SQSEventPublisher
             publisher = SQSEventPublisher()
             await publisher.start()
 
             assert not publisher.is_connected
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not HAS_AIOBOTO3, reason="aioboto3 not installed")
     async def test_sqs_publisher_publish_when_not_connected(self, mock_settings):
         """Test that publish does nothing when not connected."""
-        from app.events.publisher import SQSEventPublisher
+        from app.events.publisher_sqs import SQSEventPublisher
 
         publisher = SQSEventPublisher()
         # Don't call start(), so publisher is not connected
@@ -72,9 +89,10 @@ class TestSQSEventPublisher:
         # Should not raise, just return silently
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not HAS_AIOBOTO3, reason="aioboto3 not installed")
     async def test_sqs_publisher_is_connected(self, mock_settings):
         """Test is_connected property."""
-        from app.events.publisher import SQSEventPublisher
+        from app.events.publisher_sqs import SQSEventPublisher
 
         publisher = SQSEventPublisher()
         assert not publisher.is_connected
@@ -84,23 +102,28 @@ class TestSQSEventPublisher:
         assert publisher.is_connected
 
     @pytest.mark.asyncio
-    async def test_create_event_publisher_sqs(self, mock_settings):
+    @pytest.mark.skipif(not HAS_AIOBOTO3, reason="aioboto3 not installed")
+    async def test_create_event_publisher_sqs(self):
         """Test factory function creates SQS publisher when configured."""
-        mock_settings.event_backend = "sqs"
+        with patch('app.events.publisher.settings') as mock_settings:
+            mock_settings.event_backend = "sqs"
 
-        from app.events.publisher import create_event_publisher, SQSEventPublisher
+            from app.events.publisher import create_event_publisher
+            from app.events.publisher_sqs import SQSEventPublisher
 
-        publisher = create_event_publisher()
-        assert isinstance(publisher, SQSEventPublisher)
+            publisher = create_event_publisher()
+            assert isinstance(publisher, SQSEventPublisher)
 
     @pytest.mark.asyncio
+    @pytest.mark.skipif(not HAS_AIOKAFKA, reason="aiokafka not installed")
     async def test_create_event_publisher_kafka(self):
         """Test factory function creates Kafka publisher when configured."""
         with patch('app.events.publisher.settings') as mock_settings:
             mock_settings.event_backend = "kafka"
             mock_settings.kafka_bootstrap_servers = "kafka:9092"
 
-            from app.events.publisher import create_event_publisher, KafkaEventPublisher
+            from app.events.publisher import create_event_publisher
+            from app.events.publisher_kafka import KafkaEventPublisher
 
             publisher = create_event_publisher()
             assert isinstance(publisher, KafkaEventPublisher)
