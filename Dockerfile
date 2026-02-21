@@ -20,16 +20,17 @@ RUN pip install --no-cache-dir uv
 # 코드 변경 시 의존성 재설치 불필요
 COPY --chown=appuser:appgroup ./pyproject.toml ./uv.lock ./README.md /code/
 
-# Python 의존성 설치
+# 디렉토리 소유권 설정 후 appuser로 전환
+RUN chown -R appuser:appgroup /code
+USER appuser
+
+# Python 의존성 설치 (appuser로 실행)
 RUN uv sync --frozen --no-cache
 
 # 애플리케이션 코드 복사
 COPY --chown=appuser:appgroup ./app /code/app
 COPY --chown=appuser:appgroup ./alembic /code/alembic
 COPY --chown=appuser:appgroup ./alembic.ini /code/alembic.ini
-
-# 비루트 사용자로 전환
-USER appuser
 
 EXPOSE 8000
 
