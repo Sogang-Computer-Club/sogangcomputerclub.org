@@ -100,3 +100,10 @@ variable "enable_vpc_endpoints" {
   type        = bool
   default     = false
 }
+
+# GitHub Actions OIDC
+variable "github_repository" {
+  description = "GitHub 레포지토리 (owner/repo 형식)"
+  type        = string
+  default     = "Sogang-Computer-Club/sogangcomputerclub.org"
+}

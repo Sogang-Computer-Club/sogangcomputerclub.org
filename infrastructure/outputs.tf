@@ -75,6 +75,11 @@ output "admin_group_name" {
   value       = aws_iam_group.admins.name
 }
 
+output "github_actions_role_arn" {
+  description = "GitHub Actions OIDC Role ARN (set as AWS_ROLE_ARN secret)"
+  value       = aws_iam_role.github_actions.arn
+}
+
 # DNS Configuration instructions
 output "dns_configuration" {
   description = "DNS records to configure"
