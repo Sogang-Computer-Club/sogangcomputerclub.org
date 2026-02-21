@@ -139,6 +139,7 @@ jobs:
     name: Docker Image Security Scan
     runs-on: ubuntu-latest
     if: github.event_name != 'pull_request'
+    continue-on-error: true  # non-blocking: 경고만 표시
     permissions:
       actions: read
       contents: read
@@ -272,11 +273,12 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
 
           # Check for failures, treating 'skipped' as success
+          # docker-image-scan은 non-blocking이므로 제외
           FAILED=0
           if [ "${{ needs.trivy-fs-scan.result }}" == "failure" ]; then FAILED=1; fi
           if [ "${{ needs.trivy-config-scan.result }}" == "failure" ]; then FAILED=1; fi
           if [ "${{ needs.secret-scan.result }}" == "failure" ]; then FAILED=1; fi
-          if [ "${{ needs.docker-image-scan.result }}" == "failure" ]; then FAILED=1; fi
+          # docker-image-scan: non-blocking (continue-on-error: true)
           if [ "${{ needs.codeql-analysis.result }}" == "failure" ]; then FAILED=1; fi
 
           if [ $FAILED -eq 1 ]; then

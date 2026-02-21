@@ -60,12 +60,14 @@ jobs:
 
       - name: Initialize database schema
         env:
+          DEBUG: "true"
           DATABASE_URL: postgresql+asyncpg://memo_user:phoenix@localhost:5432/memo_app
         run: |
           uv run python scripts/init_test_db.py
 
       - name: Run database integration tests
         env:
+          DEBUG: "true"
           POSTGRES_HOST: localhost
           POSTGRES_PORT: 5432
           POSTGRES_USER: memo_user

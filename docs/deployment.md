@@ -89,7 +89,7 @@ sequenceDiagram
     participant EC2 as EC2 Instance
 
     GH->>GH: 1. Security Scan (Trivy)
-    Note over GH: CRITICAL 취약점 시 중단
+    Note over GH: Docker 스캔은 non-blocking
 
     GH->>ECR: 2. Build & Push Images
     Note over GH: Backend + Frontend

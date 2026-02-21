@@ -201,11 +201,32 @@ flowchart LR
 - CloudWatch: 로그 전송
 ```
 
+### 관리자 IAM 그룹
+
+동아리 관리자(인수인계 대상)를 위한 IAM 그룹:
+
+```bash
+# 그룹에 포함된 정책
+- AmazonEC2FullAccess
+- AmazonRDSFullAccess
+- AmazonEC2ContainerRegistryFullAccess
+- AmazonSQSFullAccess
+- SecretsManagerReadWrite
+- CloudWatchFullAccess
+- AmazonVPCFullAccess
+- IAMReadOnlyAccess
+```
+
+**사용법:**
+1. AWS Console → IAM → Users → Create user
+2. 사용자 생성 후 `sgcc-admins` 그룹에 추가
+3. Access Key 발급 (CLI 사용 시)
+
 ### RDS PostgreSQL
 
 - **엔진**: PostgreSQL 15
 - **Multi-AZ**: 기본 비활성화 (동아리 규모에서 불필요, 비용 2배)
-- **백업**: 7일 자동 백업
+- **백업**: 1일 자동 백업 (Free Tier 제한)
 - **암호화**: AES-256 (저장 데이터)
 - **접근**: VPC 내부에서만 (Private Subnet)
 

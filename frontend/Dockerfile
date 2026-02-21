@@ -13,8 +13,9 @@ RUN npm run build
 FROM node:20-alpine AS production
 
 # 보안: root가 아닌 전용 사용자로 실행
-RUN addgroup --gid 1000 appgroup && \
-    adduser --uid 1000 -G appgroup -D appuser
+# Alpine의 기본 node 사용자(uid 1000) 활용
+RUN addgroup -S appgroup && \
+    adduser -S -G appgroup appuser
 
 WORKDIR /app
 

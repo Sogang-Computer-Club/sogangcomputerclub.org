@@ -43,6 +43,25 @@ docker-compose down -v
 docker-compose up -d
 ```
 
+#### Alpine Docker GID 충돌
+
+```
+addgroup: gid '1000' in use
+```
+
+**원인:** Alpine Linux에서 GID 1000이 이미 사용 중
+
+**해결:** 시스템 그룹/사용자 방식 사용
+```dockerfile
+# ✗ 잘못됨
+RUN addgroup --gid 1000 appgroup && \
+    adduser --uid 1000 -G appgroup -D appuser
+
+# ✓ 올바름
+RUN addgroup -S appgroup && \
+    adduser -S -G appgroup appuser
+```
+
 ---
 
 ### 백엔드 (Python/FastAPI)
@@ -296,6 +315,36 @@ EXPLAIN ANALYZE SELECT * FROM memos WHERE title LIKE '%keyword%';
 ```
 
 ### CI/CD
+
+#### GitHub Actions YAML 파싱 오류
+
+GitHub Actions의 `script:` 블록에서 JavaScript 템플릿 리터럴 사용 시 YAML 파서와 충돌할 수 있습니다.
+
+```yaml
+# ✗ 잘못됨: 백틱과 ${}가 YAML 파서와 충돌
+script: |
+  const body = `Hello ${name}
+  **Bold text**`;
+
+# ✓ 올바름: 문자열 연결 방식 사용
+script: |
+  const body = 'Hello ' + name + '\n' +
+    '**Bold text**';
+```
+
+#### CI 테스트 SECRET_KEY 오류
+
+```
+ValueError: SECRET_KEY must be set to a secure value in production
+```
+
+**원인:** CI에서 `DEBUG=false`일 때 프로덕션 검증이 실행됨
+
+**해결:** 워크플로우에 `DEBUG=true` 환경변수 추가
+```yaml
+env:
+  DEBUG: "true"
+```
 
 #### GitHub Actions 실패
 

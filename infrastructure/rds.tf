@@ -62,8 +62,8 @@ resource "aws_db_instance" "main" {
   # 고가용성 - Multi-AZ로 자동 장애 조치 (프로덕션 권장)
   multi_az = var.db_multi_az
 
-  # 백업 - 7일간 보관, 새벽 시간대 실행 (트래픽 적은 시간)
-  backup_retention_period = 7
+  # 백업 - 1일 보관 (Free Tier 제한), 새벽 시간대 실행
+  backup_retention_period = 1
   backup_window           = "03:00-04:00"        # UTC 기준
   maintenance_window      = "Mon:04:00-Mon:05:00"
 

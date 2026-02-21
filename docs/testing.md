@@ -434,6 +434,8 @@ locust -f locustfile.py --host=http://localhost:8000 \
 
 ### GitHub Actions 설정
 
+> **중요:** CI 환경에서는 `DEBUG=true`를 설정해야 프로덕션 검증(SECRET_KEY 등)을 우회합니다.
+
 ```yaml
 # .github/workflows/backend-ci.yml
 jobs:
@@ -457,6 +459,7 @@ jobs:
 
       - name: Run tests
         env:
+          DEBUG: "true"  # 프로덕션 검증 우회
           DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db
         run: |
           uv sync

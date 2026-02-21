@@ -70,6 +70,11 @@ output "cloudwatch_log_group" {
   value       = aws_cloudwatch_log_group.app.name
 }
 
+output "admin_group_name" {
+  description = "IAM Admin group name (add users to this group)"
+  value       = aws_iam_group.admins.name
+}
+
 # DNS Configuration instructions
 output "dns_configuration" {
   description = "DNS records to configure"
@@ -106,11 +111,16 @@ output "deployment_summary" {
     DNS Configuration:
       Point ${var.domain_name} A record to ${aws_eip.ec2.public_ip}
 
+    Admin Group:
+      - Name: ${aws_iam_group.admins.name}
+      - Add IAM users to this group for admin access
+
     Next Steps:
       1. Update DNS records
       2. SSH to EC2 and configure SSL (certbot)
       3. Update GitHub Secrets for CI/CD
       4. Push code to trigger deployment
+      5. Create IAM users and add to admin group
     ====================================
   EOT
 }
