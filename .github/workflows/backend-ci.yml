@@ -112,20 +112,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('lint_output.txt', 'utf8');
-            const body = `[실패] 백엔드 린트 검사 실패
-
-\`\`\`
-${output.slice(0, 3000)}
-\`\`\`
-
-**해결 방법:**
-\`\`\`bash
-uv run ruff check app/ --fix
-\`\`\`
-
-**팁:** \`pre-commit install\`을 실행하면 커밋 전에 자동으로 검사됩니다.`;
-
+            const output = fs.readFileSync('lint_output.txt', 'utf8').slice(0, 3000);
+            const body = '[실패] 백엔드 린트 검사 실패\n\n```\n' + output + '\n```\n\n' +
+              '**해결 방법:**\n```bash\nuv run ruff check app/ --fix\n```\n\n' +
+              '**팁:** `pre-commit install`을 실행하면 커밋 전에 자동으로 검사됩니다.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -139,20 +129,10 @@ uv run ruff check app/ --fix
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('format_output.txt', 'utf8');
-            const body = `[실패] 백엔드 포맷 검사 실패
-
-\`\`\`
-${output.slice(0, 3000)}
-\`\`\`
-
-**해결 방법:**
-\`\`\`bash
-uv run ruff format app/
-\`\`\`
-
-**팁:** \`pre-commit install\`을 실행하면 커밋 전에 자동으로 포맷팅됩니다.`;
-
+            const output = fs.readFileSync('format_output.txt', 'utf8').slice(0, 3000);
+            const body = '[실패] 백엔드 포맷 검사 실패\n\n```\n' + output + '\n```\n\n' +
+              '**해결 방법:**\n```bash\nuv run ruff format app/\n```\n\n' +
+              '**팁:** `pre-commit install`을 실행하면 커밋 전에 자동으로 포맷팅됩니다.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,

@@ -64,20 +64,10 @@ jobs:
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('frontend/typecheck_output.txt', 'utf8');
-            const body = `[실패] 프론트엔드 타입 체크 실패
-
-\`\`\`
-${output.slice(0, 3000)}
-\`\`\`
-
-**해결 방법:**
-\`\`\`bash
-cd frontend && npm run check
-\`\`\`
-
-에러 메시지를 확인하고 타입 오류를 수정하세요.`;
-
+            const output = fs.readFileSync('frontend/typecheck_output.txt', 'utf8').slice(0, 3000);
+            const body = '[실패] 프론트엔드 타입 체크 실패\n\n```\n' + output + '\n```\n\n' +
+              '**해결 방법:**\n```bash\ncd frontend && npm run check\n```\n\n' +
+              '에러 메시지를 확인하고 타입 오류를 수정하세요.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
@@ -91,20 +81,10 @@ cd frontend && npm run check
         with:
           script: |
             const fs = require('fs');
-            const output = fs.readFileSync('frontend/test_output.txt', 'utf8');
-            const body = `[실패] 프론트엔드 테스트 실패
-
-\`\`\`
-${output.slice(0, 3000)}
-\`\`\`
-
-**해결 방법:**
-\`\`\`bash
-cd frontend && npm run test
-\`\`\`
-
-실패한 테스트를 확인하고 수정하세요.`;
-
+            const output = fs.readFileSync('frontend/test_output.txt', 'utf8').slice(0, 3000);
+            const body = '[실패] 프론트엔드 테스트 실패\n\n```\n' + output + '\n```\n\n' +
+              '**해결 방법:**\n```bash\ncd frontend && npm run test\n```\n\n' +
+              '실패한 테스트를 확인하고 수정하세요.';
             github.rest.issues.createComment({
               issue_number: context.issue.number,
               owner: context.repo.owner,
