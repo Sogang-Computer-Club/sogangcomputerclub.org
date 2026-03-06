@@ -6,7 +6,6 @@ from .rate_limit import (
     limiter,
     rate_limit_exceeded_handler,
     RATE_LIMIT_DEFAULT,
-    RATE_LIMIT_AUTH,
     RATE_LIMIT_WRITE,
     RATE_LIMIT_SEARCH,
 )
@@ -20,7 +19,6 @@ __all__ = [
     "limiter",
     "rate_limit_exceeded_handler",
     "RATE_LIMIT_DEFAULT",
-    "RATE_LIMIT_AUTH",
     "RATE_LIMIT_WRITE",
     "RATE_LIMIT_SEARCH",
 ]

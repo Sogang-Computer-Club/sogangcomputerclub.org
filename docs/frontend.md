@@ -16,8 +16,6 @@ frontend/src/
 ├── routes/                    # 페이지 라우트
 │   ├── +layout.svelte        # 전역 레이아웃
 │   ├── +page.svelte          # 홈페이지
-│   ├── login/
-│   │   └── +page.svelte
 │   └── about-us/
 │       ├── welcome/
 │       │   └── +page.svelte
@@ -30,7 +28,6 @@ frontend/src/
 │   │   ├── NavigationBar.svelte
 │   │   └── *.test.ts        # 컴포넌트 테스트
 │   ├── stores/               # 상태 관리
-│   │   ├── auth.svelte.ts
 │   │   └── ui.svelte.ts
 │   ├── utils/                # 유틸리티
 │   │   └── calculate-calendar-days.ts
@@ -83,44 +80,19 @@ Svelte 5에서는 `$state`, `$derived`, `$effect`를 사용합니다:
 ### 클래스 기반 스토어
 
 ```typescript
-// lib/stores/auth.svelte.ts
-import type { User } from '$lib/api';
-import { getCurrentUser, refreshToken } from '$lib/api';
-
-export class AuthStore {
+// lib/stores/ui.svelte.ts
+export class UIStore {
     // 반응형 상태
-    token = $state<string | null>(null);
-    user = $state<User | null>(null);
-    isLoading = $state(false);
+    sidebarOpen = $state(false);
+    theme = $state<'light' | 'dark'>('light');
 
-    // 파생 상태
-    isAuthenticated = $derived(!!this.token && !this.isLoading);
-
-    constructor() {
-        // 브라우저에서만 localStorage 접근
-        if (typeof window !== 'undefined') {
-            this.token = localStorage.getItem('access_token');
-        }
-    }
-
-    setToken(token: string) {
-        this.token = token;
-        localStorage.setItem('access_token', token);
-    }
-
-    logout() {
-        this.token = null;
-        this.user = null;
-        localStorage.removeItem('access_token');
-    }
-
-    getAuthHeaders(): Record<string, string> {
-        return this.token ? { 'Authorization': `Bearer ${this.token}` } : {};
+    toggleSidebar() {
+        this.sidebarOpen = !this.sidebarOpen;
     }
 }
 
 // Context 키
-export const AUTH_CONTEXT_KEY = Symbol('auth');
+export const UI_CONTEXT_KEY = Symbol('ui');
 ```
 
 ### Context API 사용
@@ -129,14 +101,11 @@ export const AUTH_CONTEXT_KEY = Symbol('auth');
 <!-- +layout.svelte -->
 <script lang="ts">
     import { setContext } from 'svelte';
-    import { AuthStore, AUTH_CONTEXT_KEY } from '$lib/stores/auth.svelte';
     import { UIStore, UI_CONTEXT_KEY } from '$lib/stores/ui.svelte';
 
     // 스토어 인스턴스 생성 및 Context 제공
-    const authStore = new AuthStore();
     const uiStore = new UIStore();
 
-    setContext(AUTH_CONTEXT_KEY, authStore);
     setContext(UI_CONTEXT_KEY, uiStore);
 </script>
 
@@ -147,14 +116,10 @@ export const AUTH_CONTEXT_KEY = Symbol('auth');
 <!-- 자식 컴포넌트에서 사용 -->
 <script lang="ts">
     import { getContext } from 'svelte';
-    import { AUTH_CONTEXT_KEY, type AuthStore } from '$lib/stores/auth.svelte';
+    import { UI_CONTEXT_KEY, type UIStore } from '$lib/stores/ui.svelte';
 
-    const authStore = getContext<AuthStore>(AUTH_CONTEXT_KEY);
+    const uiStore = getContext<UIStore>(UI_CONTEXT_KEY);
 </script>
-
-{#if authStore.isAuthenticated}
-    <p>로그인됨: {authStore.user?.email}</p>
-{/if}
 ```
 
 ## 컴포넌트 작성
@@ -250,11 +215,7 @@ export async function createMemo(memo: MemoCreate, token: string): Promise<Memo>
 <!-- routes/memos/+page.svelte -->
 <script lang="ts">
     import { onMount } from 'svelte';
-    import { getContext } from 'svelte';
     import { getMemos, createMemo, type Memo } from '$lib/api';
-    import { AUTH_CONTEXT_KEY, type AuthStore } from '$lib/stores/auth.svelte';
-
-    const authStore = getContext<AuthStore>(AUTH_CONTEXT_KEY);
 
     let memos = $state<Memo[]>([]);
     let loading = $state(true);
@@ -271,9 +232,7 @@ export async function createMemo(memo: MemoCreate, token: string): Promise<Memo>
     });
 
     async function handleCreate(title: string, content: string) {
-        if (!authStore.token) return;
-
-        const newMemo = await createMemo({ title, content }, authStore.token);
+        const newMemo = await createMemo({ title, content });
         memos = [newMemo, ...memos];
     }
 </script>
@@ -365,18 +324,17 @@ describe('Button', () => {
 
 ```typescript
 import { render } from '@testing-library/svelte';
-import { AUTH_CONTEXT_KEY, AuthStore } from '$lib/stores/auth.svelte';
-import AuthStatus from './AuthStatus.svelte';
+import { UI_CONTEXT_KEY, UIStore } from '$lib/stores/ui.svelte';
+import SomeComponent from './SomeComponent.svelte';
 
 it('Context를 사용하는 컴포넌트', () => {
-    const authStore = new AuthStore();
-    authStore.token = 'test-token';
+    const uiStore = new UIStore();
 
-    const { getByText } = render(AuthStatus, {
-        context: new Map([[AUTH_CONTEXT_KEY, authStore]])
+    const { getByText } = render(SomeComponent, {
+        context: new Map([[UI_CONTEXT_KEY, uiStore]])
     });
 
-    expect(getByText('로그인됨')).toBeInTheDocument();
+    expect(getByText('콘텐츠')).toBeInTheDocument();
 });
 ```
 

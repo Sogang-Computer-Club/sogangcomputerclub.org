@@ -9,7 +9,6 @@ sogangcomputerclub.org/
 ├── tests/                          # 백엔드 테스트
 │   ├── conftest.py                # pytest 설정, fixtures
 │   ├── test_memos.py              # 메모 단위 테스트
-│   ├── test_auth.py               # 인증 단위 테스트
 │   └── test_integration.py        # 통합 테스트
 ├── frontend/src/lib/
 │   └── components/
@@ -223,42 +222,6 @@ describe('Button', () => {
 });
 ```
 
-### Context를 사용하는 컴포넌트 테스트
-
-```typescript
-// lib/components/AuthStatus.test.ts
-import { describe, it, expect } from 'vitest';
-import { render } from '@testing-library/svelte';
-import AuthStatus from './AuthStatus.svelte';
-import { AUTH_CONTEXT_KEY, AuthStore } from '$lib/stores/auth.svelte';
-
-describe('AuthStatus', () => {
-    it('로그인 상태를 표시한다', () => {
-        // Context 제공
-        const authStore = new AuthStore();
-        authStore.token = 'test-token';
-        authStore.user = { email: 'user@test.com', name: 'Test User' };
-
-        const { getByText } = render(AuthStatus, {
-            context: new Map([[AUTH_CONTEXT_KEY, authStore]])
-        });
-
-        expect(getByText('로그인됨')).toBeInTheDocument();
-        expect(getByText('Test User')).toBeInTheDocument();
-    });
-
-    it('비로그인 상태를 표시한다', () => {
-        const authStore = new AuthStore();
-
-        const { getByText } = render(AuthStatus, {
-            context: new Map([[AUTH_CONTEXT_KEY, authStore]])
-        });
-
-        expect(getByText('로그인')).toBeInTheDocument();
-    });
-});
-```
-
 ### 비동기 테스트
 
 ```typescript
@@ -314,48 +277,28 @@ from app.main import app
 async def test_full_memo_workflow():
     """메모 CRUD 전체 흐름 테스트"""
     async with AsyncClient(app=app, base_url="http://test") as client:
-        # 1. 회원가입
-        register_response = await client.post("/v1/auth/register", json={
-            "email": "test@sogang.ac.kr",
-            "password": "password123",
-            "name": "Test User",
-            "student_id": "20231234"
-        })
-        assert register_response.status_code == 201
-
-        # 2. 로그인
-        login_response = await client.post("/v1/auth/login", json={
-            "email": "test@sogang.ac.kr",
-            "password": "password123"
-        })
-        assert login_response.status_code == 200
-        token = login_response.json()["access_token"]
-        headers = {"Authorization": f"Bearer {token}"}
-
-        # 3. 메모 생성
+        # 1. 메모 생성
         create_response = await client.post("/v1/memos", json={
             "title": "Test Memo",
-            "content": "Test Content"
-        }, headers=headers)
+            "content": "Test Content",
+            "author": "test@sogang.ac.kr"
+        })
         assert create_response.status_code == 201
         memo_id = create_response.json()["id"]
 
-        # 4. 메모 조회
+        # 2. 메모 조회
         get_response = await client.get(f"/v1/memos/{memo_id}")
         assert get_response.status_code == 200
         assert get_response.json()["title"] == "Test Memo"
 
-        # 5. 메모 수정
+        # 3. 메모 수정
         update_response = await client.put(f"/v1/memos/{memo_id}", json={
             "title": "Updated Memo"
-        }, headers=headers)
+        })
         assert update_response.status_code == 200
 
-        # 6. 메모 삭제
-        delete_response = await client.delete(
-            f"/v1/memos/{memo_id}",
-            headers=headers
-        )
+        # 4. 메모 삭제
+        delete_response = await client.delete(f"/v1/memos/{memo_id}")
         assert delete_response.status_code == 204
 ```
 
@@ -377,19 +320,6 @@ from locust import HttpUser, task, between
 class WebsiteUser(HttpUser):
     wait_time = between(1, 3)  # 요청 간 대기 시간
 
-    def on_start(self):
-        """테스트 시작 시 로그인"""
-        response = self.client.post("/v1/auth/login", json={
-            "email": "test@sogang.ac.kr",
-            "password": "password123"
-        })
-        if response.status_code == 200:
-            self.token = response.json()["access_token"]
-            self.headers = {"Authorization": f"Bearer {self.token}"}
-        else:
-            self.token = None
-            self.headers = {}
-
     @task(3)
     def view_memos(self):
         """메모 목록 조회 (빈도: 3)"""
@@ -398,11 +328,11 @@ class WebsiteUser(HttpUser):
     @task(1)
     def create_memo(self):
         """메모 생성 (빈도: 1)"""
-        if self.token:
-            self.client.post("/v1/memos", json={
-                "title": "Load Test Memo",
-                "content": "Created during load test"
-            }, headers=self.headers)
+        self.client.post("/v1/memos", json={
+            "title": "Load Test Memo",
+            "content": "Created during load test",
+            "author": "loadtest@sogang.ac.kr"
+        })
 
     @task(2)
     def search_memos(self):
@@ -434,7 +364,7 @@ locust -f locustfile.py --host=http://localhost:8000 \
 
 ### GitHub Actions 설정
 
-> **중요:** CI 환경에서는 `DEBUG=true`를 설정해야 프로덕션 검증(SECRET_KEY 등)을 우회합니다.
+> **중요:** CI 환경에서는 `DEBUG=true`를 설정해야 프로덕션 검증(DATABASE_URL 등)을 우회합니다.
 
 ```yaml
 # .github/workflows/backend-ci.yml

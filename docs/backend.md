@@ -19,7 +19,6 @@ app/
 ├── core/                   # 공유 인프라
 │   ├── config.py          # 환경 설정
 │   ├── database.py        # DB 연결
-│   ├── security.py        # JWT, 비밀번호 해싱
 │   ├── repository.py      # 추상 리포지토리
 │   └── dependencies.py    # 공통 의존성
 ├── common/                 # 공통 유틸
@@ -36,8 +35,6 @@ app/
 │   ├── service.py
 │   ├── router.py
 │   └── dependencies.py
-├── users/                  # 사용자 도메인
-│   └── ...
 └── health/                 # 헬스체크
     └── router.py
 ```
@@ -229,7 +226,6 @@ from fastapi import APIRouter, HTTPException, Depends, status, Request
 from .schemas import PostCreate, PostUpdate, PostInDB
 from .service import PostService, PostNotFoundError
 from .dependencies import get_post_service
-from ..users.dependencies import require_auth
 from ..common.rate_limit import limiter, RATE_LIMIT_WRITE
 
 router = APIRouter(prefix="/posts", tags=["Posts"])
@@ -258,9 +254,8 @@ async def create_post(
     request: Request,
     post: PostCreate,
     service: PostService = Depends(get_post_service),
-    current_user: dict = Depends(require_auth)
 ):
-    return await service.create_post(post, current_user["sub"])
+    return await service.create_post(post, post.author)
 ```
 
 ### 7. 라우터 등록
@@ -277,36 +272,6 @@ app.include_router(posts_router, prefix="/v1")
 ```bash
 uv run alembic revision --autogenerate -m "Add posts table"
 uv run alembic upgrade head
-```
-
-## 인증/인가
-
-### 인증 필수 엔드포인트
-
-```python
-from ..users.dependencies import require_auth
-
-@router.post("/")
-async def create_resource(
-    current_user: dict = Depends(require_auth)  # 토큰 필수
-):
-    user_email = current_user["sub"]
-    # ...
-```
-
-### 인증 선택 엔드포인트
-
-```python
-from ..users.dependencies import get_current_user
-
-@router.get("/")
-async def get_resources(
-    current_user: dict | None = Depends(get_current_user)  # 토큰 선택
-):
-    if current_user:
-        # 로그인 사용자 추가 기능
-        pass
-    # ...
 ```
 
 ## 에러 처리

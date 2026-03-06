@@ -164,7 +164,7 @@ terraform destroy
 ```bash
 aws secretsmanager update-secret \
   --secret-id sgcc/app-secrets \
-  --secret-string '{"SECRET_KEY":"your_new_secret",...}'
+  --secret-string '{"POSTGRES_PASSWORD":"your_new_password",...}'
 ```
 
 ## 문제 해결

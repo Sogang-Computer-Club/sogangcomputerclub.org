@@ -6,22 +6,22 @@
 
 | Prefix | 용도 | 예시 |
 |--------|------|------|
-| `feature/` | 새 기능 | `feature/login-form` |
+| `feature/` | 새 기능 | `feature/memo-tags` |
 | `fix/` | 버그 수정 | `fix/api-timeout` |
 | `docs/` | 문서 변경 | `docs/readme-update` |
-| `refactor/` | 리팩토링 | `refactor/user-service` |
-| `test/` | 테스트 | `test/auth-unit-tests` |
+| `refactor/` | 리팩토링 | `refactor/memo-service` |
+| `test/` | 테스트 | `test/memo-unit-tests` |
 | `chore/` | 유지보수 | `chore/update-deps` |
 
 ## 커밋 메시지
 
 | Type | 설명 | 예시 |
 |------|------|------|
-| `feat:` | 새 기능 | `feat: 로그인 폼 추가` |
+| `feat:` | 새 기능 | `feat: 메모 태그 기능 추가` |
 | `fix:` | 버그 수정 | `fix: API 타임아웃 해결` |
 | `docs:` | 문서 변경 | `docs: README 업데이트` |
-| `refactor:` | 리팩토링 | `refactor: 유저 서비스 분리` |
-| `test:` | 테스트 | `test: 인증 테스트 추가` |
+| `refactor:` | 리팩토링 | `refactor: 메모 서비스 분리` |
+| `test:` | 테스트 | `test: 메모 테스트 추가` |
 | `chore:` | 기타 | `chore: 의존성 업데이트` |
 
 ## 자주 쓰는 명령어

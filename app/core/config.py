@@ -35,14 +35,6 @@ class Settings(BaseSettings):
     debug: bool = False
     log_level: str = "INFO"
 
-    # 보안 - JWT 토큰 서명 키
-    # 프로덕션에서는 반드시 강력한 랜덤 키로 설정해야 함
-    secret_key: str = Field(
-        default="CHANGE_THIS_IN_PRODUCTION_USE_STRONG_SECRET_KEY",
-        description="Secret key for JWT signing. MUST be set via environment variable.",
-    )
-    access_token_expire_minutes: int = 30  # 토큰 만료 시간 (분)
-
     def validate_production_settings(self) -> None:
         """
         프로덕션 필수 설정 검증.
@@ -51,11 +43,6 @@ class Settings(BaseSettings):
         보안 사고 방지 (기본 비밀번호로 프로덕션 운영 방지).
         """
         if not self.debug:
-            if self.secret_key == "CHANGE_THIS_IN_PRODUCTION_USE_STRONG_SECRET_KEY":
-                raise ValueError(
-                    "SECRET_KEY must be set to a secure value in production. "
-                    'Generate one with: python -c "import secrets; print(secrets.token_urlsafe(64))"'
-                )
             if "changeme" in self.database_url.lower():
                 raise ValueError(
                     "DATABASE_URL contains 'changeme'. Set a secure password in production."

@@ -20,12 +20,6 @@ class MemoNotFoundError(Exception):
     pass
 
 
-class MemoForbiddenError(Exception):
-    """Raised when user is not authorized to modify a memo."""
-
-    pass
-
-
 class MemoService:
     """Service layer for memo operations."""
 
@@ -37,14 +31,7 @@ class MemoService:
         self.repository = repository
         self.event_publisher = event_publisher
 
-    def _check_ownership(self, memo: dict, current_user: dict) -> bool:
-        """Check if current user owns the memo or is admin."""
-        if current_user.get("is_admin", False):
-            return True
-        user_email = current_user.get("sub", "")
-        return memo.get("author") == user_email
-
-    async def create_memo(self, memo: MemoCreate, user_email: str) -> dict:
+    async def create_memo(self, memo: MemoCreate, author: str) -> dict:
         """Create a new memo."""
         entity = {
             "title": memo.title,
@@ -54,7 +41,7 @@ class MemoService:
             "category": memo.category,
             "is_archived": memo.is_archived,
             "is_favorite": memo.is_favorite,
-            "author": user_email,
+            "author": author,
         }
 
         created_memo = await self.repository.create(entity)
@@ -85,16 +72,11 @@ class MemoService:
         """Search memos by keyword."""
         return await self.repository.search(query, skip, limit)
 
-    async def update_memo(
-        self, memo_id: int, memo_update: MemoUpdate, current_user: dict
-    ) -> dict:
+    async def update_memo(self, memo_id: int, memo_update: MemoUpdate) -> dict:
         """Update a memo."""
         existing_memo = await self.repository.get_by_id(memo_id)
         if existing_memo is None:
             raise MemoNotFoundError(f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
-
-        if not self._check_ownership(existing_memo, current_user):
-            raise MemoForbiddenError("Not authorized to modify this memo")
 
         update_data = memo_update.model_dump(exclude_unset=True)
         if not update_data:
@@ -109,14 +91,11 @@ class MemoService:
 
         return updated_memo  # type: ignore
 
-    async def delete_memo(self, memo_id: int, current_user: dict) -> None:
+    async def delete_memo(self, memo_id: int) -> None:
         """Delete a memo."""
         existing_memo = await self.repository.get_by_id(memo_id)
         if existing_memo is None:
             raise MemoNotFoundError(f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
-
-        if not self._check_ownership(existing_memo, current_user):
-            raise MemoForbiddenError("Not authorized to delete this memo")
 
         await self.repository.delete(memo_id)
 

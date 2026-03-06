@@ -11,11 +11,6 @@ resource "aws_secretsmanager_secret" "app_secrets" {
 }
 
 # 보안 비밀 자동 생성 - 수동 설정 대신 Terraform이 강력한 랜덤 값 생성
-resource "random_password" "secret_key" {
-  length  = 64
-  special = true
-}
-
 resource "random_password" "grafana_password" {
   length  = 24
   special = true
@@ -33,8 +28,7 @@ resource "aws_secretsmanager_secret_version" "app_secrets" {
     POSTGRES_PORT     = "5432"
     DATABASE_URL      = "postgresql+asyncpg://${var.db_username}:${var.db_password}@${aws_db_instance.main.address}:5432/${var.db_name}"
 
-    # 앱 보안 설정 (자동 생성된 강력한 키)
-    SECRET_KEY        = random_password.secret_key.result
+    # CORS 설정
     CORS_ORIGINS      = "https://${var.domain_name},https://www.${var.domain_name}"
 
     # AWS 리소스 정보

@@ -43,7 +43,6 @@ flowchart TB
 app/
 ├── core/           # 공유 인프라
 ├── memos/          # 메모 도메인
-├── users/          # 사용자 도메인
 ├── health/         # 헬스체크
 └── events/         # 이벤트 발행
 ```
@@ -71,7 +70,7 @@ flowchart LR
 | 레이어 | 책임 | 예시 |
 |--------|------|------|
 | Router | HTTP 요청/응답 처리 | `@router.post("/memos/")` |
-| Service | 비즈니스 로직 | 권한 검사, 이벤트 발행 |
+| Service | 비즈니스 로직 | 검증, 이벤트 발행 |
 | Repository | 데이터 접근 | CRUD 쿼리 실행 |
 
 ### 3. 의존성 주입 (DI)
@@ -91,9 +90,8 @@ async def get_memo_service(
 async def create_memo(
     memo: MemoCreate,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth)
 ):
-    return await service.create_memo(memo, current_user["sub"])
+    return await service.create_memo(memo, memo.author)
 ```
 
 ### 4. 리포지토리 패턴
@@ -144,27 +142,6 @@ flowchart TB
     Store --> Context
 ```
 
-### 상태 관리
-
-Svelte 5의 Runes를 사용한 클래스 기반 스토어:
-
-```typescript
-// lib/stores/auth.svelte.ts
-export class AuthStore {
-    token = $state<string | null>(null);
-    user = $state<User | null>(null);
-    isAuthenticated = $derived(!!this.token);
-
-    setToken(token: string) {
-        this.token = token;
-        localStorage.setItem('access_token', token);
-    }
-}
-
-// Context API로 주입
-export const AUTH_CONTEXT_KEY = Symbol('auth');
-```
-
 ## 이벤트 기반 아키텍처 (선택적)
 
 > **Note**: 동아리 규모에서 이벤트 시스템은 불필요하여 기본 비활성화됨 (`EVENT_BACKEND=null`).
@@ -193,38 +170,10 @@ class AbstractEventPublisher(ABC):
 # EVENT_BACKEND=sqs   → SQSEventPublisher (boto3, aioboto3 설치 필요)
 ```
 
-## 보안 아키텍처
-
-### 인증 흐름
-
-```mermaid
-sequenceDiagram
-    participant Client
-    participant Frontend
-    participant Backend
-    participant DB
-
-    Client->>Frontend: 로그인 요청
-    Frontend->>Backend: POST /auth/login
-    Backend->>DB: 사용자 조회
-    Backend->>Backend: 비밀번호 검증 (PBKDF2)
-    Backend->>Frontend: JWT 토큰 반환
-    Frontend->>Frontend: localStorage 저장
-    Frontend->>Client: 로그인 완료
-
-    Note over Client,Backend: 이후 요청
-    Client->>Frontend: API 요청
-    Frontend->>Backend: Authorization: Bearer {token}
-    Backend->>Backend: JWT 검증
-    Backend->>Frontend: 응답
-```
-
-### 보안 설정
+## 보안 설정
 
 | 항목 | 설정 |
 |------|------|
-| 비밀번호 해싱 | PBKDF2-SHA256 (60만 회 반복) |
-| 토큰 | JWT (HS256, 30분 만료) |
 | CORS | 명시적 origin 목록 |
 | Rate Limiting | 엔드포인트별 제한 |
 | CSP | Content-Security-Policy 헤더 |

@@ -4,6 +4,5 @@ Re-exports tables from domain modules for backward compatibility and Alembic.
 """
 
 from ..memos.models import memos
-from ..users.models import users
 
-__all__ = ["memos", "users"]
+__all__ = ["memos"]
