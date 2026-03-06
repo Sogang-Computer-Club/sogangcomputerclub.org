@@ -51,12 +51,16 @@ jobs:
       # 통합/부하 테스트 제외: CI에서는 빠른 피드백을 위해 단위 테스트만 실행
       # 통합 테스트는 integration-tests.yml에서 별도 실행
       - name: Run unit tests
+        env:
+          DEBUG: "true"
         run: |
           uv run pytest tests/ -v --ignore=tests/integration --ignore=tests/load
 
       # continue-on-error: 커버리지 리포트 실패가 전체 CI를 막지 않도록
       # (코드 커버리지는 참고용이지 필수 게이트가 아님)
       - name: Generate coverage report
+        env:
+          DEBUG: "true"
         run: |
           uv run pytest tests/ --cov=app --cov-report=xml --cov-report=html --ignore=tests/integration --ignore=tests/load
         continue-on-error: true

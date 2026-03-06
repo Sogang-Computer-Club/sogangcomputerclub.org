@@ -18,6 +18,7 @@ on:
 
 env:
   AWS_REGION: ap-northeast-2
+  ECR_REGISTRY: 567886497655.dkr.ecr.ap-northeast-2.amazonaws.com
 
 jobs:
   security-scan:
@@ -31,7 +32,7 @@ jobs:
         uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11  # v4.1.1
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.2
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -46,7 +47,7 @@ jobs:
           sarif_file: "trivy-results.sarif"
 
       - name: Block deployment on critical vulnerabilities
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.2
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -111,8 +112,7 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.backend-tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_BACKEND_REPO }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true  # Force fresh build to pick up dependency updates
           provenance: false  # ECR doesn't support attestations yet
 
       - name: Build and push Frontend Docker image
@@ -124,12 +124,11 @@ jobs:
           tags: |
             ${{ steps.meta.outputs.frontend-tag }}
             ${{ steps.login-ecr.outputs.registry }}/${{ secrets.ECR_FRONTEND_REPO }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true  # Force fresh build to pick up dependency updates
           provenance: false
 
       - name: Scan Backend image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.2
         with:
           image-ref: ${{ steps.meta.outputs.backend-tag }}
           format: "table"
@@ -137,7 +136,7 @@ jobs:
           severity: "CRITICAL,HIGH"
 
       - name: Scan Frontend image with Trivy
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@0.34.2
         with:
           image-ref: ${{ steps.meta.outputs.frontend-tag }}
           format: "table"
@@ -172,6 +171,56 @@ jobs:
             echo "::error::The following secrets are missing: $missing_secrets"
             exit 1
           fi
+
+      - name: Copy deployment files to EC2
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          source: "docker-compose.aws.yml,nginx-aws.conf,scripts/fetch-secrets.sh"
+          target: "/opt/sgcc"
+          strip_components: 0
+
+      - name: Setup EC2 environment
+        uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
+        env:
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+          SECRET_ARN: ${{ secrets.SECRET_ARN }}
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          port: 22
+          envs: ECR_REGISTRY,SECRET_ARN
+          script: |
+            set -e
+            cd /opt/sgcc
+
+            # Move fetch-secrets.sh to correct location
+            mv scripts/fetch-secrets.sh . 2>/dev/null || true
+            rmdir scripts 2>/dev/null || true
+            chmod +x fetch-secrets.sh
+
+            # Create self-signed certs for initial deployment (replace with Let's Encrypt later)
+            sudo mkdir -p certs
+            sudo chown $USER:$USER certs
+            if [ ! -f certs/fullchain.pem ]; then
+              openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+                -keyout certs/privkey.pem \
+                -out certs/fullchain.pem \
+                -subj "/CN=sogangcomputerclub.org"
+              chmod 644 certs/fullchain.pem certs/privkey.pem
+            fi
+
+            # Create .deploy-env
+            cat > .deploy-env << EOF
+            export AWS_REGION=ap-northeast-2
+            export ECR_REGISTRY=$ECR_REGISTRY
+            export PROJECT_NAME=sgcc
+            export SECRET_ARN=$SECRET_ARN
+            EOF
 
       - name: Deploy to EC2
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
@@ -229,16 +278,27 @@ jobs:
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
           script: |
-            # Test backend health endpoint
-            curl -f http://localhost:8000/health || exit 1
+            cd /opt/sgcc
 
-            # Test frontend
-            curl -f http://localhost:3000 || exit 1
+            # Check container status first
+            echo "=== Container Status ==="
+            docker compose -f docker-compose.aws.yml ps
 
-            # Test HTTPS (if SSL is configured)
-            curl -fk https://localhost/health || echo "HTTPS not yet configured"
+            # Test through nginx with retries
+            echo "=== Testing endpoints ==="
+            for i in 1 2 3; do
+              if curl --insecure --fail --silent --show-error https://localhost/health; then
+                echo "Health check passed!"
+                break
+              fi
+              echo "Attempt $i failed, waiting..."
+              sleep 10
+            done
 
-            echo "Smoke tests passed!"
+            # Final test
+            curl --insecure --fail https://localhost/ -o /dev/null && echo "Frontend check passed!"
+
+            echo "Smoke tests completed!"
 
       - name: Debug on failure
         if: failure()

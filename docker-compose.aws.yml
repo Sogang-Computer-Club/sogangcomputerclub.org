@@ -16,7 +16,6 @@ services:
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
       - EVENT_BACKEND=sqs
       # 앱 설정
-      - SECRET_KEY=${SECRET_KEY}
       - DEBUG=false
       - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}
     networks:
@@ -44,6 +43,9 @@ services:
       - NODE_ENV=production
       - HOST=0.0.0.0
       - PORT=3000
+      - ORIGIN=https://sogangcomputerclub.org
+      - PROTOCOL_HEADER=x-forwarded-proto
+      - HOST_HEADER=x-forwarded-host
     depends_on:
       - backend
     networks:

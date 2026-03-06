@@ -6,7 +6,6 @@ from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, Asyn
 from app.main import app
 from app.core.dependencies import get_db
 from app.core.database import metadata
-from app.core.security import create_access_token
 from typing import AsyncGenerator
 
 
@@ -89,21 +88,3 @@ async def client(test_engine, test_session_factory):
 
     # Clear overrides
     app.dependency_overrides.clear()
-
-
-@pytest.fixture
-def auth_token() -> str:
-    """Create a test authentication token"""
-    return create_access_token(
-        {
-            "sub": "test@example.com",  # Email used as subject for ownership checks
-            "user_id": 1,
-            "is_admin": False,
-        }
-    )
-
-
-@pytest.fixture
-def auth_headers(auth_token: str) -> dict:
-    """Create authorization headers with test token"""
-    return {"Authorization": f"Bearer {auth_token}"}

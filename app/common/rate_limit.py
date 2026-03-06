@@ -83,6 +83,5 @@ async def rate_limit_exceeded_handler(
 
 # 엔드포인트별 요청 제한 설정
 RATE_LIMIT_DEFAULT = "100/minute"  # 일반 조회 (GET)
-RATE_LIMIT_AUTH = "10/minute"  # 인증 (로그인/회원가입) - 브루트포스 방지
 RATE_LIMIT_WRITE = "30/minute"  # 쓰기 작업 (POST/PUT/DELETE)
 RATE_LIMIT_SEARCH = "60/minute"  # 검색 - DB 부하 고려

@@ -332,20 +332,6 @@ script: |
     '**Bold text**';
 ```
 
-#### CI 테스트 SECRET_KEY 오류
-
-```
-ValueError: SECRET_KEY must be set to a secure value in production
-```
-
-**원인:** CI에서 `DEBUG=false`일 때 프로덕션 검증이 실행됨
-
-**해결:** 워크플로우에 `DEBUG=true` 환경변수 추가
-```yaml
-env:
-  DEBUG: "true"
-```
-
 #### GitHub Actions 실패
 
 1. **Secret 누락:**
@@ -385,8 +371,6 @@ docker-compose -f docker-compose.aws.yml logs --tail 100 backend
 
 | 오류 | 원인 | 해결 |
 |------|------|------|
-| `401 Unauthorized` | 토큰 만료 또는 누락 | 재로그인 |
-| `403 Forbidden` | 권한 없음 | 소유자 확인 |
 | `404 Not Found` | 리소스 없음 | ID 확인 |
 | `429 Too Many Requests` | Rate limit 초과 | 잠시 대기 |
 | `500 Internal Server Error` | 서버 오류 | 로그 확인 |

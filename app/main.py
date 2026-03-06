@@ -21,7 +21,7 @@ from slowapi.errors import RateLimitExceeded
 
 from .core.config import get_settings
 from .core.database import engine, async_session_factory
-from .routers import health_router, memos_router, auth_router
+from .routers import health_router, memos_router
 from .common.middleware import PrometheusMiddleware
 from .events.publisher import create_event_publisher
 from .common.metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
@@ -173,7 +173,6 @@ app.include_router(health_router)
 
 # API v1 routers
 API_V1_PREFIX = "/v1"
-app.include_router(auth_router, prefix=API_V1_PREFIX)
 app.include_router(memos_router, prefix=API_V1_PREFIX)
 
 

@@ -33,9 +33,6 @@ POSTGRES_DB=memo_app
 # 이벤트 백엔드 (기본: null - 비활성화)
 EVENT_BACKEND=null
 
-# 보안
-SECRET_KEY=your_secret_key_here           # 반드시 변경
-
 # Grafana (--profile monitoring 사용 시)
 GRAFANA_ADMIN_USER=admin
 GRAFANA_ADMIN_PASSWORD=admin

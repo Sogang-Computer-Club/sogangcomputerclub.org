@@ -8,9 +8,8 @@ from typing import List
 import logging
 
 from .schemas import MemoCreate, MemoUpdate, MemoInDB
-from .service import MemoService, MemoNotFoundError, MemoForbiddenError
+from .service import MemoService, MemoNotFoundError
 from .dependencies import get_memo_service
-from ..users.dependencies import require_auth
 from ..common.rate_limit import (
     limiter,
     RATE_LIMIT_WRITE,
@@ -28,12 +27,10 @@ async def create_memo(
     request: Request,
     memo: MemoCreate,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth),
 ):
-    """Create a new memo. Requires authentication."""
+    """Create a new memo."""
     try:
-        user_email = current_user.get("sub", memo.author)
-        return await service.create_memo(memo, user_email)
+        return await service.create_memo(memo, memo.author)
     except Exception as e:
         logger.error(f"메모 생성 중 오류 발생: {e}")
         raise HTTPException(
@@ -106,15 +103,12 @@ async def update_memo(
     memo_id: int,
     memo: MemoUpdate,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth),
 ):
-    """Update a memo. Requires authentication and ownership."""
+    """Update a memo."""
     try:
-        return await service.update_memo(memo_id, memo, current_user)
+        return await service.update_memo(memo_id, memo)
     except MemoNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except MemoForbiddenError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
@@ -131,16 +125,13 @@ async def delete_memo(
     request: Request,
     memo_id: int,
     service: MemoService = Depends(get_memo_service),
-    current_user: dict = Depends(require_auth),
 ):
-    """Delete a memo. Requires authentication and ownership."""
+    """Delete a memo."""
     try:
-        await service.delete_memo(memo_id, current_user)
+        await service.delete_memo(memo_id)
         return None
     except MemoNotFoundError as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except MemoForbiddenError as e:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail=str(e))
     except Exception as e:
         logger.error(f"메모(ID:{memo_id}) 삭제 중 오류 발생: {e}")
         raise HTTPException(

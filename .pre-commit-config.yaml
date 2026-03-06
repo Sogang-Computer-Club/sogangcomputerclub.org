@@ -5,7 +5,7 @@
 repos:
   # 백엔드: Ruff 린트 + 포맷팅
   - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.8.0
+    rev: v0.15.1
     hooks:
       - id: ruff
         args: [--fix]

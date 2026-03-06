@@ -72,9 +72,8 @@ docker-compose --profile monitoring up -d
 ```text
 sogangcomputerclub.org/
 ├── app/                    # 백엔드 애플리케이션
-│   ├── core/              # 공통 인프라 (config, database, security)
+│   ├── core/              # 공통 인프라 (config, database)
 │   ├── memos/             # 메모 도메인
-│   ├── users/             # 사용자 도메인
 │   ├── health/            # 헬스체크
 │   └── events/            # 이벤트 발행
 ├── frontend/              # 프론트엔드 애플리케이션
