@@ -19,6 +19,9 @@ services:
       - postgres
     volumes:
       - ../app:/code/app  # 핫 리로드: 코드 변경 시 자동 반영
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - app-network
 
@@ -47,6 +50,9 @@ services:
       - PORT=${PORT}
     depends_on:
       - backend
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - app-network
 
@@ -63,8 +69,13 @@ services:
     entrypoint: /bin/sh
     command: -c "/nginx.sh"
     depends_on:
-      - backend
-      - frontend
+      backend:
+        condition: service_started
+      frontend:
+        condition: service_started
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - app-network
 
@@ -76,12 +87,14 @@ services:
       - ../scripts/certbot.sh:/certbot.sh
     entrypoint: /bin/sh
     command: -c "/certbot.sh"
+    depends_on:
+      nginx:
+        condition: service_started
+    dns:
+      - 8.8.8.8
+      - 1.1.1.1
     networks:
       - app-network
-    depends_on:
-      - nginx
-    links:
-      - nginx
 
   # ===== 모니터링 스택 (Prometheus + Grafana) =====
   # 사용: docker compose -f deploy/docker-compose.yml --env-file .env --profile monitoring up
