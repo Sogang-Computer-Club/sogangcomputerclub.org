@@ -8,7 +8,7 @@
     let { data }: PageProps = $props();
     let { slicedPostSummary, currentPage, totalPages } = $derived(data);
     let navArray = $derived(makeNavArray(currentPage, totalPages, NAV_LENGTH));
-    let width = $state(window.innerWidth);
+    let width = $state(0);
     let isMobile = $derived(width < 640);
 </script>
 

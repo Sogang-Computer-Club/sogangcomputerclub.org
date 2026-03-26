@@ -29,6 +29,7 @@ export const handle: Handle = async ({ event, resolve }) => {
       "img-src 'self' data: https:",
       "font-src 'self'",
       "connect-src 'self' https://www.googleapis.com", // Google Calendar API
+      "frame-src 'self' https://www.youtube.com", // YouTube embeds
       "frame-ancestors 'none'",
       "base-uri 'self'",
       "form-action 'self'",
