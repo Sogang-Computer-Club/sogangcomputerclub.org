@@ -11,10 +11,8 @@ services:
     environment:
       # 데이터베이스 - AWS Secrets Manager에서 .env로 주입
       - DATABASE_URL=${DATABASE_URL}
-      # SQS - Kafka 대체 (비용 절감)
-      - SQS_QUEUE_URL=${SQS_QUEUE_URL}
+      # AWS
       - AWS_REGION=${AWS_REGION:-ap-northeast-2}
-      - EVENT_BACKEND=sqs
       # 앱 설정
       - DEBUG=false
       - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}

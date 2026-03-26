@@ -133,7 +133,6 @@ flowchart TB
     end
 
     subgraph Store["Stores"]
-        AuthStore[AuthStore]
         UIStore[UIStore]
     end
 
@@ -142,33 +141,9 @@ flowchart TB
     Store --> Context
 ```
 
-## 이벤트 기반 아키텍처 (선택적)
+## 이벤트 시스템
 
-> **Note**: 동아리 규모에서 이벤트 시스템은 불필요하여 기본 비활성화됨 (`EVENT_BACKEND=null`).
-> 필요 시 Kafka 또는 SQS를 활성화할 수 있습니다.
-
-비즈니스 이벤트를 메시지 큐로 발행하여 서비스 간 결합도를 낮춥니다:
-
-```mermaid
-flowchart LR
-    Service[MemoService] --> Publisher[EventPublisher]
-    Publisher --> Queue[Kafka/SQS]
-    Queue --> Consumer[이벤트 소비자]
-```
-
-### 이벤트 발행 추상화
-
-```python
-# 추상 인터페이스
-class AbstractEventPublisher(ABC):
-    @abstractmethod
-    async def publish(self, topic: str, message: dict) -> None: ...
-
-# 구현체 선택 (환경변수로)
-# EVENT_BACKEND=null  → NullEventPublisher (기본값, 이벤트 비활성화)
-# EVENT_BACKEND=kafka → KafkaEventPublisher (aiokafka 설치 필요)
-# EVENT_BACKEND=sqs   → SQSEventPublisher (boto3, aioboto3 설치 필요)
-```
+동아리 규모에서 메시지 큐는 불필요하여 이벤트 발행은 `NullEventPublisher`(no-op)로 처리됩니다. 향후 필요 시 실제 publisher 구현체로 교체할 수 있도록 인터페이스만 유지하고 있습니다.
 
 ## 보안 설정
 

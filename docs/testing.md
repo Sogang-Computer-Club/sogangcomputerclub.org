@@ -9,13 +9,14 @@ sogangcomputerclub.org/
 ├── tests/                          # 백엔드 테스트
 │   ├── conftest.py                # pytest 설정, fixtures
 │   ├── test_memos.py              # 메모 단위 테스트
-│   └── test_integration.py        # 통합 테스트
-├── frontend/src/lib/
-│   └── components/
-│       ├── Header.svelte
-│       ├── Header.test.ts         # 컴포넌트 테스트
-│       └── ...
-└── locustfile.py                  # 부하 테스트
+│   ├── test_health.py             # 헬스체크 테스트
+│   ├── integration/               # 통합 테스트
+│   └── load/                      # 부하 테스트
+└── frontend/src/lib/
+    └── components/
+        ├── Header.svelte
+        ├── Header.test.ts         # 컴포넌트 테스트
+        └── ...
 ```
 
 ## 백엔드 테스트 (pytest)
@@ -165,9 +166,6 @@ npm run test
 # 감시 모드 (파일 변경 시 자동 실행)
 npm run test:watch
 
-# 커버리지
-npm run test:coverage
-
 # UI 모드
 npm run test:ui
 ```
@@ -254,10 +252,10 @@ describe('MemoList', () => {
 
 ```bash
 # 테스트용 서비스 실행
-docker-compose -f docker-compose.test.yml up -d
+docker-compose up -d
 
 # 통합 테스트 실행
-uv run pytest tests/test_integration.py -v
+uv run pytest tests/integration/ -v
 
 # 정리
 docker-compose -f docker-compose.test.yml down -v

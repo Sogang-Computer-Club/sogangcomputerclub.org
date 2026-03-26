@@ -7,7 +7,7 @@
 | 영역 | 기술 |
 | --- | --- |
 | Backend | FastAPI, SQLAlchemy 2.0, PostgreSQL |
-| Frontend | SvelteKit 5, Svelte 5, Tailwind CSS v4 |
+| Frontend | SvelteKit 2, Svelte 5, Tailwind CSS v4 |
 | Infrastructure | Docker, Terraform, AWS |
 
 ## 빠른 시작

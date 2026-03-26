@@ -10,10 +10,6 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Database Configurations
-# MariaDB (Source) - using pymysql for sync connection or aiomysql if needed, but let's use sync for migration script simplicity if possible, 
-# or async if we want to reuse project patterns. 
-# Actually, for a one-off script, sync is often easier, but we installed asyncpg. 
-# Let's use the installed drivers. We added pymysql and psycopg2-binary for this script specifically.
 
 # Source: MariaDB
 MARIADB_USER = "memo_user"
@@ -66,12 +62,7 @@ def migrate_data():
         return
 
     # 2. Insert data into Postgres
-    # We need to ensure the table exists. The app creates it, but we might be running this before the app runs against Postgres.
-    # Let's assume the table schema is compatible. We might need to create it if it doesn't exist.
-    # For simplicity, we'll assume the user runs the app once or we create the table here.
-    # Actually, the implementation plan said "The app's lifespan creates tables". 
-    # But we need to insert data NOW. 
-    # Let's define the table schema using SQLAlchemy Core to ensure it exists.
+    # Ensure the table exists by defining schema via SQLAlchemy Core
 
     metadata = sqlalchemy.MetaData()
     memos_table = sqlalchemy.Table(
@@ -95,9 +86,6 @@ def migrate_data():
         metadata.create_all(postgres_engine)
         
         logger.info("Inserting memos into Postgres...")
-        # We need to handle the fact that 'tags' in MariaDB might be JSON string or actual JSON depending on driver/storage.
-        # In MariaDB it was JSON type.
-        
         import json
         for memo in memos:
             # Check if memo already exists to avoid duplicates if run multiple times

@@ -196,27 +196,18 @@ git push origin v1.2.3-alpha.1
 |----------|---------|---------|
 | `pr-validation.yml` | PR 열림/수정됨 | PR 형식 및 내용 검증 |
 | `pr-labeler.yml` | PR 열림/업데이트됨 | 파일/크기/유형에 따라 자동 레이블링 |
-| `pr-auto-assign.yml` | PR 열림 | 리뷰어 할당, 기여자 환영 |
 | `backend-ci.yml` | Push/PR | 백엔드 테스트 실행 |
 | `frontend-ci.yml` | Push/PR | 프론트엔드 테스트 실행 |
 | `integration-tests.yml` | Push/PR | 통합 테스트 실행 |
 | `security-scan.yml` | Push/PR | 보안 스캔 (Docker 스캔은 non-blocking) |
-| `codeql.yml` | Push/PR/Schedule | GitHub CodeQL 보안 분석 |
 | `docker-build.yml` | Push (main) | Docker 이미지 빌드 및 푸시 |
 
-### 유지보수 워크플로우
+### 배포/릴리스 워크플로우
 
 | 워크플로우 | 트리거 | 목적 |
 |----------|---------|---------|
-| `stale.yml` | 매일 | 오래된 PR/이슈 표시 및 닫기 |
-| `auto-merge.yml` | 리뷰/검사 | 승인된 PR 자동 병합 |
+| `deploy-aws.yml` | 마스터에 푸시 | AWS 프로덕션에 배포 |
 | `release.yml` | 태그 푸시 | 변경 로그와 함께 릴리스 생성 |
-
-### 배포 워크플로우
-
-| 워크플로우 | 트리거 | 목적 |
-|----------|---------|---------|
-| `deploy-production.yml` | 마스터에 푸시 | 프로덕션에 배포 |
 
 ---
 

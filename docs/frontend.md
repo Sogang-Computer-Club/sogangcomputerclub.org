@@ -193,12 +193,11 @@ export async function getMemos(): Promise<Memo[]> {
     return response.json();
 }
 
-export async function createMemo(memo: MemoCreate, token: string): Promise<Memo> {
+export async function createMemo(memo: MemoCreate): Promise<Memo> {
     const response = await fetch(`${API_BASE_URL}/memos/`, {
         method: 'POST',
         headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
         },
         body: JSON.stringify(memo),
     });
@@ -349,8 +348,6 @@ npm run test
 # 감시 모드
 npm run test:watch
 
-# 커버리지
-npm run test:coverage
 ```
 
 ## 스타일링 (Tailwind CSS)
