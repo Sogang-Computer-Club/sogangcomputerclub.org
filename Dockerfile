@@ -12,7 +12,7 @@ WORKDIR /code
 COPY ./pyproject.toml ./uv.lock ./README.md /code/
 
 # Python 의존성 설치
-RUN uv sync --frozen --no-cache
+RUN uv sync --frozen --no-cache --no-dev
 
 # --- 프로덕션 스테이지 ---
 FROM python:3.13-slim
