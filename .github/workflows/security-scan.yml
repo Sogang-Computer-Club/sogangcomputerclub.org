@@ -11,12 +11,12 @@ name: Security Scanning
 
 on:
   push:
-    branches: [master, develop, staging]
+    branches: [master]
   pull_request:
-    branches: [master, develop]
-  # 매일 새벽 2시(UTC) 정기 스캔: 새로 발견된 CVE를 빠르게 탐지
+    branches: [master]
+  # 매주 월요일 새벽 2시(UTC) 정기 스캔
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 2 * * 1"
   workflow_dispatch:
 
 # 최소 권한 원칙: 필요한 권한만 부여

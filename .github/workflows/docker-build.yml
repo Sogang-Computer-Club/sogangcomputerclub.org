@@ -2,11 +2,27 @@ name: Docker Build and Push
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ master ]
     tags:
       - 'v*.*.*'
+    paths:
+      - 'app/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - 'frontend/Dockerfile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'frontend/package*.json'
   pull_request:
-    branches: [ main, master ]
+    branches: [ master ]
+    paths:
+      - 'app/**'
+      - 'frontend/**'
+      - 'Dockerfile'
+      - 'frontend/Dockerfile'
+      - 'pyproject.toml'
+      - 'uv.lock'
+      - 'frontend/package*.json'
 
 env:
   REGISTRY: ghcr.io

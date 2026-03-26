@@ -1,5 +1,5 @@
 # AWS 프로덕션 배포용 Docker Compose
-# 외부 서비스: RDS (PostgreSQL), SQS (이벤트)
+# 외부 서비스: RDS (PostgreSQL)
 # 컨테이너 서비스: Backend, Frontend, Nginx
 
 services:
