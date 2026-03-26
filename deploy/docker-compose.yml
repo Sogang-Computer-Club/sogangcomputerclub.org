@@ -1,14 +1,16 @@
 # 로컬 개발용 Docker Compose
 # 모든 서비스가 컨테이너로 실행됨 (AWS 서비스 없음)
 #
-# 기본 실행: docker compose -f deploy/docker-compose.yml up
+# 기본 실행: docker compose -f deploy/docker-compose.yml --env-file .env up
 #   - 핵심 서비스만 실행 (backend, postgres, frontend, nginx)
 #
-# 모니터링 포함: docker compose -f deploy/docker-compose.yml --profile monitoring up
+# 모니터링 포함: docker compose -f deploy/docker-compose.yml --env-file .env --profile monitoring up
 
 services:
   backend:
-    build: ..
+    build:
+      context: ..
+      network: host
     ports:
       - "8000:8000"
     environment:
@@ -34,7 +36,9 @@ services:
       - app-network
 
   frontend:
-    build: ../frontend
+    build:
+      context: ../frontend
+      network: host
     ports:
       - "3000:3000"
     environment:
@@ -80,7 +84,7 @@ services:
       - nginx
 
   # ===== 모니터링 스택 (Prometheus + Grafana) =====
-  # 사용: docker compose -f deploy/docker-compose.yml --profile monitoring up
+  # 사용: docker compose -f deploy/docker-compose.yml --env-file .env --profile monitoring up
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
