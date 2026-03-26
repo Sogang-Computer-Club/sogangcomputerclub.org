@@ -32,6 +32,10 @@
 - `docs/testing.md` - 테스트 가이드
 - `docs/troubleshooting.md` - 문제 해결
 - `docs/api-reference.md` - API 레퍼런스
+- `MONITORING.md` - Prometheus+Grafana 모니터링
+- `MAINTAINER_GUIDE.md` - 메인테이너 운영 가이드
+- `infrastructure/README.md` - Terraform AWS 인프라 (백업용)
+- `backups/README.md` - 데이터베이스 백업/복구
 
 ## Open Source Files
 - `LICENSE` - MIT License

@@ -28,68 +28,11 @@
 - [테스트 가이드](./testing.md) - 단위 테스트, 통합 테스트, 부하 테스트
 - [문제 해결](./troubleshooting.md) - 일반적인 오류와 해결 방법
 
-## 기술 스택
+### 운영
 
-| 영역           | 기술                                                |
-| -------------- | --------------------------------------------------- |
-| Backend | Python 3.13, FastAPI, SQLAlchemy 2.0, Pydantic |
-| Frontend | SvelteKit 2.0, Svelte 5, TypeScript, Tailwind CSS |
-| Database | PostgreSQL 15 (AWS RDS) |
-| Infrastructure | Terraform, Docker, Nginx |
-| CI/CD | GitHub Actions, Amazon ECR |
-| Monitoring | Prometheus, Grafana, AWS CloudWatch |
+- [모니터링](../MONITORING.md) - Prometheus, Grafana 설정
+- [메인테이너 가이드](../MAINTAINER_GUIDE.md) - 레포지토리 운영
+- [데이터베이스 백업](../backups/README.md) - 백업/복구 절차
 
-> **Note**: 동아리 규모에서 불필요한 기술은 제외됨:
->
-> - Redis (캐싱) - Rate limiting은 in-memory 사용
-> - Kafka/SQS (메시징) - 이벤트 시스템 기본 비활성화 (`EVENT_BACKEND=null`)
-> - RDS Multi-AZ - 고가용성 불필요
-
-## 빠른 시작
-
-```bash
-# 프로젝트 클론
-git clone https://github.com/Sogang-Computer-Club/sogangcomputerclub.org.git
-cd sogangcomputerclub.org
-
-# 환경 변수 설정
-cp .env.example .env
-
-# Docker로 핵심 서비스 실행
-docker compose -f deploy/docker-compose.yml up -d
-
-# 모니터링 포함 실행
-docker compose -f deploy/docker-compose.yml --profile monitoring up -d
-
-# 접속
-# Frontend: http://localhost:3000
-# Backend API: http://localhost:8000
-# API 문서: http://localhost:8000/docs
-```
-
-## 프로젝트 구조
-
-```text
-sogangcomputerclub.org/
-├── app/                    # 백엔드 애플리케이션
-│   ├── core/              # 공통 인프라 (config, database)
-│   ├── memos/             # 메모 도메인
-│   ├── health/            # 헬스체크
-│   └── events/            # 이벤트 발행
-├── frontend/              # 프론트엔드 애플리케이션
-│   └── src/
-│       ├── routes/        # 페이지 라우트
-│       └── lib/           # 컴포넌트, 스토어, 유틸
-├── infrastructure/        # Terraform 인프라 코드
-├── tests/                 # 백엔드 테스트
-├── docs/                  # 개발 문서 (현재 위치)
-└── .github/workflows/     # CI/CD 파이프라인
-```
-
-## 기여하기
-
-1. 이슈를 확인하거나 새로 생성합니다
-2. 피처 브랜치를 생성합니다 (`git checkout -b feature/기능명`)
-3. 변경사항을 커밋합니다 (`git commit -m '기능 설명'`)
-4. 브랜치를 푸시합니다 (`git push origin feature/기능명`)
-5. Pull Request를 생성합니다
+기술 스택, 빠른 시작, 기여 방법은 [README.md](../README.md) 참조.
+프로젝트 구조는 [아키텍처 문서](./architecture.md) 참조.
