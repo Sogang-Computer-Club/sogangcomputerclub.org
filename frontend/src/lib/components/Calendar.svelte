@@ -44,7 +44,6 @@
                 };
             });
 
-            // Events loaded successfully
         } catch (error) {
             console.error('Error fetching calendar data:', error);
         }

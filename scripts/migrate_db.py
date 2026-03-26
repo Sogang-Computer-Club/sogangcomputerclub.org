@@ -21,7 +21,7 @@ MARIADB_URL = f"mysql+pymysql://{MARIADB_USER}:{MARIADB_PASSWORD}@{MARIADB_HOST}
 
 # Destination: Postgres (sgcc-db)
 POSTGRES_USER = "admin"
-POSTGRES_PASSWORD = "82292" # From docker inspect
+POSTGRES_PASSWORD = "82292"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = "5432" # Host port
 POSTGRES_DB = "sgcc-backend-db"

@@ -51,7 +51,6 @@ async def health_check(request: Request) -> dict[str, Any]:
     """
     is_internal = _check_internal_access(request)
 
-    # Check Database
     db_healthy = False
     try:
         async with request.app.state.db_session_factory() as session:
@@ -60,14 +59,12 @@ async def health_check(request: Request) -> dict[str, Any]:
     except Exception as e:
         logger.error(f"Database health check failed: {e}")
 
-    # Simple response for external requests
     if not is_internal:
         return {
             "status": "healthy" if db_healthy else "degraded",
             "timestamp": datetime.now(UTC).isoformat(),
         }
 
-    # Detailed response for internal requests
     return {
         "status": "healthy" if db_healthy else "degraded",
         "timestamp": datetime.now(UTC).isoformat(),
