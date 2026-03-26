@@ -4,6 +4,11 @@
 # --- 빌드 스테이지 ---
 FROM python:3.13-slim AS builder
 
+# greenlet 등 C 확장 빌드에 필요
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends gcc python3-dev && \
+    rm -rf /var/lib/apt/lists/*
+
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 WORKDIR /code
