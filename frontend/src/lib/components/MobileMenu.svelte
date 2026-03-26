@@ -37,7 +37,6 @@
                 </button>
 
                 {#if openSubMenu === item.name && item.subItems.length > 0}
-                    <!-- Notice 배치 조절.... -->
                     {#if openSubMenu == "Notice"}
                         <div
                             class="absolute z-10 left-full -top-21 h-[250px] w-screen transform shadow-lg transition-all duration-300 visible opacity-90"

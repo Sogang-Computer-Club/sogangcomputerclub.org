@@ -70,16 +70,10 @@ cd ..
 
 ```bash
 # 기본 실행 (핵심 서비스만)
-docker-compose up -d
-
-# Kafka 포함 (이벤트 시스템 테스트 시)
-docker-compose --profile kafka up -d
+docker compose -f deploy/docker-compose.yml up -d
 
 # 모니터링 포함 (Prometheus + Grafana)
-docker-compose --profile monitoring up -d
-
-# 전체 실행
-docker-compose --profile kafka --profile monitoring up -d
+docker compose -f deploy/docker-compose.yml --profile monitoring up -d
 ```
 
 접속 주소:
@@ -93,17 +87,17 @@ docker-compose --profile kafka --profile monitoring up -d
 로그 확인:
 
 ```bash
-docker-compose logs -f backend
-docker-compose logs -f frontend
+docker compose -f deploy/docker-compose.yml logs -f backend
+docker compose -f deploy/docker-compose.yml logs -f frontend
 ```
 
 서비스 중지:
 
 ```bash
-docker-compose down
+docker compose -f deploy/docker-compose.yml down
 
 # 볼륨까지 삭제 (DB 초기화)
-docker-compose down -v
+docker compose -f deploy/docker-compose.yml down -v
 ```
 
 ### 방법 2: 개별 실행
@@ -112,7 +106,7 @@ docker-compose down -v
 
 ```bash
 # 인프라 서비스만 실행
-docker-compose up -d postgres
+docker compose -f deploy/docker-compose.yml up -d postgres
 
 # 백엔드 실행 (새 터미널)
 DATABASE_URL=postgresql+asyncpg://memo_user:your_password@localhost:5433/memo_app \
@@ -184,8 +178,8 @@ cd frontend
 # 타입 체크
 npm run check
 
-# 린팅 (ESLint)
-npm run lint
+# 린팅 (svelte-check)
+npm run check
 ```
 
 ## 다음 단계

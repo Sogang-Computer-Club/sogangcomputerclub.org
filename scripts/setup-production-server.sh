@@ -80,9 +80,6 @@ POSTGRES_PASSWORD=CHANGE_ME_USER_PASSWORD
 POSTGRES_DB=memo_app
 DATABASE_URL=postgresql+asyncpg://memo_user:CHANGE_ME_USER_PASSWORD@postgres:5432/memo_app
 
-# Kafka Configuration
-KAFKA_BOOTSTRAP_SERVERS=kafka:9093
-
 # Application Configuration
 NODE_ENV=production
 HOST=0.0.0.0
@@ -135,6 +132,6 @@ echo -e "   - PROD_SSH_KEY: (private key shown above)"
 echo -e "   - PROD_SSH_PORT: 22"
 echo -e "   - PROD_DEPLOY_PATH: $DEPLOY_DIR"
 echo -e "3. Re-login to apply docker group: ${YELLOW}newgrp docker${NC}"
-echo -e "4. Test deployment: ${YELLOW}cd $DEPLOY_DIR && docker-compose -f docker-compose.prod.yml pull${NC}"
+echo -e "4. Test deployment: ${YELLOW}cd $DEPLOY_DIR && docker compose -f deploy/docker-compose.prod.yml pull${NC}"
 echo ""
 echo -e "${GREEN}Documentation: $DEPLOY_DIR/docs/DEPLOYMENT.md${NC}"

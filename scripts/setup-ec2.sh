@@ -24,7 +24,8 @@ cd /opt/sgcc
 echo "1. Copying configuration files from repository..."
 # Assuming the repository is cloned
 if [ -d "/tmp/sgcc-repo" ]; then
-    cp /tmp/sgcc-repo/docker-compose.aws.yml .
+    mkdir -p deploy
+    cp /tmp/sgcc-repo/deploy/docker-compose.aws.yml deploy/
     cp /tmp/sgcc-repo/nginx-aws.conf .
     cp /tmp/sgcc-repo/prometheus.yml .
     cp -r /tmp/sgcc-repo/grafana .
@@ -55,18 +56,18 @@ mkdir -p certs
 echo "   Directory created. SSL certificates will be configured by certbot."
 
 echo "6. Pulling Docker images..."
-docker compose -f docker-compose.aws.yml pull
+docker compose -f deploy/docker-compose.aws.yml pull
 echo "   Images pulled."
 
 echo "7. Starting services..."
-docker compose -f docker-compose.aws.yml up -d
+docker compose -f deploy/docker-compose.aws.yml up -d
 echo "   Services started."
 
 echo "8. Waiting for services to be healthy..."
 sleep 30
 
 echo "9. Checking service status..."
-docker compose -f docker-compose.aws.yml ps
+docker compose -f deploy/docker-compose.aws.yml ps
 
 echo ""
 echo "=== Setup Complete ==="
@@ -79,5 +80,5 @@ echo "3. Copy SSL certificates:"
 echo "   sudo cp /etc/letsencrypt/live/sogangcomputerclub.org/fullchain.pem /opt/sgcc/certs/"
 echo "   sudo cp /etc/letsencrypt/live/sogangcomputerclub.org/privkey.pem /opt/sgcc/certs/"
 echo "4. Restart nginx:"
-echo "   docker compose -f docker-compose.aws.yml restart nginx"
+echo "   docker compose -f deploy/docker-compose.aws.yml restart nginx"
 echo ""

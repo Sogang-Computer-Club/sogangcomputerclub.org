@@ -20,7 +20,7 @@ uv.lock @revenantonthemission
 # Infrastructure and DevOps
 /k8s/ @revenantonthemission
 /scripts/ @revenantonthemission
-docker-compose*.yml @revenantonthemission
+/deploy/ @revenantonthemission
 Dockerfile @revenantonthemission
 /frontend/Dockerfile @revenantonthemission
 

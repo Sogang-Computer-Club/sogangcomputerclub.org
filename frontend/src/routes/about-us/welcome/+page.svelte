@@ -6,7 +6,6 @@
 <main>
   <div class="relative flex min-h-201 desktop:h-322 flex-col items-center bg-black desktop:py-29.5 py-12 text-white">
     <h2 class="mb-17 text-center desktop:text-[50px] text-[35px] font-normal">인사말</h2>
-    <!-- aspect-[226/130] h-[130px] h-[346px]-->
     <img alt="welcome" src={welcomeImage} class="mb-7.5 shrink-0 h-[346px] tablet:h-[476px] desktop:bg-white">
       
 

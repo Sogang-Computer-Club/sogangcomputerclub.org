@@ -45,10 +45,6 @@
             <h2 class="mb-16.5 text-[40px] xl:text-[50px]">2025년 2학기 SGCC 신입 부원 모집</h2>
            
             <div class="flex w-full mb-8 self-start justify-center">
-                <!--
-                <div class="flex bg-[#252525] w-[474px] h-[54px] border-[#AE1F1F] border-4 rounded-[4px]">
-                    <span class="text-[24px] pt-1.25 pl-5 font-pretendard-variable">서류 모집 (~9/10)</span>
-                </div>-->
                 <div class="relative w-[374px] xl:w-[474px] h-[54px]">
                     <svg class="absolute hidden xl:block" width="471" height="54" viewBox="0 0 471 54" fill="none" xmlns="http://www.w3.org/2000/svg">                   
                         <path d="M8 2.5H442.812C444.22 2.50007 445.573 3.03922 446.595 4.00684L466.65 23.0068C468.94 25.1762 468.94 28.8238 466.65 30.9932L446.595 49.9932C445.573 50.9608 444.22 51.4999 442.812 51.5H8C4.96243 51.5 2.5 49.0376 2.5 46V8C2.5 4.96243 4.96243 2.5 8 2.5Z" fill="#252525" stroke="#AE1F1F" stroke-width="5"/>

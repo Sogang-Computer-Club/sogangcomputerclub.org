@@ -67,11 +67,10 @@ backups/
 *.old
 *.orig
 
-# Kubernetes
-k8s/
+# YAML (compose files not needed in image)
 *.yaml
 *.yml
-!docker-compose.yml
+!deploy/docker-compose.yml
 
 # CI/CD
 .github/

@@ -5,13 +5,13 @@
 
 ## Tech Stack
 - Backend: FastAPI + SQLAlchemy 2.0 + PostgreSQL
-- Frontend: SvelteKit 5 + Tailwind CSS v4
+- Frontend: SvelteKit 2 + Svelte 5 + Tailwind CSS v4
 - Infra: Docker Compose (로컬), AWS EC2+RDS (프로덕션)
 - CI/CD: GitHub Actions
 
 ## Commands
-- `docker-compose up` - 핵심 서비스만 (backend, postgres, frontend, nginx)
-- `docker-compose --profile monitoring up` - Prometheus+Grafana 포함
+- `docker compose -f deploy/docker-compose.yml up` - 핵심 서비스만 (backend, postgres, frontend, nginx)
+- `docker compose -f deploy/docker-compose.yml --profile monitoring up` - Prometheus+Grafana 포함
 - `uv sync` - Python 의존성 설치
 - `cd frontend && npm install` - 프론트엔드 의존성 설치
 - `uv run pytest tests/ -v` - 백엔드 테스트
@@ -23,7 +23,19 @@
 
 ## Documentation
 - `README.md` - 프로젝트 소개용 (외부 공개)
-- `/docs/` - 개발 문서, 인수인계용 (내부 개발자용)
+- `docs/getting-started.md` - 개발 환경 설정
+- `docs/architecture.md` - 시스템 아키텍처
+- `docs/backend.md` - 백엔드 개발 가이드
+- `docs/frontend.md` - 프론트엔드 개발 가이드
+- `docs/deployment.md` - 배포 가이드
+- `docs/infrastructure.md` - 인프라 설정
+- `docs/testing.md` - 테스트 가이드
+- `docs/troubleshooting.md` - 문제 해결
+- `docs/api-reference.md` - API 레퍼런스
+- `MONITORING.md` - Prometheus+Grafana 모니터링
+- `MAINTAINER_GUIDE.md` - 메인테이너 운영 가이드
+- `infrastructure/README.md` - Terraform AWS 인프라 (백업용)
+- `backups/README.md` - 데이터베이스 백업/복구
 
 ## Open Source Files
 - `LICENSE` - MIT License

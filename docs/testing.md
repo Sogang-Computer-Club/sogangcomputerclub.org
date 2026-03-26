@@ -4,357 +4,114 @@
 
 ## 테스트 구조
 
-```
-sogangcomputerclub.org/
-├── tests/                          # 백엔드 테스트
-│   ├── conftest.py                # pytest 설정, fixtures
-│   ├── test_memos.py              # 메모 단위 테스트
-│   └── test_integration.py        # 통합 테스트
-├── frontend/src/lib/
-│   └── components/
-│       ├── Header.svelte
-│       ├── Header.test.ts         # 컴포넌트 테스트
-│       └── ...
-└── locustfile.py                  # 부하 테스트
-```
+백엔드 테스트는 `tests/` 디렉토리에, 프론트엔드 컴포넌트 테스트는 `frontend/src/lib/components/` 내 각 컴포넌트 옆에 위치합니다.
+
+| 디렉토리/파일 | 역할 |
+|---|---|
+| `tests/conftest.py` | pytest 설정, fixtures |
+| `tests/test_memos.py` | 메모 단위 테스트 |
+| `tests/test_health.py` | 헬스체크 테스트 |
+| `tests/integration/` | 통합 테스트 |
+| `tests/load/` | 부하 테스트 |
+| `frontend/src/lib/components/*.test.ts` | 컴포넌트 테스트 |
 
 ## 백엔드 테스트 (pytest)
 
 ### 실행 방법
 
-```bash
-# 전체 테스트
-uv run pytest tests/ -v
-
-# 특정 파일
-uv run pytest tests/test_memos.py -v
-
-# 특정 테스트
-uv run pytest tests/test_memos.py::test_create_memo -v
-
-# 커버리지
-uv run pytest tests/ --cov=app --cov-report=html
-```
+| Command | Purpose |
+|---|---|
+| `uv run pytest tests/ -v` | 전체 테스트 |
+| `uv run pytest tests/test_memos.py -v` | 특정 파일 |
+| `uv run pytest tests/test_memos.py::test_create_memo -v` | 특정 테스트 |
+| `uv run pytest tests/ --cov=app --cov-report=html` | 커버리지 리포트 |
 
 ### 단위 테스트 작성
 
-```python
-# tests/test_memos.py
-import pytest
-from unittest.mock import AsyncMock
+단위 테스트는 AAA(Arrange-Act-Assert) 패턴을 따릅니다. 리포지토리와 이벤트 퍼블리셔는 `AsyncMock`으로 대체하여 서비스 로직만 검증합니다.
 
-from app.memos.service import MemoService, MemoNotFoundError
-from app.memos.schemas import MemoCreate
+테스트 대상 서비스는 `MemoService`이며, Mock된 리포지토리와 퍼블리셔를 주입받아 생성합니다. 메모 생성 테스트에서는 리포지토리의 `create` 반환값을 설정한 뒤, 서비스의 `create_memo`를 호출하고 결과값과 Mock 호출 여부를 검증합니다. 존재하지 않는 메모 조회 시에는 `MemoNotFoundError` 예외 발생을 확인합니다.
 
-
-@pytest.fixture
-def mock_repository():
-    """리포지토리 Mock 객체 생성"""
-    return AsyncMock()
-
-
-@pytest.fixture
-def mock_publisher():
-    """이벤트 퍼블리셔 Mock 객체 생성"""
-    return AsyncMock()
-
-
-@pytest.fixture
-def service(mock_repository, mock_publisher):
-    """테스트용 서비스 인스턴스"""
-    return MemoService(mock_repository, mock_publisher)
-
-
-@pytest.mark.asyncio
-async def test_create_memo(service, mock_repository, mock_publisher):
-    """메모 생성 테스트"""
-    # Arrange
-    mock_repository.create.return_value = {
-        "id": 1,
-        "title": "Test",
-        "content": "Content",
-        "author": "user@test.com"
-    }
-
-    memo = MemoCreate(title="Test", content="Content")
-
-    # Act
-    result = await service.create_memo(memo, "user@test.com")
-
-    # Assert
-    assert result["id"] == 1
-    assert result["title"] == "Test"
-    mock_repository.create.assert_called_once()
-    mock_publisher.publish.assert_called_once()
-
-
-@pytest.mark.asyncio
-async def test_get_memo_not_found(service, mock_repository):
-    """존재하지 않는 메모 조회 시 예외 발생"""
-    # Arrange
-    mock_repository.get_by_id.return_value = None
-
-    # Act & Assert
-    with pytest.raises(MemoNotFoundError):
-        await service.get_memo(999)
-```
+전체 구현은 `tests/test_memos.py` 참조.
 
 ### Fixtures (conftest.py)
 
-```python
-# tests/conftest.py
-import pytest
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import sessionmaker
+테스트용 Fixture는 `tests/conftest.py`에 정의되어 있습니다.
 
-from app.core.database import metadata
+| Fixture | Scope | 설명 |
+|---|---|---|
+| `event_loop` | session | pytest-asyncio용 이벤트 루프 생성 |
+| `test_engine` | session | 인메모리 SQLite 엔진 (aiosqlite). metadata로 테이블 자동 생성 |
+| `test_session` | function | 테스트용 DB 세션. 각 테스트 후 rollback으로 격리 |
+| `test_client` | function | httpx `AsyncClient` 기반 FastAPI 테스트 클라이언트 |
 
-
-@pytest.fixture(scope="session")
-def event_loop():
-    """이벤트 루프 생성 (pytest-asyncio용)"""
-    import asyncio
-    loop = asyncio.get_event_loop_policy().new_event_loop()
-    yield loop
-    loop.close()
-
-
-@pytest.fixture(scope="session")
-async def test_engine():
-    """테스트용 인메모리 SQLite 엔진"""
-    engine = create_async_engine(
-        "sqlite+aiosqlite:///:memory:",
-        echo=False
-    )
-    async with engine.begin() as conn:
-        await conn.run_sync(metadata.create_all)
-    yield engine
-    await engine.dispose()
-
-
-@pytest.fixture
-async def test_session(test_engine):
-    """테스트용 DB 세션"""
-    async_session = sessionmaker(
-        test_engine,
-        class_=AsyncSession,
-        expire_on_commit=False
-    )
-    async with async_session() as session:
-        yield session
-        await session.rollback()
-
-
-@pytest.fixture
-def test_client(test_app):
-    """FastAPI 테스트 클라이언트"""
-    from httpx import AsyncClient
-    return AsyncClient(app=test_app, base_url="http://test")
-```
+전체 구현은 `tests/conftest.py` 참조.
 
 ## 프론트엔드 테스트 (Vitest)
 
 ### 실행 방법
 
-```bash
-cd frontend
-
-# 전체 테스트
-npm run test
-
-# 감시 모드 (파일 변경 시 자동 실행)
-npm run test:watch
-
-# 커버리지
-npm run test:coverage
-
-# UI 모드
-npm run test:ui
-```
+| Command | Purpose |
+|---|---|
+| `cd frontend && npm run test` | 전체 테스트 |
+| `cd frontend && npm run test:watch` | 감시 모드 (파일 변경 시 자동 실행) |
+| `cd frontend && npm run test:ui` | UI 모드 |
 
 ### 컴포넌트 테스트 작성
 
-```typescript
-// lib/components/Button.test.ts
-import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
-import Button from './Button.svelte';
+Svelte 컴포넌트 테스트는 `@testing-library/svelte`의 `render`와 `fireEvent`를 사용합니다. 기본적인 렌더링 확인, 클릭 핸들러 호출 검증, disabled 상태 동작 확인 등을 테스트합니다.
 
-describe('Button', () => {
-    it('렌더링된다', () => {
-        const { getByRole } = render(Button, {
-            props: { children: () => 'Click me' }
-        });
-
-        expect(getByRole('button')).toBeInTheDocument();
-    });
-
-    it('클릭 시 핸들러가 호출된다', async () => {
-        const handleClick = vi.fn();
-
-        const { getByRole } = render(Button, {
-            props: {
-                onclick: handleClick,
-                children: () => 'Click me'
-            }
-        });
-
-        await fireEvent.click(getByRole('button'));
-
-        expect(handleClick).toHaveBeenCalledOnce();
-    });
-
-    it('disabled 상태에서 클릭이 무시된다', async () => {
-        const handleClick = vi.fn();
-
-        const { getByRole } = render(Button, {
-            props: {
-                onclick: handleClick,
-                disabled: true,
-                children: () => 'Click me'
-            }
-        });
-
-        await fireEvent.click(getByRole('button'));
-
-        expect(handleClick).not.toHaveBeenCalled();
-    });
-});
-```
+프론트엔드 컴포넌트 테스트 예시는 `frontend/src/lib/components/Header.test.ts` 참조.
 
 ### 비동기 테스트
 
-```typescript
-import { describe, it, expect, vi } from 'vitest';
-import { render, waitFor } from '@testing-library/svelte';
-import MemoList from './MemoList.svelte';
-
-// API Mock
-vi.mock('$lib/api', () => ({
-    getMemos: vi.fn(() => Promise.resolve([
-        { id: 1, title: 'Test Memo', content: 'Content' }
-    ]))
-}));
-
-describe('MemoList', () => {
-    it('메모 목록을 로드한다', async () => {
-        const { getByText } = render(MemoList);
-
-        // 비동기 로딩 대기
-        await waitFor(() => {
-            expect(getByText('Test Memo')).toBeInTheDocument();
-        });
-    });
-});
-```
+API 호출이 포함된 컴포넌트는 `vi.mock`으로 API 모듈을 Mock하고, `waitFor`로 비동기 렌더링 완료를 대기한 뒤 결과를 검증합니다.
 
 ## 통합 테스트
 
 ### Docker Compose로 실행
 
-```bash
-# 테스트용 서비스 실행
-docker-compose -f docker-compose.test.yml up -d
+| Command | Purpose |
+|---|---|
+| `docker compose -f deploy/docker-compose.yml up -d` | 테스트용 서비스 실행 |
+| `uv run pytest tests/integration/ -v` | 통합 테스트 실행 |
+| `docker compose -f deploy/docker-compose.test.yml down -v` | 정리 |
 
-# 통합 테스트 실행
-uv run pytest tests/test_integration.py -v
+### 통합 테스트 작성
 
-# 정리
-docker-compose -f docker-compose.test.yml down -v
-```
+통합 테스트는 httpx `AsyncClient`로 FastAPI 앱에 직접 요청을 보내 CRUD 전체 흐름을 검증합니다. 메모 생성(POST) -> 조회(GET) -> 수정(PUT) -> 삭제(DELETE) 순서로 실행하며, 각 단계의 HTTP 상태 코드와 응답 본문을 확인합니다.
 
-### 통합 테스트 예시
-
-```python
-# tests/test_integration.py
-import pytest
-from httpx import AsyncClient
-
-from app.main import app
-
-
-@pytest.mark.asyncio
-async def test_full_memo_workflow():
-    """메모 CRUD 전체 흐름 테스트"""
-    async with AsyncClient(app=app, base_url="http://test") as client:
-        # 1. 메모 생성
-        create_response = await client.post("/v1/memos", json={
-            "title": "Test Memo",
-            "content": "Test Content",
-            "author": "test@sogang.ac.kr"
-        })
-        assert create_response.status_code == 201
-        memo_id = create_response.json()["id"]
-
-        # 2. 메모 조회
-        get_response = await client.get(f"/v1/memos/{memo_id}")
-        assert get_response.status_code == 200
-        assert get_response.json()["title"] == "Test Memo"
-
-        # 3. 메모 수정
-        update_response = await client.put(f"/v1/memos/{memo_id}", json={
-            "title": "Updated Memo"
-        })
-        assert update_response.status_code == 200
-
-        # 4. 메모 삭제
-        delete_response = await client.delete(f"/v1/memos/{memo_id}")
-        assert delete_response.status_code == 204
-```
+전체 구현은 `tests/integration/` 디렉토리 참조.
 
 ## 부하 테스트 (Locust)
 
 ### 설치
 
-```bash
-uv add locust
-```
+`uv add locust` 로 설치합니다.
 
 ### 테스트 시나리오
 
-```python
-# locustfile.py
-from locust import HttpUser, task, between
+Locust의 `HttpUser`를 상속하여 시나리오를 작성합니다. 각 task에 빈도 가중치를 부여하여 실제 사용 패턴을 시뮬레이션합니다.
 
+| Task | 빈도 | 설명 |
+|---|---|---|
+| `view_memos` | 3 | 메모 목록 조회 (GET /v1/memos) |
+| `create_memo` | 1 | 메모 생성 (POST /v1/memos) |
+| `search_memos` | 2 | 메모 검색 (GET /v1/memos/search?q=test) |
 
-class WebsiteUser(HttpUser):
-    wait_time = between(1, 3)  # 요청 간 대기 시간
-
-    @task(3)
-    def view_memos(self):
-        """메모 목록 조회 (빈도: 3)"""
-        self.client.get("/v1/memos")
-
-    @task(1)
-    def create_memo(self):
-        """메모 생성 (빈도: 1)"""
-        self.client.post("/v1/memos", json={
-            "title": "Load Test Memo",
-            "content": "Created during load test",
-            "author": "loadtest@sogang.ac.kr"
-        })
-
-    @task(2)
-    def search_memos(self):
-        """메모 검색 (빈도: 2)"""
-        self.client.get("/v1/memos/search?q=test")
-```
+요청 간 대기 시간은 1~3초로 설정합니다.
 
 ### 실행
 
-```bash
-# Web UI로 실행
-locust -f locustfile.py --host=http://localhost:8000
-
-# CLI로 실행 (100 사용자, 10/초 증가, 60초 실행)
-locust -f locustfile.py --host=http://localhost:8000 \
-  --users 100 --spawn-rate 10 --run-time 60s --headless
-```
+| Command | Purpose |
+|---|---|
+| `locust -f locustfile.py --host=http://localhost:8000` | Web UI로 실행 |
+| `locust -f locustfile.py --host=http://localhost:8000 --users 100 --spawn-rate 10 --run-time 60s --headless` | CLI로 실행 (100 사용자, 10/초 증가, 60초) |
 
 ### 결과 해석
 
 | 메트릭 | 권장값 |
-|--------|--------|
+|---|---|
 | Median Response Time | < 200ms |
 | 95th Percentile | < 500ms |
 | Requests/sec | 서버 사양에 따라 |
@@ -366,59 +123,22 @@ locust -f locustfile.py --host=http://localhost:8000 \
 
 > **중요:** CI 환경에서는 `DEBUG=true`를 설정해야 프로덕션 검증(DATABASE_URL 등)을 우회합니다.
 
-```yaml
-# .github/workflows/backend-ci.yml
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:15
-        env:
-          POSTGRES_DB: test_db
-          POSTGRES_USER: test_user
-          POSTGRES_PASSWORD: test_pass
-        ports:
-          - 5432:5432
+CI 파이프라인은 PostgreSQL 15 서비스 컨테이너를 띄우고, uv로 의존성 설치 후 pytest를 실행합니다. 커버리지 결과는 XML로 출력하여 Codecov에 업로드합니다.
 
-    steps:
-      - uses: actions/checkout@v4
+주요 환경변수:
 
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
+| 환경변수 | 값 | 용도 |
+|---|---|---|
+| `DEBUG` | `"true"` | 프로덕션 검증 우회 |
+| `DATABASE_URL` | `postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db` | 테스트 DB 연결 |
 
-      - name: Run tests
-        env:
-          DEBUG: "true"  # 프로덕션 검증 우회
-          DATABASE_URL: postgresql+asyncpg://test_user:test_pass@localhost:5432/test_db
-        run: |
-          uv sync
-          uv run pytest tests/ -v --cov=app --cov-report=xml
-
-      - name: Upload coverage
-        uses: codecov/codecov-action@v4
-        with:
-          files: coverage.xml
-```
+전체 워크플로우 설정은 `.github/workflows/backend-ci.yml` 참조.
 
 ## 테스트 모범 사례
 
 ### AAA 패턴
 
-```python
-async def test_example():
-    # Arrange - 준비
-    mock_repo = AsyncMock()
-    mock_repo.get_by_id.return_value = {"id": 1}
-    service = MyService(mock_repo)
-
-    # Act - 실행
-    result = await service.get_item(1)
-
-    # Assert - 검증
-    assert result["id"] == 1
-    mock_repo.get_by_id.assert_called_once_with(1)
-```
+모든 테스트는 Arrange(준비) -> Act(실행) -> Assert(검증) 순서로 구성합니다. Mock 객체를 설정하고, 테스트 대상 메서드를 호출한 뒤, 반환값과 Mock 호출을 검증합니다.
 
 ### 테스트 격리
 
@@ -428,18 +148,9 @@ async def test_example():
 
 ### 네이밍
 
-```python
-# ✓ 좋은 예: 동작을 설명
-def test_create_memo_returns_created_memo():
-def test_get_memo_raises_error_when_not_found():
-
-# ✗ 나쁜 예: 의미 없는 이름
-def test_memo1():
-def test_function():
-```
+테스트 함수명은 동작을 설명해야 합니다. `test_create_memo_returns_created_memo`나 `test_get_memo_raises_error_when_not_found`처럼 무엇을 테스트하는지 명확히 드러내야 합니다. `test_memo1`이나 `test_function` 같은 의미 없는 이름은 피합니다.
 
 ## 다음 단계
 
 - [백엔드 개발](./backend.md) - 테스트 대상 코드
 - [문제 해결](./troubleshooting.md) - 테스트 문제 해결
-

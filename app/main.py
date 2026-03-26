@@ -1,13 +1,7 @@
 """
 FastAPI Memo Application - Main Entry Point
 
-This is the main application module that wires together all components:
-- Database connections
-- API routers
-- Prometheus metrics
-
-Note: Redis와 Kafka/SQS 이벤트 시스템은 동아리 규모에서 불필요하여 제거됨.
-Rate limiting은 in-memory storage를 사용함.
+Database connections, API routers, Prometheus metrics를 결합하는 메인 모듈.
 """
 
 from fastapi import FastAPI
@@ -27,7 +21,6 @@ from .events.publisher import NullEventPublisher
 from .common.metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
 from .common.rate_limit import limiter, rate_limit_exceeded_handler
 
-# --- Logging Configuration ---
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 )
@@ -36,7 +29,6 @@ logger = logging.getLogger(__name__)
 settings = get_settings()
 
 
-# --- Background Tasks ---
 async def monitor_database_connections(app: FastAPI):
     """Background task to monitor database connection pool."""
     while True:
@@ -49,13 +41,11 @@ async def monitor_database_connections(app: FastAPI):
         await asyncio.sleep(5)
 
 
-# --- Application Lifespan Management ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Application startup and shutdown lifecycle management."""
     logger.info("Lifespan: 애플리케이션 시작...")
 
-    # Store database resources in app state
     app.state.db_engine = engine
     app.state.db_session_factory = async_session_factory
     logger.info("Lifespan: 데이터베이스 리소스가 app.state에 저장되었습니다.")
@@ -88,7 +78,6 @@ async def lifespan(app: FastAPI):
 
     logger.info("Lifespan: 모든 서비스가 성공적으로 시작되었습니다.")
 
-    # Initialize MEMO_COUNT
     try:
         async with engine.connect() as conn:
             result = await conn.execute(sqlalchemy.text("SELECT COUNT(*) FROM memos"))
@@ -117,7 +106,6 @@ async def lifespan(app: FastAPI):
     logger.info("Lifespan: 모든 서비스가 정상적으로 종료되었습니다.")
 
 
-# --- FastAPI Application ---
 app = FastAPI(
     title="Memo API",
     description="FastAPI, SQLAlchemy 2.0을 사용한 비동기 메모 애플리케이션",
@@ -125,11 +113,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-# --- Rate Limiting ---
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_exceeded_handler)
 
-# --- Middleware ---
 app.add_middleware(PrometheusMiddleware)
 
 # CORS configuration with explicit origins (not wildcard)
@@ -155,7 +141,6 @@ app.add_middleware(
     allow_headers=["Authorization", "Content-Type", "X-Requested-With"],
 )
 
-# --- Routers ---
 # Health router at root level (not versioned)
 app.include_router(health_router)
 
@@ -164,7 +149,6 @@ API_V1_PREFIX = "/v1"
 app.include_router(memos_router, prefix=API_V1_PREFIX)
 
 
-# --- Development Server ---
 if __name__ == "__main__":
     import uvicorn
 

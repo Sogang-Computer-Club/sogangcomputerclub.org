@@ -1,14 +1,14 @@
 # 로컬 개발용 Docker Compose
 # 모든 서비스가 컨테이너로 실행됨 (AWS 서비스 없음)
 #
-# 기본 실행: docker-compose up
+# 기본 실행: docker compose -f deploy/docker-compose.yml up
 #   - 핵심 서비스만 실행 (backend, postgres, frontend, nginx)
 #
-# 모니터링 포함: docker-compose --profile monitoring up
+# 모니터링 포함: docker compose -f deploy/docker-compose.yml --profile monitoring up
 
 services:
   backend:
-    build: .
+    build: ..
     ports:
       - "8000:8000"
     environment:
@@ -16,7 +16,7 @@ services:
     depends_on:
       - postgres
     volumes:
-      - ./app:/code/app  # 핫 리로드: 코드 변경 시 자동 반영
+      - ../app:/code/app  # 핫 리로드: 코드 변경 시 자동 반영
     networks:
       - app-network
 
@@ -34,7 +34,7 @@ services:
       - app-network
 
   frontend:
-    build: ./frontend
+    build: ../frontend
     ports:
       - "3000:3000"
     environment:
@@ -52,9 +52,9 @@ services:
       - "80:80"
       - "443:443"
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
-      - ./nginx-sogangcomputerclub.conf:/etc/nginx/conf.d/sogangcomputerclub.conf:ro
-      - ./scripts/nginx.sh:/nginx.sh
+      - ../nginx.conf:/etc/nginx/nginx.conf:ro
+      - ../nginx-sogangcomputerclub.conf:/etc/nginx/conf.d/sogangcomputerclub.conf:ro
+      - ../scripts/nginx.sh:/nginx.sh
       - certbot_certs:/etc/letsencrypt
     entrypoint: /bin/sh
     command: -c "/nginx.sh"
@@ -68,8 +68,8 @@ services:
     image: certbot/certbot
     volumes:
       - certbot_certs:/etc/letsencrypt
-      - ./frontend/build:/var/www/html
-      - ./scripts/certbot.sh:/certbot.sh
+      - ../frontend/build:/var/www/html
+      - ../scripts/certbot.sh:/certbot.sh
     entrypoint: /bin/sh
     command: -c "/certbot.sh"
     networks:
@@ -80,7 +80,7 @@ services:
       - nginx
 
   # ===== 모니터링 스택 (Prometheus + Grafana) =====
-  # 사용: docker-compose --profile monitoring up
+  # 사용: docker compose -f deploy/docker-compose.yml --profile monitoring up
 
   postgres-exporter:
     image: prometheuscommunity/postgres-exporter
@@ -112,7 +112,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus_data:/prometheus
     command:
       - "--config.file=/etc/prometheus/prometheus.yml"
@@ -136,7 +136,7 @@ services:
       - GF_USERS_ALLOW_SIGN_UP=false
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./grafana/provisioning:/etc/grafana/provisioning
+      - ../grafana/provisioning:/etc/grafana/provisioning
     networks:
       - app-network
     depends_on:

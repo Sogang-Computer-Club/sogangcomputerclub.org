@@ -59,7 +59,6 @@ def get_real_client_ip(request: Request) -> str:
     return get_remote_address(request)
 
 
-# Create limiter instance with custom key function
 limiter = Limiter(key_func=get_real_client_ip)
 
 

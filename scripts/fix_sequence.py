@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 # Database Configuration
 POSTGRES_USER = "admin"
-POSTGRES_PASSWORD = "82292" # From docker inspect (as seen in migrate_db.py)
+POSTGRES_PASSWORD = "82292"
 POSTGRES_HOST = "localhost"
 POSTGRES_PORT = "5432"
 POSTGRES_DB = "sgcc-backend-db"

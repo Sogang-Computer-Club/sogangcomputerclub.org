@@ -7,7 +7,7 @@
 | 영역 | 기술 |
 | --- | --- |
 | Backend | FastAPI, SQLAlchemy 2.0, PostgreSQL |
-| Frontend | SvelteKit 5, Svelte 5, Tailwind CSS v4 |
+| Frontend | SvelteKit 2, Svelte 5, Tailwind CSS v4 |
 | Infrastructure | Docker, Terraform, AWS |
 
 ## 빠른 시작
@@ -24,7 +24,7 @@
 git clone https://github.com/Sogang-Computer-Club/sogangcomputerclub.org.git
 cd sogangcomputerclub.org
 cp .env.example .env
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml up -d
 ```
 
 ### 접속 주소

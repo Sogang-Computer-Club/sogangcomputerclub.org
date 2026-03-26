@@ -83,10 +83,10 @@ aws ecr get-login-password --region $AWS_REGION | docker login --username AWS --
 ./fetch-secrets.sh "$SECRET_ARN" "$AWS_REGION" .env
 
 # Pull latest images
-docker compose -f docker-compose.aws.yml pull
+docker compose -f deploy/docker-compose.aws.yml pull
 
 # Deploy with zero-downtime
-docker compose -f docker-compose.aws.yml up -d --remove-orphans
+docker compose -f deploy/docker-compose.aws.yml up -d --remove-orphans
 
 # Cleanup old images
 docker image prune -f
@@ -106,8 +106,8 @@ After=docker.service
 Type=oneshot
 RemainAfterExit=yes
 WorkingDirectory=/opt/sgcc
-ExecStart=/usr/bin/docker compose -f docker-compose.aws.yml up -d
-ExecStop=/usr/bin/docker compose -f docker-compose.aws.yml down
+ExecStart=/usr/bin/docker compose -f deploy/docker-compose.aws.yml up -d
+ExecStop=/usr/bin/docker compose -f deploy/docker-compose.aws.yml down
 
 [Install]
 WantedBy=multi-user.target

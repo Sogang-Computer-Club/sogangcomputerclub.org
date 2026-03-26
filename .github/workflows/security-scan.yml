@@ -11,12 +11,12 @@ name: Security Scanning
 
 on:
   push:
-    branches: [master, develop, staging]
+    branches: [master]
   pull_request:
-    branches: [master, develop]
-  # 매일 새벽 2시(UTC) 정기 스캔: 새로 발견된 CVE를 빠르게 탐지
+    branches: [master]
+  # 매주 월요일 새벽 2시(UTC) 정기 스캔
   schedule:
-    - cron: "0 2 * * *"
+    - cron: "0 2 * * 1"
   workflow_dispatch:
 
 # 최소 권한 원칙: 필요한 권한만 부여
@@ -38,7 +38,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy vulnerability scanner in filesystem mode
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -55,7 +55,7 @@ jobs:
           category: "trivy-fs"
 
       - name: Generate vulnerability report
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: "fs"
           scan-ref: "."
@@ -82,7 +82,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Run Trivy config scanner
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: "config"
           scan-ref: "."
@@ -129,7 +129,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.88.0
         with:
           path: ./
           # only-verified: 실제로 유효한 시크릿만 보고 (오탐 감소)
@@ -166,7 +166,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Scan image with Trivy
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ matrix.image }}:scan
           format: "sarif"
@@ -181,7 +181,7 @@ jobs:
           category: "trivy-${{ matrix.image }}-image"
 
       - name: Generate detailed image report
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ matrix.image }}:scan
           format: "table"
@@ -195,7 +195,7 @@ jobs:
           path: "trivy-${{ matrix.image }}-detailed.txt"
 
       - name: Check for critical vulnerabilities
-        uses: aquasecurity/trivy-action@0.34.2
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: ${{ matrix.image }}:scan
           format: "table"

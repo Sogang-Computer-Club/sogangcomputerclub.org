@@ -95,22 +95,22 @@ GRAFANA_ADMIN_PASSWORD=your_secure_password
 
 ## Docker Compose 설정
 
-서비스는 `docker-compose.yml` (개발) 및 `docker-compose.prod.yml` (프로덕션) 모두에 정의되어 있습니다.
+서비스는 `deploy/docker-compose.yml` (개발) 및 `deploy/docker-compose.prod.yml` (프로덕션) 모두에 정의되어 있습니다.
 
 ### 개발
 ```bash
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml up -d
 ```
 
 ### 프로덕션
 ```bash
-docker-compose -f docker-compose.prod.yml up -d
+docker compose -f deploy/docker-compose.prod.yml up -d
 ```
 
 ## 문제 해결
 
 ### FastAPI 지표가 표시되지 않음
-1. Backend가 실행 중인지 확인: `docker-compose ps`
+1. Backend가 실행 중인지 확인: `docker compose -f deploy/docker-compose.yml ps`
 2. 지표 엔드포인트 확인: `curl http://localhost:8000/metrics`
 3. Prometheus 타겟 확인: http://localhost:9090/targets
 
@@ -122,7 +122,7 @@ docker-compose -f docker-compose.prod.yml up -d
 ### 포트 충돌
 포트 바인딩 오류가 발생하는 경우:
 1. 포트를 사용하는 프로세스 확인: `sudo ss -tlnp | grep <port>`
-2. 충돌하는 서비스를 중지하거나 docker-compose.yml에서 포트 변경
+2. 충돌하는 서비스를 중지하거나 deploy/docker-compose.yml에서 포트 변경
 
 ## 지표 추가하기
 
@@ -165,7 +165,7 @@ docker run --rm -v sogangcomputercluborg_grafana_data:/data -v $(pwd):/backup al
 - **Nginx Exporter**: nginx 웹 서버 지표 모니터링
 - **Node Exporter**: 호스트 시스템 지표 모니터링
 
-이들은 **현재 배포되어 있으며** `docker-compose.yml` 및 `docker-compose.prod.yml`에 구성되어 있습니다.
+이들은 **현재 배포되어 있으며** `deploy/docker-compose.yml` 및 `deploy/docker-compose.prod.yml`에 구성되어 있습니다.
 
 - `postgres-exporter` (Port: 9187)
 - `nginx-exporter` (Port: 9113)

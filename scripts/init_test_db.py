@@ -28,7 +28,6 @@ memos = sqlalchemy.Table(
 
 async def init_db():
     """데이터베이스 테이블 생성"""
-    # CI 환경의 MariaDB 설정
     import os
     DATABASE_URL = os.getenv(
         "DATABASE_URL",

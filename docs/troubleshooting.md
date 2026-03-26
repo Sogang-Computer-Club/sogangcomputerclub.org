@@ -6,254 +6,83 @@
 
 ### Docker 관련
 
-#### 컨테이너가 시작되지 않음
+### 컨테이너가 시작되지 않음
 
-```bash
-# 상태 확인
-docker-compose ps
+`docker compose -f deploy/docker-compose.yml ps`로 상태를 확인하고, `docker compose -f deploy/docker-compose.yml logs backend` 또는 `logs frontend`로 로그를 확인합니다. 해결되지 않으면 `docker compose -f deploy/docker-compose.yml down && docker compose -f deploy/docker-compose.yml up -d`로 컨테이너를 재시작합니다.
 
-# 로그 확인
-docker-compose logs backend
-docker-compose logs frontend
+### 포트 충돌
 
-# 컨테이너 재시작
-docker-compose down && docker-compose up -d
-```
+"Bind for 0.0.0.0:8000 failed: port is already allocated" 오류가 발생하면 `lsof -i :8000`으로 사용 중인 프로세스를 찾아 종료하거나, `deploy/docker-compose.yml`에서 호스트 포트를 변경합니다 (예: `"8001:8000"`).
 
-#### 포트 충돌
+### 볼륨 권한 문제
 
-```
-Error: Bind for 0.0.0.0:8000 failed: port is already allocated
-```
+`docker compose -f deploy/docker-compose.yml down -v`로 볼륨을 초기화한 뒤 `docker compose -f deploy/docker-compose.yml up -d`로 재시작합니다.
 
-```bash
-# 사용 중인 프로세스 찾기
-lsof -i :8000
+### Alpine Docker GID 충돌
 
-# 해당 프로세스 종료 또는 docker-compose.yml에서 포트 변경
-ports:
-  - "8001:8000"  # 호스트 포트 변경
-```
-
-#### 볼륨 권한 문제
-
-```bash
-# 볼륨 초기화
-docker-compose down -v
-docker-compose up -d
-```
-
-#### Alpine Docker GID 충돌
-
-```
-addgroup: gid '1000' in use
-```
-
-**원인:** Alpine Linux에서 GID 1000이 이미 사용 중
-
-**해결:** 시스템 그룹/사용자 방식 사용
-```dockerfile
-# ✗ 잘못됨
-RUN addgroup --gid 1000 appgroup && \
-    adduser --uid 1000 -G appgroup -D appuser
-
-# ✓ 올바름
-RUN addgroup -S appgroup && \
-    adduser -S -G appgroup appuser
-```
+"addgroup: gid '1000' in use" 오류는 Alpine Linux에서 GID 1000이 이미 사용 중일 때 발생합니다. `addgroup --gid 1000` 대신 `addgroup -S appgroup && adduser -S -G appgroup appuser`처럼 시스템 그룹/사용자 방식을 사용합니다.
 
 ---
 
 ### 백엔드 (Python/FastAPI)
 
-#### 모듈을 찾을 수 없음
+### 모듈을 찾을 수 없음
 
-```
-ModuleNotFoundError: No module named 'app'
-```
+"ModuleNotFoundError: No module named 'app'" 오류가 발생하면 `which python`으로 가상환경(.venv/bin/python)을 사용 중인지 확인하고, `uv sync`로 의존성을 재설치합니다.
 
-```bash
-# 가상환경 확인
-which python  # .venv/bin/python 이어야 함
+### 데이터베이스 연결 실패
 
-# 의존성 재설치
-uv sync
-```
+"sqlalchemy.exc.OperationalError: connection refused" 오류의 원인과 해결 방법:
 
-#### 데이터베이스 연결 실패
+| 확인 항목 | 방법 |
+|-----------|------|
+| PostgreSQL 실행 여부 | `docker compose -f deploy/docker-compose.yml ps postgres` |
+| 환경변수 | `echo $DATABASE_URL` (예: postgresql+asyncpg://user:pass@localhost:5433/db) |
+| 포트 | Docker 내부는 `postgres:5432`, 로컬 개발은 `localhost:5433` |
 
-```
-sqlalchemy.exc.OperationalError: connection refused
-```
+### 마이그레이션 오류
 
-**원인 및 해결:**
+"Target database is not up to date" 오류가 발생하면 `uv run alembic current`로 현재 버전을 확인합니다. 필요 시 `uv run alembic stamp head`로 버전을 강제 설정한 뒤 `uv run alembic upgrade head`로 마이그레이션을 재적용합니다.
 
-1. PostgreSQL이 실행 중인지 확인:
-   ```bash
-   docker-compose ps postgres
-   ```
+### Rate Limiting 테스트 실패
 
-2. 환경변수 확인:
-   ```bash
-   echo $DATABASE_URL
-   # 예: postgresql+asyncpg://user:pass@localhost:5433/db
-   ```
-
-3. 포트 확인 (Docker 내부 vs 외부):
-   - Docker 내부: `postgres:5432`
-   - 로컬 개발: `localhost:5433`
-
-#### 마이그레이션 오류
-
-```
-alembic.util.exc.CommandError: Target database is not up to date
-```
-
-```bash
-# 현재 버전 확인
-uv run alembic current
-
-# 강제로 특정 버전으로 설정
-uv run alembic stamp head
-
-# 마이그레이션 재적용
-uv run alembic upgrade head
-```
-
-#### Rate Limiting 테스트 실패
-
-```python
-# tests/conftest.py에서 rate limiting 비활성화 확인
-@pytest.fixture
-def test_app():
-    app.state.limiter.enabled = False
-    yield app
-```
+테스트 시 rate limiting이 비활성화되어 있는지 확인합니다. `tests/conftest.py`의 test_app fixture에서 `app.state.limiter.enabled = False`가 설정되어야 합니다.
 
 ---
 
 ### 프론트엔드 (SvelteKit)
 
-#### 빌드 에러
+### 빌드 에러
 
-```
-Error: Cannot find module '$lib/...'
-```
+"Cannot find module '$lib/...'" 오류가 발생하면 `rm -rf node_modules package-lock.json && npm install`로 node_modules를 재설치합니다. TypeScript 캐시 문제라면 `rm -rf .svelte-kit && npm run dev`로 캐시를 초기화합니다.
 
-```bash
-# node_modules 재설치
-rm -rf node_modules package-lock.json
-npm install
+### Hydration 불일치
 
-# TypeScript 캐시 초기화
-rm -rf .svelte-kit
-npm run dev
-```
+"Hydration failed because the initial UI does not match" 오류는 SSR과 CSR 결과가 다를 때 발생합니다. `localStorage` 등 브라우저 전용 API는 `$app/environment`의 `browser` 변수로 감싸서 클라이언트에서만 실행되도록 합니다. `$effect` 블록 안에서 `if (browser)` 조건을 사용합니다.
 
-#### Hydration 불일치
+### Context를 찾을 수 없음
 
-```
-Error: Hydration failed because the initial UI does not match
-```
+"Function called outside component initialization" 오류는 `getContext()`가 컴포넌트 초기화 외부에서 호출될 때 발생합니다. `getContext()`는 반드시 `<script>` 블록 최상위에서 호출해야 하며, 이벤트 핸들러 등 함수 내부에서 호출하면 안 됩니다.
 
-**원인:** SSR과 CSR 결과가 다름
+### API 호출 실패 (CORS)
 
-**해결:**
-```svelte
-<script>
-    import { browser } from '$app/environment';
-
-    // 클라이언트에서만 실행
-    let data = $state(null);
-
-    $effect(() => {
-        if (browser) {
-            data = localStorage.getItem('key');
-        }
-    });
-</script>
-```
-
-#### Context를 찾을 수 없음
-
-```
-Error: Function called outside component initialization
-```
-
-**원인:** `getContext()`가 컴포넌트 초기화 외부에서 호출됨
-
-**해결:**
-```svelte
-<script>
-    import { getContext } from 'svelte';
-
-    // ✓ 올바름: 스크립트 최상위에서 호출
-    const store = getContext(KEY);
-
-    // ✗ 잘못됨: 함수 내부에서 호출
-    function handleClick() {
-        const store = getContext(KEY);  // Error!
-    }
-</script>
-```
-
-#### API 호출 실패 (CORS)
-
-```
-Access to fetch blocked by CORS policy
-```
-
-**개발 환경:** `vite.config.ts` 프록시 확인
-```typescript
-server: {
-    proxy: {
-        '/api': {
-            target: 'http://localhost:8000',
-            rewrite: (path) => path.replace(/^\/api/, '')
-        }
-    }
-}
-```
+"Access to fetch blocked by CORS policy" 오류가 발생하면 `vite.config.ts`에서 `/api` 경로에 대한 프록시 설정이 `http://localhost:8000`을 target으로 올바르게 구성되어 있는지 확인합니다.
 
 ---
 
 ### 테스트
 
-#### pytest가 테스트를 찾지 못함
+### pytest가 테스트를 찾지 못함
 
-```bash
-# 테스트 검색 확인
-uv run pytest --collect-only
+`uv run pytest --collect-only`로 테스트 검색 결과를 확인합니다. 파일명이 `test_*.py` 또는 `*_test.py` 패턴을 따르는지 확인합니다.
 
-# 파일명이 test_*.py 또는 *_test.py 인지 확인
-```
+### async 테스트 오류
 
-#### async 테스트 오류
+"RuntimeWarning: coroutine was never awaited" 경고는 async 테스트 함수에 `@pytest.mark.asyncio` 데코레이터가 누락되었을 때 발생합니다.
 
-```
-RuntimeWarning: coroutine was never awaited
-```
+### Vitest 타임아웃
 
-```python
-import pytest
-
-# pytest.mark.asyncio 데코레이터 필요
-@pytest.mark.asyncio
-async def test_async_function():
-    result = await some_async_function()
-    assert result is not None
-```
-
-#### Vitest 타임아웃
-
-```typescript
-// vitest.config.ts에서 타임아웃 증가
-export default defineConfig({
-    test: {
-        testTimeout: 10000,  // 10초
-    }
-});
-```
+`vitest.config.ts`에서 `test.testTimeout` 값을 늘립니다 (예: 10000으로 설정하면 10초).
 
 ---
 
@@ -261,109 +90,41 @@ export default defineConfig({
 
 ### EC2
 
-#### SSH 접속 실패
+### SSH 접속 실패
 
-```bash
-# 키 권한 확인
-chmod 400 ~/.ssh/sgcc-production.pem
+`chmod 400 ~/.ssh/sgcc-production.pem`으로 키 권한을 확인합니다. `aws ec2 describe-security-groups --group-ids sg-xxx`로 보안 그룹에서 내 IP가 허용되어 있는지, `aws ec2 describe-instance-status --instance-ids i-xxx`로 인스턴스 상태를 확인합니다.
 
-# 보안 그룹에서 내 IP 허용 확인
-aws ec2 describe-security-groups --group-ids sg-xxx
+### 디스크 용량 부족
 
-# 인스턴스 상태 확인
-aws ec2 describe-instance-status --instance-ids i-xxx
-```
-
-#### 디스크 용량 부족
-
-```bash
-# 용량 확인
-df -h
-
-# Docker 정리
-docker system prune -af
-docker volume prune -f
-
-# 오래된 로그 삭제
-sudo journalctl --vacuum-time=7d
-```
+`df -h`로 용량을 확인합니다. `docker system prune -af && docker volume prune -f`로 Docker를 정리하고, `sudo journalctl --vacuum-time=7d`로 오래된 로그를 삭제합니다.
 
 ### RDS
 
-#### 연결 거부
+### 연결 거부
 
-1. Security Group 확인 (EC2 → RDS 허용)
-2. RDS가 Private Subnet에 있는지 확인
-3. VPC 라우팅 테이블 확인
+Security Group에서 EC2 -> RDS 허용 여부, RDS가 Private Subnet에 있는지, VPC 라우팅 테이블을 확인합니다. EC2 내부에서 `nc -zv <rds-endpoint> 5432`로 연결을 테스트합니다.
 
-```bash
-# EC2 내부에서 테스트
-nc -zv <rds-endpoint> 5432
-```
+### 느린 쿼리
 
-#### 느린 쿼리
-
-```sql
--- 실행 중인 쿼리 확인
-SELECT pid, now() - pg_stat_activity.query_start AS duration, query
-FROM pg_stat_activity
-WHERE state != 'idle'
-ORDER BY duration DESC;
-
--- 인덱스 사용 확인
-EXPLAIN ANALYZE SELECT * FROM memos WHERE title LIKE '%keyword%';
-```
+`pg_stat_activity`에서 idle이 아닌 쿼리를 duration 기준으로 조회하여 실행 중인 쿼리를 확인합니다. `EXPLAIN ANALYZE`로 인덱스 사용 여부를 확인합니다.
 
 ### CI/CD
 
-#### GitHub Actions YAML 파싱 오류
+### GitHub Actions YAML 파싱 오류
 
-GitHub Actions의 `script:` 블록에서 JavaScript 템플릿 리터럴 사용 시 YAML 파서와 충돌할 수 있습니다.
+GitHub Actions의 `script:` 블록에서 JavaScript 템플릿 리터럴(백틱과 `${}`)은 YAML 파서와 충돌할 수 있습니다. 템플릿 리터럴 대신 `'Hello ' + name + '\n' + '**Bold text**'`처럼 문자열 연결 방식을 사용합니다.
 
-```yaml
-# ✗ 잘못됨: 백틱과 ${}가 YAML 파서와 충돌
-script: |
-  const body = `Hello ${name}
-  **Bold text**`;
+### GitHub Actions 실패
 
-# ✓ 올바름: 문자열 연결 방식 사용
-script: |
-  const body = 'Hello ' + name + '\n' +
-    '**Bold text**';
-```
+| 증상 | 원인 | 해결 |
+|------|------|------|
+| "Input required and not supplied: role-to-assume" | Secret 누락 | Repository Settings -> Secrets에서 확인 |
+| ECR 로그인 실패 | IAM 역할 권한 부족 | ecr:GetAuthorizationToken, ecr:BatchGetImage, ecr:GetDownloadUrlForLayer 권한 확인 |
+| SSH 연결 실패 | 키 또는 네트워크 문제 | `EC2_SSH_KEY` Secret이 올바른 PEM 형식인지, Security Group에서 GitHub Actions IP가 허용되어 있는지 확인 |
 
-#### GitHub Actions 실패
+### 자동 롤백 후 상태 확인
 
-1. **Secret 누락:**
-   ```
-   Error: Input required and not supplied: role-to-assume
-   ```
-   Repository Settings → Secrets에서 확인
-
-2. **ECR 로그인 실패:**
-   ```bash
-   # IAM 역할 권한 확인
-   # ecr:GetAuthorizationToken
-   # ecr:BatchGetImage
-   # ecr:GetDownloadUrlForLayer
-   ```
-
-3. **SSH 연결 실패:**
-   - `EC2_SSH_KEY` Secret이 올바른 PEM 형식인지 확인
-   - EC2 Security Group에서 GitHub Actions IP 허용
-
-#### 자동 롤백 후 상태 확인
-
-```bash
-ssh ec2-user@<EC2_IP>
-cd /opt/sgcc
-
-# 현재 실행 중인 이미지 태그 확인
-docker-compose -f docker-compose.aws.yml ps
-
-# 로그 확인
-docker-compose -f docker-compose.aws.yml logs --tail 100 backend
-```
+EC2에 SSH 접속 후 `/opt/sgcc` 디렉토리에서 `docker compose -f deploy/docker-compose.aws.yml ps`로 실행 중인 이미지 태그를 확인하고, `docker compose -f deploy/docker-compose.aws.yml logs --tail 100 backend`로 로그를 확인합니다.
 
 ---
 
@@ -381,26 +142,11 @@ docker-compose -f docker-compose.aws.yml logs --tail 100 backend
 
 ### 로컬 개발
 
-```bash
-# 백엔드 로그
-docker-compose logs -f backend
-
-# 프론트엔드 로그
-docker-compose logs -f frontend
-
-# 특정 시간 이후
-docker-compose logs --since 10m backend
-```
+백엔드 로그는 `docker compose -f deploy/docker-compose.yml logs -f backend`, 프론트엔드 로그는 `docker compose -f deploy/docker-compose.yml logs -f frontend`로 확인합니다. 특정 시간 이후의 로그만 보려면 `--since 10m` 옵션을 추가합니다.
 
 ### 프로덕션
 
-```bash
-# EC2에서
-docker-compose -f docker-compose.aws.yml logs -f
-
-# CloudWatch (AWS Console)
-# Log Group: /ecs/sgcc-backend
-```
+EC2에서 `docker compose -f deploy/docker-compose.aws.yml logs -f`로 확인합니다. AWS Console의 CloudWatch에서 Log Group `/ecs/sgcc-backend`를 확인할 수도 있습니다.
 
 ---
 
@@ -411,4 +157,3 @@ docker-compose -f docker-compose.aws.yml logs -f
 1. **GitHub Issues**: 버그 리포트 작성
 2. **문서 확인**: 관련 가이드 재확인
 3. **로그 첨부**: 에러 로그와 재현 단계 포함
-

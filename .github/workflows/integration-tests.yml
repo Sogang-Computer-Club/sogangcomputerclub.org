@@ -76,12 +76,3 @@ jobs:
         run: |
           uv run pytest tests/integration/test_database.py -v
 
-      - name: Upload test results
-        uses: actions/upload-artifact@v4
-        if: always()
-        with:
-          name: integration-test-results
-          path: |
-            pytest-report.xml
-            coverage.xml
-          retention-days: 7
