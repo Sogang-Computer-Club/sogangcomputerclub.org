@@ -87,6 +87,16 @@ describe("FeedCard", () => {
 
     // Check main container has correct classes
     const link = container.querySelector("a");
-    expect(link).toHaveClass("flex", "h-40", "items-center", "w-full");
+    expect(link).toHaveClass(
+      "flex",
+      "flex-col",
+      "w-75",
+      "gap-3",
+      "sm:flex-row",
+      "sm:h-40",
+      "sm:items-center",
+      "sm:w-full",
+      "sm:gap-0",
+    );
   });
 });

@@ -6,10 +6,11 @@
 
     let { data }: { data: PageData } = $props();
 
+    let memos = $state([...data.memos]);
     let selectedSort = $state('updated');
 
     const sortedMemos: Memo[] = $derived.by(() => {
-        const originalMemos = [...data.memos];
+        const originalMemos = [...memos];
 
         switch (selectedSort) {
             case 'newest':
@@ -31,6 +32,18 @@
                 );
         }
     });
+
+    function handleMemoCreate(newMemo: Memo) {
+        memos = [...memos, newMemo];
+    }
+
+    function handleMemoUpdate(updatedMemo: Memo) {
+        memos = memos.map((m) => (m.id === updatedMemo.id ? updatedMemo : m));
+    }
+
+    function handleMemoDelete(deletedId: number) {
+        memos = memos.filter((m) => m.id !== deletedId);
+    }
 </script>
 
 <div class="p-4 bg-[#FFF3DF]">
@@ -50,10 +63,10 @@
 <div class="columns-1 sm:columns-2 md:columns-3 lg:columns-4 xl:columns-5 2xl:columns-6 bg-[#FFF3DF] min-h-screen">
     {#each sortedMemos as memo (memo.id)}
         {#if memo.id % 2 == 0}
-            <MemoCard {memo} memoColor="#200F4C" />
+            <MemoCard {memo} memoColor="#200F4C" onMemoUpdate={handleMemoUpdate} onMemoDelete={handleMemoDelete} />
         {:else}
-            <MemoCard {memo} memoColor="#22949F" />
+            <MemoCard {memo} memoColor="#22949F" onMemoUpdate={handleMemoUpdate} onMemoDelete={handleMemoDelete} />
         {/if}
     {/each}
-    <MemoPlus />
+    <MemoPlus onMemoCreate={handleMemoCreate} />
 </div>

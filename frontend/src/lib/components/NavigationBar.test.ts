@@ -94,7 +94,7 @@ describe("NavigationBar", () => {
     // Get all links
     const links = screen.getAllByRole("link");
 
-    // Should have multiple links (main + submenu)
+    // Should have 12 submenu links total across all 5 categories (3+4+2+1+1=11)
     expect(links.length).toBeGreaterThan(10);
   });
 });

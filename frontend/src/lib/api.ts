@@ -68,19 +68,6 @@ async function handleApiError(
 }
 
 /**
- * Get authorization headers if token is available
- */
-function getAuthHeaders(token?: string): HeadersInit {
-  const headers: HeadersInit = {
-    "Content-Type": "application/json",
-  };
-  if (token) {
-    headers["Authorization"] = `Bearer ${token}`;
-  }
-  return headers;
-}
-
-/**
  * Fetch all memos
  */
 export async function getMemos(
@@ -100,17 +87,12 @@ export async function getMemos(
 }
 
 /**
- * Create a new memo (requires authentication)
- * @param memo - The memo data to create
- * @param token - Optional auth token. If not provided, request will fail with 401.
+ * Create a new memo
  */
-export async function createMemo(
-  memo: MemoCreate,
-  token?: string,
-): Promise<Memo> {
+export async function createMemo(memo: MemoCreate): Promise<Memo> {
   const response = await fetch(`${API_BASE_URL}/memos/`, {
     method: "POST",
-    headers: getAuthHeaders(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(memo),
   });
   if (!response.ok) {
@@ -123,19 +105,12 @@ export async function createMemo(
 }
 
 /**
- * Update an existing memo (requires authentication)
- * @param id - The memo ID to update
- * @param memo - The updated memo data
- * @param token - Optional auth token. If not provided, request will fail with 401.
+ * Update an existing memo
  */
-export async function updateMemo(
-  id: number,
-  memo: MemoUpdate,
-  token?: string,
-): Promise<Memo> {
+export async function updateMemo(id: number, memo: MemoUpdate): Promise<Memo> {
   const response = await fetch(`${API_BASE_URL}/memos/${id}`, {
     method: "PUT",
-    headers: getAuthHeaders(token),
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(memo),
   });
   if (!response.ok) {
@@ -148,14 +123,11 @@ export async function updateMemo(
 }
 
 /**
- * Delete a memo (requires authentication)
- * @param id - The memo ID to delete
- * @param token - Optional auth token. If not provided, request will fail with 401.
+ * Delete a memo
  */
-export async function deleteMemo(id: number, token?: string): Promise<void> {
+export async function deleteMemo(id: number): Promise<void> {
   const response = await fetch(`${API_BASE_URL}/memos/${id}`, {
     method: "DELETE",
-    headers: getAuthHeaders(token),
   });
   if (!response.ok) {
     await handleApiError(
