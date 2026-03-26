@@ -9,7 +9,6 @@
     "test:watch": "vitest",
     "test:ui": "vitest --ui",
     "prepare": "svelte-kit sync || echo ''",
-    "prepack": "svelte-kit sync && svelte-package && publint",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
     "check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
     "cz": "cz"
@@ -37,18 +36,14 @@
   "devDependencies": {
     "@commitlint/cli": "^19.0.0",
     "@commitlint/config-conventional": "^19.0.0",
-    "@sveltejs/adapter-auto": "^6.0.0",
     "@sveltejs/adapter-node": "^5.3.3",
     "@sveltejs/kit": "^2.16.0",
-    "@sveltejs/package": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/typography": "^0.5.16",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/svelte": "^5.2.8",
     "commitizen": "^4.2.4",
     "cz-customizable": "^5.5.0",
-    "happy-dom": "^20.6.3",
-    "publint": "^0.3.2",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4.1.11",
@@ -61,14 +56,11 @@
   ],
   "dependencies": {
     "@tailwindcss/vite": "^4.1.11",
-    "@types/dompurify": "^3.0.5",
-    "@types/marked": "^5.0.2",
     "date-fns": "^4.1.0",
     "dompurify": "^3.2.7",
     "highlight.js": "^11.11.1",
     "jsdom": "^26.1.0",
-    "marked": "^16.3.0",
-    "marked-highlight": "^2.2.2"
+    "marked": "^16.3.0"
   },
   "overrides": {
     "cookie": "^0.7.0",

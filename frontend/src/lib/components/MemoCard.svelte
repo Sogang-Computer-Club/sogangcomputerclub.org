@@ -1,12 +1,10 @@
 <script lang="ts">
-    import { getContext } from 'svelte';
     import 'highlight.js/styles/github-dark.css';
     import { marked } from 'marked';
     import DOMPurify from 'dompurify';
     import hljs from 'highlight.js';
     import type { Memo } from '$lib/api';
     import { updateMemo, deleteMemo } from '$lib/api';
-    import { AUTH_CONTEXT_KEY, type AuthStore } from '$lib/stores';
 
     interface Props {
         memo: Memo;
@@ -16,8 +14,6 @@
     }
 
     let { memo, memoColor, onMemoUpdate, onMemoDelete }: Props = $props();
-
-    const auth = getContext<AuthStore>(AUTH_CONTEXT_KEY);
 
     // Local editing state (copy on edit pattern)
     let memoText = $state(memo.content);
@@ -90,7 +86,7 @@
             const updatedMemo = await updateMemo(memo.id, {
                 title: memoTitle,
                 content: memoText
-            }, auth?.token ?? undefined);
+            });
             closeModal();
             // Notify parent via callback instead of location.reload()
             onMemoUpdate?.(updatedMemo);
@@ -103,7 +99,7 @@
     async function handleDeleteMemo() {
         if (confirm('정말로 이 메모를 삭제하시겠습니까?')) {
             try {
-                await deleteMemo(memo.id, auth?.token ?? undefined);
+                await deleteMemo(memo.id);
                 closeModal();
                 // Notify parent via callback instead of location.reload()
                 onMemoDelete?.(memo.id);

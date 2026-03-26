@@ -45,39 +45,6 @@ export interface MemoUpdate {
   author?: string | null;
 }
 
-export interface ApiError {
-  detail: string;
-  status: number;
-}
-
-export interface LoginRequest {
-  email: string;
-  password: string;
-}
-
-export interface RegisterRequest {
-  email: string;
-  password: string;
-  name: string;
-  student_id?: string;
-}
-
-export interface AuthToken {
-  access_token: string;
-  token_type: string;
-}
-
-export interface User {
-  id: number;
-  email: string;
-  name: string;
-  student_id: string | null;
-  is_active: boolean;
-  is_admin: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 /**
  * Helper to extract error message from response
  */
@@ -127,20 +94,6 @@ export async function getMemos(
     await handleApiError(
       response,
       `Failed to fetch memos: ${response.statusText}`,
-    );
-  }
-  return response.json();
-}
-
-/**
- * Fetch a single memo by ID
- */
-export async function getMemo(id: number): Promise<Memo> {
-  const response = await fetch(`${API_BASE_URL}/memos/${id}`);
-  if (!response.ok) {
-    await handleApiError(
-      response,
-      `Failed to fetch memo ${id}: ${response.statusText}`,
     );
   }
   return response.json();
@@ -210,84 +163,4 @@ export async function deleteMemo(id: number, token?: string): Promise<void> {
       `Failed to delete memo ${id}: ${response.statusText}`,
     );
   }
-}
-
-/**
- * Search memos with pagination
- */
-export async function searchMemos(
-  query: string,
-  skip: number = 0,
-  limit: number = 100,
-): Promise<Memo[]> {
-  const params = new URLSearchParams({
-    q: query,
-    skip: skip.toString(),
-    limit: limit.toString(),
-  });
-  const response = await fetch(`${API_BASE_URL}/memos/search/?${params}`);
-  if (!response.ok) {
-    await handleApiError(
-      response,
-      `Failed to search memos: ${response.statusText}`,
-    );
-  }
-  return response.json();
-}
-
-/**
- * Login user and return access token
- */
-export async function login(credentials: LoginRequest): Promise<AuthToken> {
-  const response = await fetch(`${API_BASE_URL}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(credentials),
-  });
-  if (!response.ok) {
-    await handleApiError(response, "Login failed");
-  }
-  return response.json();
-}
-
-/**
- * Register a new user
- */
-export async function register(userData: RegisterRequest): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/auth/register`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(userData),
-  });
-  if (!response.ok) {
-    await handleApiError(response, "Registration failed");
-  }
-  return response.json();
-}
-
-/**
- * Get current user info
- */
-export async function getCurrentUser(token: string): Promise<User> {
-  const response = await fetch(`${API_BASE_URL}/auth/me`, {
-    headers: getAuthHeaders(token),
-  });
-  if (!response.ok) {
-    await handleApiError(response, "Failed to get user info");
-  }
-  return response.json();
-}
-
-/**
- * Refresh access token
- */
-export async function refreshToken(token: string): Promise<AuthToken> {
-  const response = await fetch(`${API_BASE_URL}/auth/refresh`, {
-    method: "POST",
-    headers: getAuthHeaders(token),
-  });
-  if (!response.ok) {
-    await handleApiError(response, "Token refresh failed");
-  }
-  return response.json();
 }

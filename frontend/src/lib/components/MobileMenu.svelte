@@ -89,21 +89,5 @@
                 {/if}
             </div>
         {/each}
-        <div class="flex flex-col text-white mt-auto -translate-y-18">
-            <a
-                href="/login"
-                onclick={handleNavigate}
-                class="min-w-[60px] h-12 mt-auto text-[20px]"
-            >
-                Login
-            </a>
-            <a
-                href="/sign-up"
-                onclick={handleNavigate}
-                class="min-w-[60px] h-12 mt-auto text-[20px]"
-            >
-                Sign Up
-            </a>
-        </div>
     </div>
 </div>

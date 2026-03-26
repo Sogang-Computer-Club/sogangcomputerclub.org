@@ -81,14 +81,6 @@ describe("NavigationBar", () => {
     expect(libraryLink).toHaveAttribute("href", "/library");
   });
 
-  it("should render Login button", () => {
-    render(NavigationBar);
-
-    const loginLink = screen.getByRole("link", { name: /Login/i });
-    expect(loginLink).toBeInTheDocument();
-    expect(loginLink).toHaveAttribute("href", "/login");
-  });
-
   it("should have navigation role", () => {
     render(NavigationBar);
 
@@ -102,7 +94,7 @@ describe("NavigationBar", () => {
     // Get all links
     const links = screen.getAllByRole("link");
 
-    // Should have multiple links (main + submenu + login)
+    // Should have multiple links (main + submenu)
     expect(links.length).toBeGreaterThan(10);
   });
 });

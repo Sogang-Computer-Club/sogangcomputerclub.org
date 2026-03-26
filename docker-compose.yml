@@ -107,7 +107,6 @@ services:
       - certbot_certs:/etc/letsencrypt
       - ./frontend/build:/var/www/html
       - ./certbot.sh:/certbot.sh
-      - /var/run/docker.sock:/var/run/docker.sock
     entrypoint: /bin/sh
     command: -c "/certbot.sh"
     networks:
