@@ -10,14 +10,14 @@
 
 ```bash
 # 상태 확인
-docker-compose ps
+docker compose -f deploy/docker-compose.yml ps
 
 # 로그 확인
-docker-compose logs backend
-docker-compose logs frontend
+docker compose -f deploy/docker-compose.yml logs backend
+docker compose -f deploy/docker-compose.yml logs frontend
 
 # 컨테이너 재시작
-docker-compose down && docker-compose up -d
+docker compose -f deploy/docker-compose.yml down && docker compose -f deploy/docker-compose.yml up -d
 ```
 
 #### 포트 충돌
@@ -30,7 +30,7 @@ Error: Bind for 0.0.0.0:8000 failed: port is already allocated
 # 사용 중인 프로세스 찾기
 lsof -i :8000
 
-# 해당 프로세스 종료 또는 docker-compose.yml에서 포트 변경
+# 해당 프로세스 종료 또는 deploy/docker-compose.yml에서 포트 변경
 ports:
   - "8001:8000"  # 호스트 포트 변경
 ```
@@ -39,8 +39,8 @@ ports:
 
 ```bash
 # 볼륨 초기화
-docker-compose down -v
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml down -v
+docker compose -f deploy/docker-compose.yml up -d
 ```
 
 #### Alpine Docker GID 충돌
@@ -90,7 +90,7 @@ sqlalchemy.exc.OperationalError: connection refused
 
 1. PostgreSQL이 실행 중인지 확인:
    ```bash
-   docker-compose ps postgres
+   docker compose -f deploy/docker-compose.yml ps postgres
    ```
 
 2. 환경변수 확인:
@@ -359,10 +359,10 @@ ssh ec2-user@<EC2_IP>
 cd /opt/sgcc
 
 # 현재 실행 중인 이미지 태그 확인
-docker-compose -f docker-compose.aws.yml ps
+docker compose -f deploy/docker-compose.aws.yml ps
 
 # 로그 확인
-docker-compose -f docker-compose.aws.yml logs --tail 100 backend
+docker compose -f deploy/docker-compose.aws.yml logs --tail 100 backend
 ```
 
 ---
@@ -383,20 +383,20 @@ docker-compose -f docker-compose.aws.yml logs --tail 100 backend
 
 ```bash
 # 백엔드 로그
-docker-compose logs -f backend
+docker compose -f deploy/docker-compose.yml logs -f backend
 
 # 프론트엔드 로그
-docker-compose logs -f frontend
+docker compose -f deploy/docker-compose.yml logs -f frontend
 
 # 특정 시간 이후
-docker-compose logs --since 10m backend
+docker compose -f deploy/docker-compose.yml logs --since 10m backend
 ```
 
 ### 프로덕션
 
 ```bash
 # EC2에서
-docker-compose -f docker-compose.aws.yml logs -f
+docker compose -f deploy/docker-compose.aws.yml logs -f
 
 # CloudWatch (AWS Console)
 # Log Group: /ecs/sgcc-backend

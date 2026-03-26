@@ -252,13 +252,13 @@ describe('MemoList', () => {
 
 ```bash
 # 테스트용 서비스 실행
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml up -d
 
 # 통합 테스트 실행
 uv run pytest tests/integration/ -v
 
 # 정리
-docker-compose -f docker-compose.test.yml down -v
+docker compose -f deploy/docker-compose.test.yml down -v
 ```
 
 ### 통합 테스트 예시

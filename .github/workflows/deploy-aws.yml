@@ -179,7 +179,7 @@ jobs:
           username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           port: 22
-          source: "docker-compose.aws.yml,nginx-aws.conf,scripts/fetch-secrets.sh"
+          source: "deploy/docker-compose.aws.yml,nginx-aws.conf,scripts/fetch-secrets.sh"
           target: "/opt/sgcc"
           strip_components: 0
 
@@ -255,10 +255,10 @@ jobs:
             echo "IMAGE_TAG=$IMAGE_TAG" >> .env
 
             # Pull latest images
-            docker compose -f docker-compose.aws.yml pull
+            docker compose -f deploy/docker-compose.aws.yml pull
 
             # Deploy with zero-downtime rolling update
-            docker compose -f docker-compose.aws.yml up -d --remove-orphans
+            docker compose -f deploy/docker-compose.aws.yml up -d --remove-orphans
 
             # Cleanup old images
             docker image prune -f
@@ -268,7 +268,7 @@ jobs:
             sleep 30
 
             # Check service status
-            docker compose -f docker-compose.aws.yml ps
+            docker compose -f deploy/docker-compose.aws.yml ps
 
       - name: Run smoke tests
         uses: appleboy/ssh-action@029f5b4aeeeb58fdfe1410a5d17f967dacf36262  # v1.0.3
@@ -282,7 +282,7 @@ jobs:
 
             # Check container status first
             echo "=== Container Status ==="
-            docker compose -f docker-compose.aws.yml ps
+            docker compose -f deploy/docker-compose.aws.yml ps
 
             # Test through nginx with retries
             echo "=== Testing endpoints ==="
@@ -311,13 +311,13 @@ jobs:
           script: |
             echo "=== DOCKER COMPOSE STATUS ==="
             cd /opt/sgcc
-            docker compose -f docker-compose.aws.yml ps
+            docker compose -f deploy/docker-compose.aws.yml ps
 
             echo "=== BACKEND LOGS ==="
-            docker compose -f docker-compose.aws.yml logs --tail 100 backend
+            docker compose -f deploy/docker-compose.aws.yml logs --tail 100 backend
 
             echo "=== FRONTEND LOGS ==="
-            docker compose -f docker-compose.aws.yml logs --tail 50 frontend
+            docker compose -f deploy/docker-compose.aws.yml logs --tail 50 frontend
 
             echo "===================="
 
@@ -338,7 +338,7 @@ jobs:
             export IMAGE_TAG=latest
 
             # Re-deploy with latest tag
-            docker compose -f docker-compose.aws.yml up -d --force-recreate
+            docker compose -f deploy/docker-compose.aws.yml up -d --force-recreate
 
             echo "Rollback completed"
 

@@ -24,7 +24,7 @@
 git clone https://github.com/Sogang-Computer-Club/sogangcomputerclub.org.git
 cd sogangcomputerclub.org
 cp .env.example .env
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml up -d
 ```
 
 ### 접속 주소

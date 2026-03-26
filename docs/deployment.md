@@ -68,7 +68,7 @@ jobs:
     services:
       postgres: ...
     steps:
-      - docker-compose up
+      - docker compose -f deploy/docker-compose.yml up
       - API 엔드포인트 테스트
 ```
 
@@ -96,7 +96,7 @@ sequenceDiagram
 
     GH->>EC2: 3. SSH Deploy
     EC2->>ECR: Pull Images
-    EC2->>EC2: docker-compose up
+    EC2->>EC2: docker compose up
 
     GH->>EC2: 4. Smoke Tests
     Note over EC2: /health 체크
@@ -227,7 +227,7 @@ docker tag sgcc-backend:latest 123456789.dkr.ecr.ap-northeast-2.amazonaws.com/sg
 docker push 123456789.dkr.ecr.ap-northeast-2.amazonaws.com/sgcc-backend:latest
 
 # 4. EC2에서 배포
-ssh ec2-user@<EC2_IP> "cd /opt/sgcc && docker-compose -f docker-compose.aws.yml pull && docker-compose -f docker-compose.aws.yml up -d"
+ssh ec2-user@<EC2_IP> "cd /opt/sgcc && docker compose -f deploy/docker-compose.aws.yml pull && docker compose -f deploy/docker-compose.aws.yml up -d"
 ```
 
 ### Rollback
@@ -236,7 +236,7 @@ ssh ec2-user@<EC2_IP> "cd /opt/sgcc && docker-compose -f docker-compose.aws.yml 
 # 이전 버전으로 롤백 (EC2에서)
 cd /opt/sgcc
 export IMAGE_TAG=<이전 커밋 SHA>
-docker-compose -f docker-compose.aws.yml up -d --force-recreate
+docker compose -f deploy/docker-compose.aws.yml up -d --force-recreate
 ```
 
 ## 모니터링
@@ -258,8 +258,8 @@ curl https://sogangcomputerclub.org/api/v1/health
 
 ```bash
 # EC2에서
-docker-compose -f docker-compose.aws.yml logs -f backend
-docker-compose -f docker-compose.aws.yml logs -f frontend
+docker compose -f deploy/docker-compose.aws.yml logs -f backend
+docker compose -f deploy/docker-compose.aws.yml logs -f frontend
 
 # CloudWatch (AWS Console)
 # Log Group: /ecs/sgcc-backend, /ecs/sgcc-frontend
@@ -267,7 +267,7 @@ docker-compose -f docker-compose.aws.yml logs -f frontend
 
 ### 메트릭
 
-Prometheus + Grafana (docker-compose.yml):
+Prometheus + Grafana (deploy/docker-compose.yml):
 - Prometheus: http://localhost:9090
 - Grafana: http://localhost:3001
 
@@ -276,7 +276,7 @@ Prometheus + Grafana (docker-compose.yml):
 ### Production
 
 ```yaml
-# docker-compose.aws.yml
+# deploy/docker-compose.aws.yml
 services:
   backend:
     image: ${ECR_REGISTRY}/sgcc-backend:${IMAGE_TAG}
@@ -291,7 +291,7 @@ services:
 
 ```bash
 # 별도 EC2 또는 같은 EC2의 다른 포트로 배포
-docker-compose -f docker-compose.aws.yml -p sgcc-staging up -d
+docker compose -f deploy/docker-compose.aws.yml -p sgcc-staging up -d
 ```
 
 ## 보안 체크리스트
@@ -310,7 +310,7 @@ docker-compose -f docker-compose.aws.yml -p sgcc-staging up -d
 1. GitHub Actions 로그 확인
 2. EC2 SSH 접속하여 로그 확인:
    ```bash
-   docker-compose -f docker-compose.aws.yml logs backend
+   docker compose -f deploy/docker-compose.aws.yml logs backend
    ```
 3. 자동 롤백 확인
 

@@ -10,8 +10,8 @@
 - CI/CD: GitHub Actions
 
 ## Commands
-- `docker-compose up` - 핵심 서비스만 (backend, postgres, frontend, nginx)
-- `docker-compose --profile monitoring up` - Prometheus+Grafana 포함
+- `docker compose -f deploy/docker-compose.yml up` - 핵심 서비스만 (backend, postgres, frontend, nginx)
+- `docker compose -f deploy/docker-compose.yml --profile monitoring up` - Prometheus+Grafana 포함
 - `uv sync` - Python 의존성 설치
 - `cd frontend && npm install` - 프론트엔드 의존성 설치
 - `uv run pytest tests/ -v` - 백엔드 테스트

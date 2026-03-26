@@ -71,7 +71,7 @@ backups/
 k8s/
 *.yaml
 *.yml
-!docker-compose.yml
+!deploy/docker-compose.yml
 
 # CI/CD
 .github/

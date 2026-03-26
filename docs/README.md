@@ -56,10 +56,10 @@ cd sogangcomputerclub.org
 cp .env.example .env
 
 # Docker로 핵심 서비스 실행
-docker-compose up -d
+docker compose -f deploy/docker-compose.yml up -d
 
 # 모니터링 포함 실행
-docker-compose --profile monitoring up -d
+docker compose -f deploy/docker-compose.yml --profile monitoring up -d
 
 # 접속
 # Frontend: http://localhost:3000

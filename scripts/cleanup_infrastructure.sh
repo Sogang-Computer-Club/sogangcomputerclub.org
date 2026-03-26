@@ -45,13 +45,13 @@ done
 # 3. Bring up the stack using docker-compose.prod.yml
 # This will create containers with the names defined in the file (sgcc-*)
 echo "Starting services with correct names..."
-if [ -f "docker-compose.prod.yml" ]; then
+if [ -f "deploy/docker-compose.prod.yml" ]; then
     # Ensure GITHUB_REPOSITORY is set if not already
     export GITHUB_REPOSITORY=${GITHUB_REPOSITORY:-sogangcomputerclub/sogangcomputerclub.org}
-    
-    docker-compose -f docker-compose.prod.yml up -d --remove-orphans
+
+    docker compose -f deploy/docker-compose.prod.yml up -d --remove-orphans
 else
-    echo "Error: docker-compose.prod.yml not found!"
+    echo "Error: deploy/docker-compose.prod.yml not found!"
     exit 1
 fi
 

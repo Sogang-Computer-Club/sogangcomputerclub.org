@@ -19,7 +19,7 @@ infrastructure:
   - changed-files:
       - any-glob-to-any-file:
           - "k8s/**/*"
-          - "docker-compose*.yml"
+          - "deploy/docker-compose*.yml"
           - "**/Dockerfile"
           - "nginx*.conf"
 

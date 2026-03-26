@@ -20,7 +20,7 @@ mkdir -p /var/www/html
 
 # Stop nginx temporarily if it's blocking port 80
 cd /opt/sgcc
-docker compose -f docker-compose.aws.yml stop nginx || true
+docker compose -f deploy/docker-compose.aws.yml stop nginx || true
 
 echo "1. Obtaining SSL certificate from Let's Encrypt..."
 certbot certonly \
@@ -46,7 +46,7 @@ cat > /etc/letsencrypt/renewal-hooks/deploy/sgcc-copy-certs.sh << 'EOF'
 cp /etc/letsencrypt/live/sogangcomputerclub.org/fullchain.pem /opt/sgcc/certs/
 cp /etc/letsencrypt/live/sogangcomputerclub.org/privkey.pem /opt/sgcc/certs/
 chown -R ec2-user:ec2-user /opt/sgcc/certs
-cd /opt/sgcc && docker compose -f docker-compose.aws.yml restart nginx
+cd /opt/sgcc && docker compose -f deploy/docker-compose.aws.yml restart nginx
 EOF
 chmod +x /etc/letsencrypt/renewal-hooks/deploy/sgcc-copy-certs.sh
 
@@ -54,7 +54,7 @@ chmod +x /etc/letsencrypt/renewal-hooks/deploy/sgcc-copy-certs.sh
 (crontab -l 2>/dev/null; echo "0 3 * * * certbot renew --quiet") | crontab -
 
 echo "5. Restarting nginx..."
-docker compose -f docker-compose.aws.yml up -d nginx
+docker compose -f deploy/docker-compose.aws.yml up -d nginx
 
 echo ""
 echo "=== SSL Setup Complete ==="
