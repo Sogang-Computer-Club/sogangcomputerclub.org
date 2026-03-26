@@ -2,7 +2,6 @@ name: Deploy to AWS (EC2 + RDS)
 
 on:
   push:
-    branches: [master]
     tags:
       - "v*.*.*"
   workflow_dispatch:

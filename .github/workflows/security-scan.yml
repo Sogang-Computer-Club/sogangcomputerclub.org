@@ -129,7 +129,7 @@ jobs:
           fetch-depth: 0
 
       - name: TruffleHog OSS
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@v3.88.0
         with:
           path: ./
           # only-verified: 실제로 유효한 시크릿만 보고 (오탐 감소)

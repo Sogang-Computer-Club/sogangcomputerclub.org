@@ -13,9 +13,6 @@ jobs:
   validate-pr:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
       - name: Validate PR title
         uses: amannn/action-semantic-pull-request@v5
         env:
@@ -144,14 +141,3 @@ jobs:
               console.log('File size check passed');
             }
 
-      - name: Comment validation result
-        if: success()
-        uses: actions/github-script@v7
-        with:
-          script: |
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: '**PR Validation Passed**\n\nYour pull request has passed all automated validation checks. It will now be reviewed by maintainers.'
-            });
