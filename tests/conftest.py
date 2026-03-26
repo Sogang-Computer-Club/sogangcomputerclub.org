@@ -76,7 +76,7 @@ async def client(test_engine, test_session_factory):
     # Override app state for testing
     app.state.db_engine = test_engine
     app.state.db_session_factory = test_session_factory
-    app.state.kafka = None  # Disable Kafka for tests
+    app.state.event_publisher = None  # Use fallback NullEventPublisher for tests
 
     # Disable rate limiting for tests
     app.state.limiter.enabled = False

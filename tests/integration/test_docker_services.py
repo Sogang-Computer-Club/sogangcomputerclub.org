@@ -18,7 +18,7 @@ def docker_services():
     )
 
     running_services = stdout.strip().split("\n") if stdout.strip() else []
-    required_services = {"backend", "postgres", "kafka", "zookeeper"}
+    required_services = {"backend", "postgres"}
 
     if not required_services.issubset(set(running_services)):
         pytest.skip(
@@ -45,7 +45,7 @@ class TestDockerServices:
         assert returncode == 0, f"Failed to get docker services: {stderr}"
 
         running_services = stdout.strip().split("\n")
-        required_services = ["backend", "postgres", "kafka", "zookeeper"]
+        required_services = ["backend", "postgres"]
 
         for service in required_services:
             assert service in running_services, f"Service {service} is not running"
@@ -60,20 +60,6 @@ class TestDockerServices:
     def test_postgres_container_healthy(self, docker_services):
         """Test that PostgreSQL container is healthy"""
         returncode, stdout, stderr = run_docker_command("docker-compose ps postgres")
-
-        assert returncode == 0
-        assert "Up" in stdout or "running" in stdout.lower()
-
-    def test_kafka_container_healthy(self, docker_services):
-        """Test that Kafka container is healthy"""
-        returncode, stdout, stderr = run_docker_command("docker-compose ps kafka")
-
-        assert returncode == 0
-        assert "Up" in stdout or "running" in stdout.lower()
-
-    def test_zookeeper_container_healthy(self, docker_services):
-        """Test that Zookeeper container is healthy"""
-        returncode, stdout, stderr = run_docker_command("docker-compose ps zookeeper")
 
         assert returncode == 0
         assert "Up" in stdout or "running" in stdout.lower()

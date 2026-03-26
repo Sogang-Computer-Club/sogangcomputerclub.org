@@ -14,8 +14,8 @@ settings = get_settings()
 engine = create_async_engine(
     settings.database_url,
     echo=settings.debug,
-    pool_size=10,  # 풀에 유지할 기본 커넥션 수
-    max_overflow=20,  # 풀이 가득 찼을 때 추가로 생성할 수 있는 커넥션 수
+    pool_size=3,  # 풀에 유지할 기본 커넥션 수 (t3.micro 단일 워커에 적합)
+    max_overflow=5,  # 풀이 가득 찼을 때 추가로 생성할 수 있는 커넥션 수
     pool_timeout=30,  # 커넥션 대기 최대 시간 (초)
     pool_recycle=3600,  # 커넥션 재활용 주기 (초) - DB의 wait_timeout 이내로 설정
     pool_pre_ping=True,  # 사용 전 커넥션 유효성 검사 (끊어진 커넥션 자동 복구)

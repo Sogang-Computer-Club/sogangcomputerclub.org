@@ -8,7 +8,7 @@ import logging
 
 from .repository import AbstractMemoRepository
 from .schemas import MemoCreate, MemoUpdate
-from ..events.publisher import AbstractEventPublisher
+from ..events.publisher import NullEventPublisher
 from ..common.metrics import MEMO_COUNT
 
 logger = logging.getLogger(__name__)
@@ -26,7 +26,7 @@ class MemoService:
     def __init__(
         self,
         repository: AbstractMemoRepository,
-        event_publisher: AbstractEventPublisher,
+        event_publisher: NullEventPublisher,
     ):
         self.repository = repository
         self.event_publisher = event_publisher
@@ -73,33 +73,27 @@ class MemoService:
         return await self.repository.search(query, skip, limit)
 
     async def update_memo(self, memo_id: int, memo_update: MemoUpdate) -> dict:
-        """Update a memo."""
-        existing_memo = await self.repository.get_by_id(memo_id)
-        if existing_memo is None:
-            raise MemoNotFoundError(f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
-
+        """Update a memo atomically (no TOCTOU race)."""
         update_data = memo_update.model_dump(exclude_unset=True)
         if not update_data:
             raise ValueError("수정할 내용이 없습니다.")
 
         updated_memo = await self.repository.update(memo_id, update_data)
+        if updated_memo is None:
+            raise MemoNotFoundError(f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
 
-        # Publish event
         await self.event_publisher.publish(
             "memo-updated", {"id": memo_id, "action": "updated"}
         )
 
-        return updated_memo  # type: ignore
+        return updated_memo
 
     async def delete_memo(self, memo_id: int) -> None:
-        """Delete a memo."""
-        existing_memo = await self.repository.get_by_id(memo_id)
-        if existing_memo is None:
+        """Delete a memo atomically (no TOCTOU race)."""
+        deleted = await self.repository.delete(memo_id)
+        if not deleted:
             raise MemoNotFoundError(f"ID {memo_id}에 해당하는 메모를 찾을 수 없습니다.")
 
-        await self.repository.delete(memo_id)
-
-        # Publish event
         await self.event_publisher.publish(
             "memo-deleted", {"id": memo_id, "action": "deleted"}
         )

@@ -22,15 +22,6 @@ class Settings(BaseSettings):
         description="Database connection URL. MUST be set via environment variable in production.",
     )
 
-    # 이벤트 백엔드 (기본: null - 동아리 규모에서 불필요)
-    # 'kafka' 또는 'sqs' 사용 시 해당 의존성 설치 필요
-    event_backend: str = Field(
-        default="null", description="Event backend: 'null' (기본), 'kafka', or 'sqs'"
-    )
-    kafka_bootstrap_servers: str = "kafka:9092"
-    sqs_queue_url: str | None = None
-    aws_region: str = "ap-northeast-2"
-
     # 애플리케이션
     debug: bool = False
     log_level: str = "INFO"

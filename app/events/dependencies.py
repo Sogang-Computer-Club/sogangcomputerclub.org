@@ -3,10 +3,10 @@ Event publisher dependency injection.
 """
 
 from fastapi import Request
-from .publisher import AbstractEventPublisher, NullEventPublisher
+from .publisher import NullEventPublisher
 
 
-async def get_event_publisher(request: Request) -> AbstractEventPublisher:
+async def get_event_publisher(request: Request) -> NullEventPublisher:
     """
     Dependency that provides the event publisher.
 
