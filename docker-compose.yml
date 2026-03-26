@@ -4,9 +4,7 @@
 # 기본 실행: docker-compose up
 #   - 핵심 서비스만 실행 (backend, postgres, frontend, nginx)
 #
-# Kafka 포함: docker-compose --profile kafka up
 # 모니터링 포함: docker-compose --profile monitoring up
-# 전체 실행: docker-compose --profile kafka --profile monitoring up
 
 services:
   backend:
@@ -15,8 +13,6 @@ services:
       - "8000:8000"
     environment:
       - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
-      - EVENT_BACKEND=${EVENT_BACKEND:-null}  # 기본: null (이벤트 시스템 비활성화)
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9093}
     depends_on:
       - postgres
     volumes:
@@ -34,39 +30,6 @@ services:
       - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - app-network
-
-  # Zookeeper - Kafka 클러스터 관리 (Kafka 의존성)
-  # 사용: docker-compose --profile kafka up
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    profiles: [kafka]
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - app-network
-
-  # Kafka - 로컬 개발용 이벤트 브로커
-  # 프로덕션에서는 SQS 사용 (EVENT_BACKEND=sqs)
-  # 사용: docker-compose --profile kafka up
-  kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    profiles: [kafka]
-    depends_on:
-      - zookeeper
-    ports:
-      - "9092:9092"   # 호스트에서 접근용 (EXTERNAL)
-      - "9093:9093"   # 컨테이너 간 통신용 (INTERNAL)
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9093,EXTERNAL://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
       - app-network
 
@@ -91,7 +54,7 @@ services:
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
       - ./nginx-sogangcomputerclub.conf:/etc/nginx/conf.d/sogangcomputerclub.conf:ro
-      - ./nginx.sh:/nginx.sh
+      - ./scripts/nginx.sh:/nginx.sh
       - certbot_certs:/etc/letsencrypt
     entrypoint: /bin/sh
     command: -c "/nginx.sh"
@@ -106,7 +69,7 @@ services:
     volumes:
       - certbot_certs:/etc/letsencrypt
       - ./frontend/build:/var/www/html
-      - ./certbot.sh:/certbot.sh
+      - ./scripts/certbot.sh:/certbot.sh
     entrypoint: /bin/sh
     command: -c "/certbot.sh"
     networks:
