@@ -3,7 +3,6 @@ Memo service containing business logic.
 Orchestrates repository and event publisher.
 """
 
-from typing import List
 import logging
 
 from .repository import AbstractMemoRepository
@@ -55,7 +54,7 @@ class MemoService:
         MEMO_COUNT.inc()
         return created_memo
 
-    async def get_memos(self, skip: int = 0, limit: int = 100) -> List[dict]:
+    async def get_memos(self, skip: int = 0, limit: int = 100) -> list[dict]:
         """Get all memos with pagination."""
         return await self.repository.get_all(skip, limit)
 
@@ -68,7 +67,7 @@ class MemoService:
 
     async def search_memos(
         self, query: str, skip: int = 0, limit: int = 100
-    ) -> List[dict]:
+    ) -> list[dict]:
         """Search memos by keyword."""
         return await self.repository.search(query, skip, limit)
 

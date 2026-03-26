@@ -10,12 +10,11 @@ from slowapi.util import get_remote_address
 from fastapi import Request
 from fastapi.responses import JSONResponse
 from ipaddress import ip_address, ip_network, IPv4Network, IPv6Network
-from typing import List, Union
 
 # 신뢰할 수 있는 프록시 네트워크 대역
 # 이 대역에서 오는 요청만 X-Forwarded-For 헤더를 신뢰함
 # 외부에서 직접 X-Forwarded-For를 조작하여 IP 스푸핑하는 것을 방지
-TRUSTED_PROXY_NETWORKS: List[Union[IPv4Network, IPv6Network]] = [
+TRUSTED_PROXY_NETWORKS: list[IPv4Network | IPv6Network] = [
     ip_network("127.0.0.0/8"),  # 로컬호스트
     ip_network("10.0.0.0/8"),  # Docker 기본 네트워크
     ip_network("172.16.0.0/12"),  # Docker 브리지 네트워크
