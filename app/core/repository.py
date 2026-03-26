@@ -13,7 +13,7 @@
 """
 
 from abc import ABC, abstractmethod
-from typing import Generic, TypeVar, Optional, List
+from typing import Generic, TypeVar
 
 T = TypeVar("T")  # 엔티티 타입 (예: dict, Pydantic 모델)
 ID = TypeVar("ID")  # 식별자 타입 (예: int, UUID)
@@ -28,12 +28,12 @@ class AbstractRepository(ABC, Generic[T, ID]):
     """
 
     @abstractmethod
-    async def get_by_id(self, id: ID) -> Optional[T]:
+    async def get_by_id(self, id: ID) -> T | None:
         """Retrieve an entity by its ID."""
         ...
 
     @abstractmethod
-    async def get_all(self, skip: int = 0, limit: int = 100) -> List[T]:
+    async def get_all(self, skip: int = 0, limit: int = 100) -> list[T]:
         """Retrieve all entities with pagination."""
         ...
 
@@ -43,7 +43,7 @@ class AbstractRepository(ABC, Generic[T, ID]):
         ...
 
     @abstractmethod
-    async def update(self, id: ID, data: dict) -> Optional[T]:
+    async def update(self, id: ID, data: dict) -> T | None:
         """Update an existing entity."""
         ...
 

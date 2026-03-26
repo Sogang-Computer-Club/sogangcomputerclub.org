@@ -6,7 +6,7 @@ from fastapi import APIRouter, Request, HTTPException
 from fastapi.responses import Response
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
 from datetime import datetime, UTC
-from typing import Dict, Any
+from typing import Any
 from ipaddress import ip_address, ip_network
 import sqlalchemy
 import logging
@@ -44,7 +44,7 @@ def _check_internal_access(request: Request) -> bool:
 
 
 @router.get("/health")
-async def health_check(request: Request) -> Dict[str, Any]:
+async def health_check(request: Request) -> dict[str, Any]:
     """
     System health check endpoint.
     Returns simple status for external requests, detailed info for internal requests.

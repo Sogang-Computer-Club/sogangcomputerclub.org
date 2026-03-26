@@ -12,7 +12,7 @@
     // Use server-side API route to keep API key secure
     const url = '/api/calendar';
     
-    let width = $state(window.innerWidth);
+    let width = $state(0);
     let isMobile = $derived(width < 640);
     let eventGap = $derived(isMobile ? 1 : 1.5);
 

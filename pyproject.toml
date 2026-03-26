@@ -10,24 +10,20 @@ dependencies = [
     "uvicorn>=0.32.0",
     "pydantic>=2.9.2",
     "pydantic-settings>=2.0.0",
-    "urllib3>=2.6.3",  # CVE-2025-66418, CVE-2025-66471, CVE-2026-21441
-    
+
     # Database (PostgreSQL)
     "sqlalchemy==2.0.32",
     "asyncpg>=0.29.0",
-    "greenlet>=3.0.0",
     
     # Note: Redis/Kafka/SQS 제거됨 (동아리 규모에서 불필요)
     # Rate limiting은 in-memory storage 사용
     # 필요 시 redis, aiokafka, boto3, aioboto3 추가
     
-    # Monitoring & Logging
+    # Monitoring
     "prometheus-client>=0.21.0",
-    "python-json-logger==2.0.7",
 
     # Security & Rate Limiting
     "slowapi>=0.1.9",
-    "email-validator>=2.0.0",
 ]
 
 # REMOVED unused dependencies:

@@ -23,7 +23,7 @@ from .core.config import get_settings
 from .core.database import engine, async_session_factory
 from .routers import health_router, memos_router
 from .common.middleware import PrometheusMiddleware
-from .events.publisher import create_event_publisher
+from .events.publisher import NullEventPublisher
 from .common.metrics import MEMO_COUNT, ACTIVE_CONNECTIONS
 from .common.rate_limit import limiter, rate_limit_exceeded_handler
 
@@ -82,17 +82,9 @@ async def lifespan(app: FastAPI):
     except Exception as e:
         logger.error(f"Lifespan: Database connection check failed - {e}")
 
-    # Initialize Event Publisher (defaults to NullEventPublisher)
-    event_publisher = create_event_publisher()
-    try:
-        await event_publisher.start()
-        app.state.event_publisher = event_publisher
-        logger.info(
-            f"Lifespan: Event Publisher 초기화 완료 (backend: {settings.event_backend})"
-        )
-    except Exception as e:
-        logger.warning(f"Lifespan: Event Publisher 초기화 실패 - {e}")
-        app.state.event_publisher = None
+    # Initialize Event Publisher (NullEventPublisher - no-op for club scale)
+    app.state.event_publisher = NullEventPublisher()
+    logger.info("Lifespan: Event Publisher 초기화 완료 (NullEventPublisher)")
 
     logger.info("Lifespan: 모든 서비스가 성공적으로 시작되었습니다.")
 
@@ -113,10 +105,6 @@ async def lifespan(app: FastAPI):
 
     # Shutdown
     logger.info("Lifespan: 애플리케이션 종료 중...")
-
-    if app.state.event_publisher:
-        await app.state.event_publisher.stop()
-        logger.info("Lifespan: Event Publisher 종료 완료")
 
     monitoring_task.cancel()
     try:

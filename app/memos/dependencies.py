@@ -7,7 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..core.dependencies import get_db
 from ..events.dependencies import get_event_publisher
-from ..events.publisher import AbstractEventPublisher
+from ..events.publisher import NullEventPublisher
 from .repository import MemoRepository, AbstractMemoRepository
 from .service import MemoService
 
@@ -21,7 +21,7 @@ async def get_memo_repository(
 
 async def get_memo_service(
     repository: AbstractMemoRepository = Depends(get_memo_repository),
-    event_publisher: AbstractEventPublisher = Depends(get_event_publisher),
+    event_publisher: NullEventPublisher = Depends(get_event_publisher),
 ) -> MemoService:
     """Dependency that provides the memo service."""
     return MemoService(repository, event_publisher)

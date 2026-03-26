@@ -10,7 +10,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
 from functools import lru_cache
-from typing import List
 
 
 class Settings(BaseSettings):
@@ -21,15 +20,6 @@ class Settings(BaseSettings):
         default="postgresql+asyncpg://memo_user:changeme@postgres:5432/memo_app",
         description="Database connection URL. MUST be set via environment variable in production.",
     )
-
-    # 이벤트 백엔드 (기본: null - 동아리 규모에서 불필요)
-    # 'kafka' 또는 'sqs' 사용 시 해당 의존성 설치 필요
-    event_backend: str = Field(
-        default="null", description="Event backend: 'null' (기본), 'kafka', or 'sqs'"
-    )
-    kafka_bootstrap_servers: str = "kafka:9092"
-    sqs_queue_url: str | None = None
-    aws_region: str = "ap-northeast-2"
 
     # 애플리케이션
     debug: bool = False
@@ -55,7 +45,7 @@ class Settings(BaseSettings):
     )
 
     @property
-    def cors_origins_list(self) -> List[str]:
+    def cors_origins_list(self) -> list[str]:
         """Parse CORS origins from comma-separated string."""
         return [
             origin.strip() for origin in self.cors_origins.split(",") if origin.strip()

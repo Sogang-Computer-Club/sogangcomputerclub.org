@@ -4,7 +4,6 @@ Thin router that delegates to MemoService.
 """
 
 from fastapi import APIRouter, HTTPException, Depends, status, Request, Query
-from typing import List
 import logging
 
 from .schemas import MemoCreate, MemoUpdate, MemoInDB
@@ -39,7 +38,7 @@ async def create_memo(
         )
 
 
-@router.get("/", response_model=List[MemoInDB])
+@router.get("/", response_model=list[MemoInDB])
 @limiter.limit(RATE_LIMIT_DEFAULT)
 async def read_memos(
     request: Request,
@@ -58,7 +57,7 @@ async def read_memos(
         )
 
 
-@router.get("/search/", response_model=List[MemoInDB])
+@router.get("/search/", response_model=list[MemoInDB])
 @limiter.limit(RATE_LIMIT_SEARCH)
 async def search_memos(
     request: Request,

@@ -25,12 +25,9 @@ services:
       - "8000"
     environment:
       - DATABASE_URL=${DATABASE_URL:-postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}
-      - KAFKA_BOOTSTRAP_SERVERS=${KAFKA_BOOTSTRAP_SERVERS:-kafka:9093}
       - DEBUG=false
       - CORS_ORIGINS=${CORS_ORIGINS:-https://sogangcomputerclub.org,https://www.sogangcomputerclub.org}
     depends_on:
-      kafka:
-        condition: service_started
       postgres:
         condition: service_healthy
     networks:
@@ -41,35 +38,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    restart: unless-stopped
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    networks:
-      - backend_sgcc-network
-
-  kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    restart: unless-stopped
-    depends_on:
-      - zookeeper
-    # No external port exposure in production
-    expose:
-      - "9092"
-      - "9093"
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: INTERNAL://0.0.0.0:9093,EXTERNAL://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: INTERNAL://kafka:9093,EXTERNAL://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: INTERNAL:PLAINTEXT,EXTERNAL:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: INTERNAL
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-    networks:
-      - backend_sgcc-network
 
   frontend:
     build: ./frontend

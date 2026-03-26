@@ -1,6 +1,6 @@
 <script lang="ts">
-    import { setContext, onMount } from 'svelte';
-    import { UIStore, UI_CONTEXT_KEY, AuthStore, AUTH_CONTEXT_KEY } from '$lib/stores';
+    import { setContext } from 'svelte';
+    import { UIStore, UI_CONTEXT_KEY } from '$lib/stores';
     import "../app.css";
     import { page } from '$app/state';
 
@@ -11,22 +11,14 @@
 
     // Provide stores via Context API
     const uiStore = new UIStore();
-    const authStore = new AuthStore();
-
     setContext(UI_CONTEXT_KEY, uiStore);
-    setContext(AUTH_CONTEXT_KEY, authStore);
-
-    // Initialize auth state (validate token, load user)
-    onMount(() => {
-        authStore.initialize();
-    });
 </script>
 
 
 <div class="font-[Pretendard_Variable]">
 <Header />
 {@render children()}
-{#if page.url.pathname !== '/login' && page.url.pathname !== '/' && page.url.pathname !== '/sign-up'}
+{#if page.url.pathname !== '/'}
   <footer><Footer /></footer>
 {/if}
 </div>
