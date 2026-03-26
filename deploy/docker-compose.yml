@@ -57,6 +57,7 @@ services:
       - ../nginx-sogangcomputerclub.conf:/etc/nginx/conf.d/sogangcomputerclub.conf:ro
       - ../scripts/nginx.sh:/nginx.sh
       - certbot_certs:/etc/letsencrypt
+      - nginx_certs:/etc/nginx/certs
     entrypoint: /bin/sh
     command: -c "/nginx.sh"
     depends_on:
@@ -70,6 +71,7 @@ services:
     network_mode: host
     volumes:
       - certbot_certs:/etc/letsencrypt
+      - nginx_certs:/etc/nginx/certs
       - ../scripts/certbot.sh:/certbot.sh
     entrypoint: /bin/sh
     command: -c "/certbot.sh"
@@ -141,6 +143,7 @@ services:
 volumes:
   postgres_data:
   certbot_certs:
+  nginx_certs:
   prometheus_data:
   grafana_data:
 
