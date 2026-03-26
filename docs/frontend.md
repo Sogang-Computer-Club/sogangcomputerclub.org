@@ -11,59 +11,29 @@ SvelteKit 기반 프론트엔드 개발 방법을 설명합니다.
 
 ## 프로젝트 구조
 
-```
-frontend/src/
-├── routes/                    # 페이지 라우트
-│   ├── +layout.svelte        # 전역 레이아웃
-│   ├── +page.svelte          # 홈페이지
-│   └── about-us/
-│       ├── welcome/
-│       │   └── +page.svelte
-│       └── activity/
-│           └── +page.svelte
-├── lib/
-│   ├── components/           # 재사용 컴포넌트
-│   │   ├── Header.svelte
-│   │   ├── Footer.svelte
-│   │   ├── NavigationBar.svelte
-│   │   └── *.test.ts        # 컴포넌트 테스트
-│   ├── stores/               # 상태 관리
-│   │   └── ui.svelte.ts
-│   ├── utils/                # 유틸리티
-│   │   └── calculate-calendar-days.ts
-│   ├── config/               # 설정
-│   │   └── navigation.ts
-│   ├── api.ts                # API 클라이언트
-│   └── types/                # 타입 정의
-│       └── index.ts
-├── hooks.server.ts           # 서버 훅 (보안 헤더)
-└── app.d.ts                  # 전역 타입
-```
+| 경로 | 설명 |
+|------|------|
+| `routes/` | 페이지 라우트 |
+| `routes/+layout.svelte` | 전역 레이아웃 |
+| `routes/+page.svelte` | 홈페이지 |
+| `routes/about-us/welcome/` | 환영 페이지 |
+| `routes/about-us/activity/` | 활동 페이지 |
+| `lib/components/` | 재사용 컴포넌트 (Header, Footer, NavigationBar 등) |
+| `lib/stores/ui.svelte.ts` | 상태 관리 스토어 |
+| `lib/utils/` | 유틸리티 (캘린더 날짜 계산 등) |
+| `lib/config/navigation.ts` | 네비게이션 설정 |
+| `lib/api.ts` | API 클라이언트 |
+| `lib/types/index.ts` | 타입 정의 |
+| `hooks.server.ts` | 서버 훅 (보안 헤더) |
+| `app.d.ts` | 전역 타입 |
+
+전체 구조는 `frontend/src/` 디렉토리를 참고하세요.
 
 ## Svelte 5 패턴
 
 ### Runes 사용
 
-Svelte 5에서는 `$state`, `$derived`, `$effect`를 사용합니다:
-
-```svelte
-<script lang="ts">
-    // 반응형 상태
-    let count = $state(0);
-
-    // 파생 상태 (자동 재계산)
-    let doubled = $derived(count * 2);
-
-    // 사이드 이펙트
-    $effect(() => {
-        console.log(`Count changed to ${count}`);
-    });
-</script>
-
-<button onclick={() => count++}>
-    Count: {count}, Doubled: {doubled}
-</button>
-```
+Svelte 5에서는 `$state`, `$derived`, `$effect` Runes를 사용하여 반응형 상태를 선언합니다. `$state`로 반응형 변수를 만들고, `$derived`로 파생 값을 자동 재계산하며, `$effect`로 상태 변경 시 사이드 이펙트를 실행합니다.
 
 ### 이전 문법 비교
 
@@ -79,300 +49,96 @@ Svelte 5에서는 `$state`, `$derived`, `$effect`를 사용합니다:
 
 ### 클래스 기반 스토어
 
-```typescript
-// lib/stores/ui.svelte.ts
-export class UIStore {
-    // 반응형 상태
-    sidebarOpen = $state(false);
-    theme = $state<'light' | 'dark'>('light');
+UI 상태는 `$state` 필드를 가진 클래스로 관리합니다. `UIStore` 클래스가 `sidebarOpen`, `theme` 등의 반응형 상태와 `toggleSidebar()` 같은 메서드를 제공합니다. Context 키는 `Symbol`로 정의하여 타입 안전하게 사용합니다.
 
-    toggleSidebar() {
-        this.sidebarOpen = !this.sidebarOpen;
-    }
-}
-
-// Context 키
-export const UI_CONTEXT_KEY = Symbol('ui');
-```
+See `frontend/src/lib/stores/ui.svelte.ts`
 
 ### Context API 사용
 
-```svelte
-<!-- +layout.svelte -->
-<script lang="ts">
-    import { setContext } from 'svelte';
-    import { UIStore, UI_CONTEXT_KEY } from '$lib/stores/ui.svelte';
-
-    // 스토어 인스턴스 생성 및 Context 제공
-    const uiStore = new UIStore();
-
-    setContext(UI_CONTEXT_KEY, uiStore);
-</script>
-
-<slot />
-```
-
-```svelte
-<!-- 자식 컴포넌트에서 사용 -->
-<script lang="ts">
-    import { getContext } from 'svelte';
-    import { UI_CONTEXT_KEY, type UIStore } from '$lib/stores/ui.svelte';
-
-    const uiStore = getContext<UIStore>(UI_CONTEXT_KEY);
-</script>
-```
+레이아웃 컴포넌트(`+layout.svelte`)에서 `setContext`로 스토어 인스턴스를 제공하고, 자식 컴포넌트에서 `getContext`로 꺼내어 사용합니다. `UI_CONTEXT_KEY` 심볼을 키로 사용하여 타입 안전한 Context 접근이 가능합니다.
 
 ## 컴포넌트 작성
 
 ### 기본 컴포넌트
 
-```svelte
-<!-- lib/components/Button.svelte -->
-<script lang="ts">
-    interface Props {
-        variant?: 'primary' | 'secondary';
-        disabled?: boolean;
-        onclick?: () => void;
-        children: import('svelte').Snippet;
-    }
+Svelte 5에서는 `interface Props`로 컴포넌트 속성 타입을 정의하고, `$props()`로 props를 받습니다. 자식 콘텐츠는 `Snippet` 타입의 `children` prop으로 전달하고, `{@render children()}`으로 렌더링합니다.
 
-    let { variant = 'primary', disabled = false, onclick, children }: Props = $props();
-</script>
+컴포넌트 props 예시 (Button):
 
-<button
-    class="btn btn-{variant}"
-    {disabled}
-    {onclick}
->
-    {@render children()}
-</button>
-
-<style>
-    .btn {
-        padding: 0.5rem 1rem;
-        border-radius: 0.25rem;
-    }
-    .btn-primary {
-        background-color: #3b82f6;
-        color: white;
-    }
-    .btn-secondary {
-        background-color: #6b7280;
-        color: white;
-    }
-</style>
-```
+| Prop | 타입 | 기본값 | 설명 |
+|------|------|--------|------|
+| `variant` | `'primary' \| 'secondary'` | `'primary'` | 버튼 스타일 |
+| `disabled` | `boolean` | `false` | 비활성화 여부 |
+| `onclick` | `() => void` | - | 클릭 핸들러 |
+| `children` | `Snippet` | (필수) | 자식 콘텐츠 |
 
 ### 사용법
 
-```svelte
-<script lang="ts">
-    import Button from '$lib/components/Button.svelte';
-</script>
-
-<Button variant="primary" onclick={() => console.log('clicked')}>
-    클릭하세요
-</Button>
-```
+`import Button from '$lib/components/Button.svelte'`로 불러와서 사용합니다. `onclick` 콜백과 slot 대신 `children` Snippet을 통해 자식 콘텐츠를 전달합니다.
 
 ## API 호출
 
 ### API 클라이언트
 
-```typescript
-// lib/api.ts
-const API_BASE_URL = typeof window === 'undefined'
-    ? 'http://backend:8000/v1'   // SSR: Docker 내부 통신
-    : '/api/v1';                  // CSR: Vite 프록시
+API 클라이언트는 SSR과 CSR 환경에 따라 기본 URL을 자동으로 전환합니다. SSR에서는 Docker 내부 통신(`http://backend:8000/v1`), CSR에서는 Vite 프록시(`/api/v1`)를 사용합니다. `getMemos()`, `createMemo()` 등의 함수로 백엔드 API를 호출하며, 응답 실패 시 에러를 throw합니다.
 
-export async function getMemos(): Promise<Memo[]> {
-    const response = await fetch(`${API_BASE_URL}/memos/`);
-    if (!response.ok) {
-        throw new Error('Failed to fetch memos');
-    }
-    return response.json();
-}
-
-export async function createMemo(memo: MemoCreate): Promise<Memo> {
-    const response = await fetch(`${API_BASE_URL}/memos/`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(memo),
-    });
-    if (!response.ok) {
-        throw new Error('Failed to create memo');
-    }
-    return response.json();
-}
-```
+See `frontend/src/lib/api.ts`
 
 ### 페이지에서 사용
 
-```svelte
-<!-- routes/memos/+page.svelte -->
-<script lang="ts">
-    import { onMount } from 'svelte';
-    import { getMemos, createMemo, type Memo } from '$lib/api';
-
-    let memos = $state<Memo[]>([]);
-    let loading = $state(true);
-    let error = $state<string | null>(null);
-
-    onMount(async () => {
-        try {
-            memos = await getMemos();
-        } catch (e) {
-            error = '메모를 불러오는데 실패했습니다';
-        } finally {
-            loading = false;
-        }
-    });
-
-    async function handleCreate(title: string, content: string) {
-        const newMemo = await createMemo({ title, content });
-        memos = [newMemo, ...memos];
-    }
-</script>
-
-{#if loading}
-    <p>로딩 중...</p>
-{:else if error}
-    <p class="error">{error}</p>
-{:else}
-    <ul>
-        {#each memos as memo}
-            <li>{memo.title}</li>
-        {/each}
-    </ul>
-{/if}
-```
+페이지 컴포넌트에서는 `$state`로 데이터, 로딩, 에러 상태를 관리합니다. `onMount`에서 API를 호출하고, `{#if loading}` / `{:else if error}` / `{:else}` 블록으로 상태별 UI를 분기합니다.
 
 ## 라우팅
 
 ### 파일 기반 라우팅
 
-```
-routes/
-├── +page.svelte              → /
-├── about-us/
-│   ├── +page.svelte          → /about-us
-│   └── welcome/
-│       └── +page.svelte      → /about-us/welcome
-├── posts/
-│   ├── +page.svelte          → /posts
-│   └── [slug]/
-│       └── +page.svelte      → /posts/:slug
-```
+SvelteKit은 `routes/` 디렉토리 구조가 곧 URL 경로가 됩니다.
+
+| 파일 경로 | URL |
+|-----------|-----|
+| `routes/+page.svelte` | `/` |
+| `routes/about-us/+page.svelte` | `/about-us` |
+| `routes/about-us/welcome/+page.svelte` | `/about-us/welcome` |
+| `routes/posts/+page.svelte` | `/posts` |
+| `routes/posts/[slug]/+page.svelte` | `/posts/:slug` |
 
 ### 동적 라우트
 
-```svelte
-<!-- routes/posts/[slug]/+page.svelte -->
-<script lang="ts">
-    import type { PageData } from './$types';
-
-    export let data: PageData;
-</script>
-
-<h1>{data.post.title}</h1>
-```
-
-```typescript
-// routes/posts/[slug]/+page.server.ts
-import type { PageServerLoad } from './$types';
-
-export const load: PageServerLoad = async ({ params }) => {
-    const post = await fetchPost(params.slug);
-    return { post };
-};
-```
+`[slug]` 같은 대괄호 디렉토리로 동적 라우트를 생성합니다. `+page.server.ts`에서 `params.slug`로 URL 파라미터에 접근하여 데이터를 로드하고, `+page.svelte`에서 `data` prop으로 받아 렌더링합니다.
 
 ## 테스트
 
 ### 컴포넌트 테스트
 
-```typescript
-// lib/components/Button.test.ts
-import { describe, it, expect, vi } from 'vitest';
-import { render, fireEvent } from '@testing-library/svelte';
-import Button from './Button.svelte';
-
-describe('Button', () => {
-    it('렌더링된다', () => {
-        const { getByRole } = render(Button, {
-            props: { children: () => 'Click me' }
-        });
-        expect(getByRole('button')).toBeInTheDocument();
-    });
-
-    it('클릭 시 핸들러가 호출된다', async () => {
-        const handleClick = vi.fn();
-        const { getByRole } = render(Button, {
-            props: { onclick: handleClick, children: () => 'Click me' }
-        });
-
-        await fireEvent.click(getByRole('button'));
-        expect(handleClick).toHaveBeenCalled();
-    });
-});
-```
+Vitest + `@testing-library/svelte`를 사용하여 컴포넌트를 테스트합니다. `render`로 컴포넌트를 마운트하고, `getByRole` 등의 쿼리로 요소를 찾으며, `fireEvent`로 사용자 인터랙션을 시뮬레이션합니다.
 
 ### Context와 함께 테스트
 
-```typescript
-import { render } from '@testing-library/svelte';
-import { UI_CONTEXT_KEY, UIStore } from '$lib/stores/ui.svelte';
-import SomeComponent from './SomeComponent.svelte';
-
-it('Context를 사용하는 컴포넌트', () => {
-    const uiStore = new UIStore();
-
-    const { getByText } = render(SomeComponent, {
-        context: new Map([[UI_CONTEXT_KEY, uiStore]])
-    });
-
-    expect(getByText('콘텐츠')).toBeInTheDocument();
-});
-```
+Context를 사용하는 컴포넌트는 `render`의 `context` 옵션에 `new Map([[UI_CONTEXT_KEY, uiStore]])`를 전달하여 테스트합니다.
 
 ### 테스트 실행
 
-```bash
-cd frontend
-
-# 전체 테스트
-npm run test
-
-# 감시 모드
-npm run test:watch
-
-```
+- 전체 테스트: `cd frontend && npm run test`
+- 감시 모드: `cd frontend && npm run test:watch`
 
 ## 스타일링 (Tailwind CSS)
 
 ### 기본 사용
 
-```svelte
-<div class="flex items-center justify-between p-4 bg-gray-100 rounded-lg">
-    <h1 class="text-2xl font-bold text-gray-900">제목</h1>
-    <button class="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-        버튼
-    </button>
-</div>
-```
+Tailwind CSS 유틸리티 클래스를 HTML 요소의 `class` 속성에 직접 작성합니다. 레이아웃(`flex`, `grid`), 간격(`p-4`, `gap-4`), 색상(`bg-gray-100`, `text-gray-900`), 모서리(`rounded-lg`) 등을 조합하여 스타일링합니다.
 
 ### 반응형 디자인
 
-```svelte
-<!-- sm: 640px, md: 768px, lg: 1024px, xl: 1280px -->
-<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-    <div class="p-4 bg-white shadow">카드 1</div>
-    <div class="p-4 bg-white shadow">카드 2</div>
-    <div class="p-4 bg-white shadow">카드 3</div>
-</div>
-```
+Tailwind의 반응형 접두사를 사용하여 화면 크기별 스타일을 적용합니다.
+
+| 접두사 | 최소 너비 |
+|--------|-----------|
+| `sm:` | 640px |
+| `md:` | 768px |
+| `lg:` | 1024px |
+| `xl:` | 1280px |
+
+예: `grid-cols-1 md:grid-cols-2 lg:grid-cols-3`으로 화면 크기에 따라 그리드 열 수를 조정합니다.
 
 ## 다음 단계
 
