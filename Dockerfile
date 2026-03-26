@@ -28,12 +28,9 @@ RUN apt-get update && \
     apt-get install -y --no-install-recommends curl && \
     rm -rf /var/lib/apt/lists/*
 
-# uv 복사 (런타임에 uv run 사용)
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
-
 # 빌드 스테이지에서 가상환경 복사
 COPY --from=builder --chown=appuser:appgroup /code/.venv /code/.venv
-COPY --chown=appuser:appgroup ./pyproject.toml ./uv.lock ./README.md /code/
+ENV PATH="/code/.venv/bin:$PATH"
 
 # 애플리케이션 코드 복사
 COPY --chown=appuser:appgroup ./app /code/app
@@ -48,4 +45,4 @@ EXPOSE 8000
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/health || exit 1
 
-CMD ["uv", "run", "uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["/code/.venv/bin/uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
