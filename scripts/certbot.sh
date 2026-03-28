@@ -1,18 +1,18 @@
 #!/bin/sh
-# network_mode: host 환경에서 nginx 대기 (127.0.0.1 사용)
-while ! nc -z 127.0.0.1 80; do sleep 1; done
+# nginx가 준비될 때까지 대기 (host 네트워크 사용)
+while ! nc -z 127.0.0.1 80; do sleep 1; done;
 
-certbot certonly --webroot \
-  --webroot-path=/var/www/html \
+# Let's Encrypt 인증서 발급
+certbot certonly \
+  --standalone \
+  --preferred-challenges http \
   --email sgccofficial2024@gmail.com \
-  --agree-tos --no-eff-email --non-interactive --renew-by-default \
+  --agree-tos --no-eff-email --non-interactive \
   -d sogangcomputerclub.org -d www.sogangcomputerclub.org
 
-# 인증서를 nginx이 읽는 경로로 복사
-CERT_DIR=$(find /etc/letsencrypt/live -type d -name "sogangcomputerclub.org*" | head -n 1)
-if [ -n "$CERT_DIR" ]; then
-  cp "$CERT_DIR/fullchain.pem" /etc/nginx/certs/fullchain.pem
-  cp "$CERT_DIR/privkey.pem" /etc/nginx/certs/privkey.pem
-  # nginx 리로드 (host network이므로 직접 시그널)
-  kill -HUP $(cat /var/run/nginx.pid 2>/dev/null) 2>/dev/null || true
+# 발급된 인증서를 nginx 마운트 경로로 복사
+if [ -f /etc/letsencrypt/live/sogangcomputerclub.org/fullchain.pem ]; then
+  cp /etc/letsencrypt/live/sogangcomputerclub.org/fullchain.pem /etc/nginx/certs/fullchain.pem
+  cp /etc/letsencrypt/live/sogangcomputerclub.org/privkey.pem /etc/nginx/certs/privkey.pem
+  echo "SSL certificates copied to /etc/nginx/certs/"
 fi
